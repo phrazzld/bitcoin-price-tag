@@ -1,13 +1,11 @@
-chrome.storage.sync.get(null, () => {
-  console.group("chrome.storage.sync.get ...");
-  console.log(
-    "Can I just run `walk` outside this block since I'm not using localStorage?"
-  );
-  console.groupEnd();
-  // TODO: Get exchange rate on pageload
-  //       set global reference
-  walk(document.body);
-});
+console.group("chrome.storage.sync.get ...");
+console.log(
+  "Can I just run `walk` outside this block since I'm not using localStorage?"
+);
+console.groupEnd();
+// TODO: Get exchange rate on pageload
+//       set global reference
+walk(document.body);
 
 // Credit to t-j-crowder on StackOverflow for this walk function
 // http://bit.ly/1o47R7V
