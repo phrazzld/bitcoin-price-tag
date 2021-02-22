@@ -50,24 +50,20 @@ const buildConcludingMatchPattern = (
 };
 
 const valueInSats = fiatAmount => {
-  console.group("valueInSats");
-  console.log("fiatAmount", fiatAmount);
-  console.groupEnd();
-
-  // TODO: if fiatAmount > btcPrice show in BTC
-  //       else show in sats
-  // TODO: use different symbols
-
   return (fiatAmount / satPrice).toFixed(0).toString();
+};
+
+const valueInBtc = fiatAmount => {
+  return (fiatAmount / btcPrice).toFixed(4).toString();
 };
 
 // Build text element in the form of: original (conversion)
 const makeSnippet = (sourceElement, fiatAmount) => {
-  console.group("makeSnippet");
-  console.log("sourceElement:", sourceElement);
-  console.log("fiatAmount:", fiatAmount);
-  console.groupEnd();
-  return `${sourceElement} (${valueInSats(fiatAmount)} sats)`;
+  if (fiatAmount >= btcPrice) {
+    return `${sourceElement} (${valueInBtc(fiatAmount)} BTC)`;
+  } else {
+    return `${sourceElement} (${valueInSats(fiatAmount)} sats)`;
+  }
 };
 
 const convert = textNode => {
@@ -157,11 +153,8 @@ const walk = node => {
   fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json")
     .then(response => response.json())
     .then(data => {
-      console.log("data:", data);
       btcPrice = parseFloat(data["bpi"]["USD"]["rate"].replace(",", ""));
       satPrice = btcPrice / 100000000;
-      console.log("btcPrice:", btcPrice);
-      console.log("satPrice:", satPrice);
       walk(document.body);
     });
 })();
