@@ -1,129 +1,177 @@
-chrome.storage.sync.get(null, function(obj) {
-  if (obj['disabled'] !== true) {
-    walk(document.body)
-  }
-})
+chrome.storage.sync.get(null, () => {
+  console.group("chrome.storage.sync.get ...");
+  console.log(
+    "Can I just run `walk` outside this block since I'm not using localStorage?"
+  );
+  console.groupEnd();
+  // TODO: Get exchange rate on pageload
+  //       set global reference
+  walk(document.body);
+});
 
 // Credit to t-j-crowder on StackOverflow for this walk function
 // http://bit.ly/1o47R7V
-function walk(node) {
-  var child, next, price
+const walk = node => {
+  console.group("walk");
+  console.log("node:", node);
+  console.groupEnd();
+  let child, next, price;
 
   switch (node.nodeType) {
-    case 1:  // Element
-    case 9:  // Document
+    case 1: // Element
+    case 9: // Document
     case 11: // Document fragment
-      child = node.firstChild
+      child = node.firstChild;
       while (child) {
-        next = child.nextSibling
+        next = child.nextSibling;
 
         // Check if child is Amazon display price
-        var classes = child.classList
-        if (classes && classes.value === 'sx-price-currency') {
-          price = child.firstChild.nodeValue.toString()
-          child.firstChild.nodeValue = null
-        } else if (classes && classes.value === 'sx-price-whole') {
-          price += child.firstChild.nodeValue.toString()
-          child.firstChild.nodeValue = price
-          convert(child.firstChild)
-          child = next
-        } else if (classes && classes.value === 'sx-price-fractional') {
-          child.firstChild.nodeValue = null
-          price = null
+        const classes = child.classList;
+        if (classes && classes.value === "sx-price-currency") {
+          price = child.firstChild.nodeValue.toString();
+          child.firstChild.nodeValue = null;
+        } else if (classes && classes.value === "sx-price-whole") {
+          price += child.firstChild.nodeValue.toString();
+          child.firstChild.nodeValue = price;
+          convert(child.firstChild);
+          child = next;
+        } else if (classes && classes.value === "sx-price-fractional") {
+          child.firstChild.nodeValue = null;
+          price = null;
         }
 
-        walk(child)
-        child = next
+        walk(child);
+        child = next;
       }
-      break
-    case 3:  // Text node
-      convert(node)
-      break
+      break;
+    case 3: // Text node
+      convert(node);
+      break;
   }
-}
+};
 
-function buildThousandsString(delimiter) {
-  if (delimiter === 'commas') {
-    return '\\,'
-  } else if (delimiter === 'spacesAndDots') {
-    return '(\\s|\\.)'
-  } else {
-    throw 'Not a recognized delimiter for thousands!'
-  }
-}
+const buildThousandsString = () => {
+  console.log("buildThousandsString, probably just nuke this function");
+  return "\\,";
+};
 
-function buildDecimalString(delimiter) {
-  if (delimiter === 'dot') {
-    return '\\.'
-  } else if (delimiter === 'comma') {
-    return '\\,'
-  } else {
-    throw 'Not a recognized delimiter for decimals!'
-  }
-}
+const buildDecimalString = () => {
+  console.log("buildDecimalString, probably just nuke this function");
+  return "\\.";
+};
 
-function buildPrecedingMatchPattern(currencySymbol, currencyCode, thousandsString, decimalString) {
-  return new RegExp('(\\' + currencySymbol + '|' + currencyCode + ')\\x20?\\d(\\d|' + thousandsString + ')*(' + decimalString + '\\d\\d)?', 'g')
-}
+const buildPrecedingMatchPattern = (
+  currencySymbol,
+  currencyCode,
+  thousandsString,
+  decimalString
+) => {
+  console.group("buildPrecedingMatchPattern");
+  console.log("currencySymbol:", currencySymbol);
+  console.log("currencyCode:", currencyCode);
+  console.log("thousandsString:", thousandsString);
+  console.log("decimalString:", decimalString);
+  console.groupEnd();
+  return new RegExp(
+    "(\\" +
+      currencySymbol +
+      "|" +
+      currencyCode +
+      ")\\x20?\\d(\\d|" +
+      thousandsString +
+      ")*(" +
+      decimalString +
+      "\\d\\d)?",
+    "g"
+  );
+};
 
-function buildConcludingMatchPattern(currencySymbol, currencyCode, thousandsString, decimalString) {
-  return new RegExp('\\d(\\d|' + thousandsString + ')*(' + decimalString + '\\d\\d)?\\x20?(\\' + currencySymbol + '|' + currencyCode + ')', 'g')
-}
+const buildConcludingMatchPattern = (
+  currencySymbol,
+  currencyCode,
+  thousandsString,
+  decimalString
+) => {
+  console.group("buildConcludingMatchPattern");
+  console.log("currencySymbol:", currencySymbol);
+  console.log("currencyCode:", currencyCode);
+  console.log("thousandsString:", thousandsString);
+  console.log("decimalString:", decimalString);
+  console.groupEnd();
+  return new RegExp(
+    "\\d(\\d|" +
+      thousandsString +
+      ")*(" +
+      decimalString +
+      "\\d\\d)?\\x20?(\\" +
+      currencySymbol +
+      "|" +
+      currencyCode +
+      ")",
+    "g"
+  );
+};
 
-function convert(textNode) {
-  chrome.storage.sync.get(null, function(items) {
-    var currencySymbol, currencyCode, amount, frequency, thousands, decimal, sourceMoney, workingWage, thousandsString, decimalString, matchPattern
-    currencySymbol = items['currencySymbol']
-    currencyCode = items['currencyCode']
-    amount = items['amount']
-    frequency = items['frequency']
-    thousands = items['thousands']
-    decimal = items['decimal']
-    thousandsString = buildThousandsString(thousands)
-    thousands = new RegExp(thousandsString, 'g')
-    decimalString = buildDecimalString(decimal)
-    decimal = new RegExp(decimalString, 'g')
-    // Currency indicator preceding amount
-    matchPattern = buildPrecedingMatchPattern(currencySymbol, currencyCode, thousandsString, decimalString)
-    textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function(e) {
-      sourceMoney = e.replace(thousands, '@').replace(decimal, '~').replace('~', '.').replace('@', '')
-      sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, '')).toFixed(2)
-      workingWage = buildWorkingWage(frequency, amount)
-      return makeSnippet(e, sourceMoney, workingWage)
-    })
-    // Currency indicator concluding amount
-    matchPattern = buildConcludingMatchPattern(currencySymbol, currencyCode, thousandsString, decimalString)
-    textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function(e) {
-      sourceMoney = e.replace(thousands, '@').replace(decimal, '~').replace('~', '.').replace('@', '')
-      sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, '')).toFixed(2)
-      workingWage = buildWorkingWage(frequency, amount)
-      return makeSnippet(e, sourceMoney, workingWage)
-    })
-  })
-}
+const convert = textNode => {
+  console.group("convert");
+  console.log("textNode:", textNode);
+  console.groupEnd();
+  const currencySymbol = "$";
+  const currencyCode = "USD";
+  const thousandsString = buildThousandsString();
+  const thousands = new RegExp(thousandsString, "g");
+  const decimalString = buildDecimalString();
+  const decimal = new RegExp(decimalString, "g");
+  // Currency indicator preceding amount
+  const matchPattern = buildPrecedingMatchPattern(
+    currencySymbol,
+    currencyCode,
+    thousandsString,
+    decimalString
+  );
+  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function(e) {
+    sourceMoney = e
+      .replace(thousands, "@")
+      .replace(decimal, "~")
+      .replace("~", ".")
+      .replace("@", "");
+    sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, "")).toFixed(2);
+    workingWage = buildWorkingWage(frequency, amount);
+    return makeSnippet(e, sourceMoney, workingWage);
+  });
+  // Currency indicator concluding amount
+  matchPattern = buildConcludingMatchPattern(
+    currencySymbol,
+    currencyCode,
+    thousandsString,
+    decimalString
+  );
+  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function(e) {
+    sourceMoney = e
+      .replace(thousands, "@")
+      .replace(decimal, "~")
+      .replace("~", ".")
+      .replace("@", "");
+    sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, "")).toFixed(2);
+    return makeSnippet(e, sourceMoney);
+  });
+};
 
-function buildWorkingWage(frequency, amount) {
-  var workingWage = parseFloat(amount)
-  if (frequency === 'yearly') {
-    workingWage = workingWage/52/40
-  }
-  return workingWage.toFixed(2)
-}
+// TODO: Get exchange rate on pageload
+//       set global reference
+//       use here for conversion
+const valueInSats = fiatAmount => {
+  console.group("valueInSats");
+  console.log("fiatAmount", fiatAmount);
+  console.groupEnd();
+  return fiatAmount;
+};
 
 // Build text element in the form of: original (conversion)
-function makeSnippet(sourceElement, sourceMoney, workingWage) {
-  var workHours = sourceMoney / workingWage
-  var hours, minutes, message
-  if (!isNaN(workHours)) {
-    hours = Math.floor(workHours)
-    minutes = Math.ceil(60 * (workHours - hours))
-    if (minutes == 60) {
-      hours += 1
-      minutes = 0
-    }
-    message = sourceElement + ' (' + hours + 'h ' + minutes + 'm)'
-  } else {
-    message = sourceElement
-  }
-  return message
-}
+const makeSnippet = (sourceElement, fiatAmount) => {
+  console.group("makeSnippet");
+  console.log("sourceElement:", sourceElement);
+  console.log("fiatAmount:", fiatAmount);
+  console.groupEnd();
+  return `${sourceElement} (${valueInSats(fiatAmount)} sats)`;
+};
