@@ -4,7 +4,6 @@
   "name": "SatoshiVision",
   "short_name": "satoshivision",
   "description": "See prices in satoshis",
-  "default_locale": "en",
   "version": "0.1",
 
   "browser_action": {
@@ -15,7 +14,7 @@
     }
   },
 
-  "permissions": ["webRequest", "*://*/*", "storage", "contextMenus"],
+  "permissions": ["webRequest", "*://*/*"],
 
   "content_scripts": [
     {
