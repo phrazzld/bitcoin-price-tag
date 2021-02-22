@@ -14,7 +14,7 @@
     }
   },
 
-  "permissions": ["webRequest", "*://*/*"],
+  "permissions": ["*://*/*"],
 
   "content_scripts": [
     {
