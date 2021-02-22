@@ -15,10 +15,6 @@
     }
   },
 
-  "background": {
-    "scripts": ["background.js"]
-  },
-
   "permissions": ["webRequest", "*://*/*", "storage", "contextMenus"],
 
   "content_scripts": [
@@ -28,12 +24,6 @@
       "run_at": "document_end"
     }
   ],
-
-  "options_ui": {
-    "page": "options.html",
-    "chrome_style": true
-  },
-  "options_page": "options.html",
 
   "icons": {
     "16": "images/icon_16.png",
