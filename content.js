@@ -1,18 +1,120 @@
-console.group("chrome.storage.sync.get ...");
-console.log(
-  "Can I just run `walk` outside this block since I'm not using localStorage?"
-);
-console.groupEnd();
-// TODO: Get exchange rate on pageload
-//       set global reference
-walk(document.body);
+let btcPrice;
+let satPrice;
+
+const buildThousandsString = () => {
+  return "\\,";
+};
+
+const buildDecimalString = () => {
+  return "\\.";
+};
+
+const buildPrecedingMatchPattern = (
+  currencySymbol,
+  currencyCode,
+  thousandsString,
+  decimalString
+) => {
+  return new RegExp(
+    "(\\" +
+      currencySymbol +
+      "|" +
+      currencyCode +
+      ")\\x20?\\d(\\d|" +
+      thousandsString +
+      ")*(" +
+      decimalString +
+      "\\d\\d)?",
+    "g"
+  );
+};
+
+const buildConcludingMatchPattern = (
+  currencySymbol,
+  currencyCode,
+  thousandsString,
+  decimalString
+) => {
+  return new RegExp(
+    "\\d(\\d|" +
+      thousandsString +
+      ")*(" +
+      decimalString +
+      "\\d\\d)?\\x20?(\\" +
+      currencySymbol +
+      "|" +
+      currencyCode +
+      ")",
+    "g"
+  );
+};
+
+const valueInSats = fiatAmount => {
+  console.group("valueInSats");
+  console.log("fiatAmount", fiatAmount);
+  console.groupEnd();
+
+  // TODO: if fiatAmount > btcPrice show in BTC
+  //       else show in sats
+  // TODO: use different symbols
+
+  return (fiatAmount / satPrice).toFixed(0).toString();
+};
+
+// Build text element in the form of: original (conversion)
+const makeSnippet = (sourceElement, fiatAmount) => {
+  console.group("makeSnippet");
+  console.log("sourceElement:", sourceElement);
+  console.log("fiatAmount:", fiatAmount);
+  console.groupEnd();
+  return `${sourceElement} (${valueInSats(fiatAmount)} sats)`;
+};
+
+const convert = textNode => {
+  let sourceMoney;
+  const currencySymbol = "$";
+  const currencyCode = "USD";
+  const thousandsString = buildThousandsString();
+  const thousands = new RegExp(thousandsString, "g");
+  const decimalString = buildDecimalString();
+  const decimal = new RegExp(decimalString, "g");
+  // Currency indicator preceding amount
+  let matchPattern = buildPrecedingMatchPattern(
+    currencySymbol,
+    currencyCode,
+    thousandsString,
+    decimalString
+  );
+  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function(e) {
+    sourceMoney = e
+      .replace(thousands, "@")
+      .replace(decimal, "~")
+      .replace("~", ".")
+      .replace("@", "");
+    sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, "")).toFixed(2);
+    return makeSnippet(e, sourceMoney);
+  });
+  // Currency indicator concluding amount
+  matchPattern = buildConcludingMatchPattern(
+    currencySymbol,
+    currencyCode,
+    thousandsString,
+    decimalString
+  );
+  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function(e) {
+    sourceMoney = e
+      .replace(thousands, "@")
+      .replace(decimal, "~")
+      .replace("~", ".")
+      .replace("@", "");
+    sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, "")).toFixed(2);
+    return makeSnippet(e, sourceMoney);
+  });
+};
 
 // Credit to t-j-crowder on StackOverflow for this walk function
 // http://bit.ly/1o47R7V
 const walk = node => {
-  console.group("walk");
-  console.log("node:", node);
-  console.groupEnd();
   let child, next, price;
 
   switch (node.nodeType) {
@@ -48,128 +150,18 @@ const walk = node => {
   }
 };
 
-const buildThousandsString = () => {
-  console.log("buildThousandsString, probably just nuke this function");
-  return "\\,";
-};
-
-const buildDecimalString = () => {
-  console.log("buildDecimalString, probably just nuke this function");
-  return "\\.";
-};
-
-const buildPrecedingMatchPattern = (
-  currencySymbol,
-  currencyCode,
-  thousandsString,
-  decimalString
-) => {
-  console.group("buildPrecedingMatchPattern");
-  console.log("currencySymbol:", currencySymbol);
-  console.log("currencyCode:", currencyCode);
-  console.log("thousandsString:", thousandsString);
-  console.log("decimalString:", decimalString);
-  console.groupEnd();
-  return new RegExp(
-    "(\\" +
-      currencySymbol +
-      "|" +
-      currencyCode +
-      ")\\x20?\\d(\\d|" +
-      thousandsString +
-      ")*(" +
-      decimalString +
-      "\\d\\d)?",
-    "g"
-  );
-};
-
-const buildConcludingMatchPattern = (
-  currencySymbol,
-  currencyCode,
-  thousandsString,
-  decimalString
-) => {
-  console.group("buildConcludingMatchPattern");
-  console.log("currencySymbol:", currencySymbol);
-  console.log("currencyCode:", currencyCode);
-  console.log("thousandsString:", thousandsString);
-  console.log("decimalString:", decimalString);
-  console.groupEnd();
-  return new RegExp(
-    "\\d(\\d|" +
-      thousandsString +
-      ")*(" +
-      decimalString +
-      "\\d\\d)?\\x20?(\\" +
-      currencySymbol +
-      "|" +
-      currencyCode +
-      ")",
-    "g"
-  );
-};
-
-const convert = textNode => {
-  console.group("convert");
-  console.log("textNode:", textNode);
-  console.groupEnd();
-  const currencySymbol = "$";
-  const currencyCode = "USD";
-  const thousandsString = buildThousandsString();
-  const thousands = new RegExp(thousandsString, "g");
-  const decimalString = buildDecimalString();
-  const decimal = new RegExp(decimalString, "g");
-  // Currency indicator preceding amount
-  const matchPattern = buildPrecedingMatchPattern(
-    currencySymbol,
-    currencyCode,
-    thousandsString,
-    decimalString
-  );
-  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function(e) {
-    sourceMoney = e
-      .replace(thousands, "@")
-      .replace(decimal, "~")
-      .replace("~", ".")
-      .replace("@", "");
-    sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, "")).toFixed(2);
-    workingWage = buildWorkingWage(frequency, amount);
-    return makeSnippet(e, sourceMoney, workingWage);
-  });
-  // Currency indicator concluding amount
-  matchPattern = buildConcludingMatchPattern(
-    currencySymbol,
-    currencyCode,
-    thousandsString,
-    decimalString
-  );
-  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function(e) {
-    sourceMoney = e
-      .replace(thousands, "@")
-      .replace(decimal, "~")
-      .replace("~", ".")
-      .replace("@", "");
-    sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, "")).toFixed(2);
-    return makeSnippet(e, sourceMoney);
-  });
-};
-
 // TODO: Get exchange rate on pageload
 //       set global reference
-//       use here for conversion
-const valueInSats = fiatAmount => {
-  console.group("valueInSats");
-  console.log("fiatAmount", fiatAmount);
-  console.groupEnd();
-  return fiatAmount;
-};
 
-// Build text element in the form of: original (conversion)
-const makeSnippet = (sourceElement, fiatAmount) => {
-  console.group("makeSnippet");
-  console.log("sourceElement:", sourceElement);
-  console.log("fiatAmount:", fiatAmount);
-  console.groupEnd();
-  return `${sourceElement} (${valueInSats(fiatAmount)} sats)`;
-};
+(() => {
+  fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json")
+    .then(response => response.json())
+    .then(data => {
+      console.log("data:", data);
+      btcPrice = parseFloat(data["bpi"]["USD"]["rate"].replace(",", ""));
+      satPrice = btcPrice / 100000000;
+      console.log("btcPrice:", btcPrice);
+      console.log("satPrice:", satPrice);
+      walk(document.body);
+    });
+})();
