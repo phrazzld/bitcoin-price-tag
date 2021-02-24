@@ -24,12 +24,13 @@ const buildPrecedingMatchPattern = (
       thousandsString +
       ")*(" +
       decimalString +
-      "\\d{1,2})?" +
-      "\\s?((B|b)(illion|n)?)?",
+      "\\d{1,3})?" +
+      "\\s?((T|t|B|b|M|MM|m|K|k)(r?illion|n)?)?",
     "g"
   );
 };
 
+// TODO: abstract regex from preceding match pattern and reuse here
 const buildConcludingMatchPattern = (
   currencySymbol,
   currencyCode,
@@ -92,8 +93,14 @@ const convert = textNode => {
     console.group("replacing:")
     console.log("sourceMoney, pre-parse:", sourceMoney)
     console.log("sourceMoney.toLowerCase().indexOf('b'):", sourceMoney.toLowerCase().indexOf('b'))
-    if (sourceMoney.toLowerCase().indexOf("b") > -1) {
+    if (sourceMoney.toLowerCase().indexOf("t") > -1) {
+      multiplier = 1000000000000
+    } else if (sourceMoney.toLowerCase().indexOf("b") > -1) {
       multiplier = 1000000000
+    } else if (sourceMoney.toLowerCase().indexOf('m') > -1) {
+      multiplier = 1000000
+    } else if (sourceMoney.toLowerCase().indexOf('k') > -1) {
+      multiplier = 1000
     }
     sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, "")).toFixed(2);
     console.log("sourceMoney, post-parse:", sourceMoney)
