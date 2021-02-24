@@ -24,7 +24,8 @@ const buildPrecedingMatchPattern = (
       thousandsString +
       ")*(" +
       decimalString +
-      "\\d{1,2})?",
+      "\\d{1,2})?" +
+      "\\s?((B|b)(illion|n)?)?",
     "g"
   );
 };
@@ -68,6 +69,7 @@ const makeSnippet = (sourceElement, fiatAmount) => {
 
 const convert = textNode => {
   let sourceMoney;
+  let multiplier = 1;
   const currencySymbol = "$";
   const currencyCode = "USD";
   const thousandsString = buildThousandsString();
@@ -87,8 +89,16 @@ const convert = textNode => {
       .replace(decimal, "~")
       .replace("~", ".")
       .replace("@", "");
+    console.group("replacing:")
+    console.log("sourceMoney, pre-parse:", sourceMoney)
+    console.log("sourceMoney.toLowerCase().indexOf('b'):", sourceMoney.toLowerCase().indexOf('b'))
+    if (sourceMoney.toLowerCase().indexOf("b") > -1) {
+      multiplier = 1000000000
+    }
     sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, "")).toFixed(2);
-    return makeSnippet(e, sourceMoney);
+    console.log("sourceMoney, post-parse:", sourceMoney)
+    console.groupEnd()
+    return makeSnippet(e, sourceMoney * multiplier);
   });
   // Currency indicator concluding amount
   matchPattern = buildConcludingMatchPattern(
