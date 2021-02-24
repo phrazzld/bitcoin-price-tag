@@ -3,8 +3,8 @@
 
   "name": "SatoshiVision",
   "short_name": "satoshivision",
-  "description": "See prices in satoshis",
-  "version": "0.2",
+  "description": "See prices in bitcoin",
+  "version": "0.3",
 
   "browser_action": {
     "default_title": "SatoshiVision",
