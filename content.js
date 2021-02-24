@@ -24,7 +24,7 @@ const buildPrecedingMatchPattern = (
       thousandsString +
       ")*(" +
       decimalString +
-      "\\d\\d)?",
+      "\\d{1,2})?",
     "g"
   );
 };
@@ -40,7 +40,7 @@ const buildConcludingMatchPattern = (
       thousandsString +
       ")*(" +
       decimalString +
-      "\\d\\d)?\\x20?(\\" +
+      "\\d{1,2})?\\x20?(\\" +
       currencySymbol +
       "|" +
       currencyCode +
@@ -145,9 +145,6 @@ const walk = node => {
       break;
   }
 };
-
-// TODO: Get exchange rate on pageload
-//       set global reference
 
 (() => {
   fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json")
