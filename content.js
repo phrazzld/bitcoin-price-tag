@@ -52,11 +52,11 @@ const buildConcludingMatchPattern = (
 };
 
 const valueInSats = fiatAmount => {
-  return (fiatAmount / satPrice).toFixed(0).toString();
+  return parseFloat((fiatAmount / satPrice).toFixed(0)).toLocaleString()
 };
 
 const valueInBtc = fiatAmount => {
-  return (fiatAmount / btcPrice).toFixed(4).toString();
+  return parseFloat((fiatAmount / btcPrice).toFixed(4)).toLocaleString()
 };
 
 // Build text element in the form of: original (conversion)
