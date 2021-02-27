@@ -25,8 +25,8 @@ const buildPrecedingMatchPattern = (
       ")*(" +
       decimalString +
       "\\d{1,3})?" +
-      "\\s?((T|t|B|b|M|MM|m|K|k)(r?illion|n)?[\\s|\.|\!|\?|\,])?",
-    "g"
+      "\\s?((t|b|mm|m|k)(r?illion|n)?[\\s|\.|\!|\?|\,])?",
+    "gi"
   );
 };
 
