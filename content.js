@@ -135,15 +135,15 @@ const walk = node => {
 
         // Check if child is Amazon display price
         const classes = child.classList;
-        if (classes && classes.value === "sx-price-currency") {
+        if (classes && ["sx-price-currency", "a-price-symbol"].includes(classes.value)) {
           price = child.firstChild.nodeValue.toString();
           child.firstChild.nodeValue = null;
-        } else if (classes && classes.value === "sx-price-whole") {
-          price += child.firstChild.nodeValue.toString();
+        } else if (classes && ["sx-price-whole", "a-price-whole", "a-price-decimal"].includes(classes.value)) {
+          price += child.firstChild.nodeValue.toString() + "." + next.firstChild.nodeValue.toString();
           child.firstChild.nodeValue = price;
           convert(child.firstChild);
           child = next;
-        } else if (classes && classes.value === "sx-price-fractional") {
+        } else if (classes && ["sx-price-fractional", "a-price-fraction"].includes(classes.value)) {
           child.firstChild.nodeValue = null;
           price = null;
         }
