@@ -25,7 +25,7 @@ const buildPrecedingMatchPattern = (
       ")*(" +
       decimalString +
       "\\d{1,3})?" +
-      "\\s?((T|t|B|b|M|MM|m|K|k)(r?illion|n)?)?",
+      "\\s?((T|t|B|b|M|MM|m|K|k)(r?illion|n)?[\\s|\.|\!|\?|\,])?",
     "g"
   );
 };
@@ -62,15 +62,14 @@ const valueInBtc = fiatAmount => {
 // Build text element in the form of: original (conversion)
 const makeSnippet = (sourceElement, fiatAmount) => {
   if (fiatAmount >= btcPrice) {
-    return `${sourceElement} (${valueInBtc(fiatAmount)} BTC)`;
+    return `${sourceElement} (${valueInBtc(fiatAmount)} BTC) `;
   } else {
-    return `${sourceElement} (${valueInSats(fiatAmount)} sats)`;
+    return `${sourceElement} (${valueInSats(fiatAmount)} sats) `;
   }
 };
 
 const convert = textNode => {
   let sourceMoney;
-  let multiplier = 1;
   const currencySymbol = "$";
   const currencyCode = "USD";
   const thousandsString = buildThousandsString();
@@ -85,6 +84,7 @@ const convert = textNode => {
     decimalString
   );
   textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function(e) {
+    let multiplier = 1;
     sourceMoney = e
       .replace(thousands, "@")
       .replace(decimal, "~")
