@@ -1,62 +1,38 @@
 let btcPrice;
 let satPrice;
 
-const buildThousandsString = () => {
-  return "\\,";
-};
+const currencySection = "(\\$|USD)";
+const thousandsSection = "(\\d|\\,)*";
+const decimalSection = "(\\.\\d+)?";
+const illions = "\\s?((t|b|m{1,2}|k)(r?illion|n)?(\\W|$))?";
 
-const buildDecimalString = () => {
-  return "\\.";
-};
-
-const buildPrecedingMatchPattern = (
-  currencySymbol,
-  currencyCode,
-  thousandsString,
-  decimalString
-) => {
+const buildPrecedingMatchPattern = () => {
   return new RegExp(
-    "(\\" +
-      currencySymbol +
-      "|" +
-      currencyCode +
-      ")\\x20?\\d(\\d|" +
-      thousandsString +
-      ")*(" +
-      decimalString +
-      "\\d{1,3})?" +
-      "\\s?((t|b|mm|m|k)(r?illion|n)?[\\s|\.|\!|\?|\,])?",
+    currencySection + "\\x20?\\d" + thousandsSection + decimalSection + illions,
     "gi"
   );
 };
 
 // TODO: abstract regex from preceding match pattern and reuse here
-const buildConcludingMatchPattern = (
-  currencySymbol,
-  currencyCode,
-  thousandsString,
-  decimalString
-) => {
+const buildConcludingMatchPattern = () => {
   return new RegExp(
-    "\\d(\\d|" +
-      thousandsString +
-      ")*(" +
-      decimalString +
-      "\\d{1,2})?\\x20?(\\" +
-      currencySymbol +
-      "|" +
-      currencyCode +
-      ")",
-    "g"
+    currencySection +
+      "?\\x20?\\d" +
+      thousandsSection +
+      decimalSection +
+      illions +
+      "\\x20?" +
+      currencySection,
+    "gi"
   );
 };
 
-const valueInSats = fiatAmount => {
-  return parseFloat((fiatAmount / satPrice).toFixed(0)).toLocaleString()
+const valueInSats = (fiatAmount) => {
+  return parseFloat((fiatAmount / satPrice).toFixed(0)).toLocaleString();
 };
 
-const valueInBtc = fiatAmount => {
-  return parseFloat((fiatAmount / btcPrice).toFixed(4)).toLocaleString()
+const valueInBtc = (fiatAmount) => {
+  return parseFloat((fiatAmount / btcPrice).toFixed(4)).toLocaleString();
 };
 
 // Build text element in the form of: original (conversion)
@@ -68,61 +44,35 @@ const makeSnippet = (sourceElement, fiatAmount) => {
   }
 };
 
-const convert = textNode => {
+const convert = (textNode) => {
   let sourceMoney;
-  const currencySymbol = "$";
-  const currencyCode = "USD";
-  const thousandsString = buildThousandsString();
-  const thousands = new RegExp(thousandsString, "g");
-  const decimalString = buildDecimalString();
-  const decimal = new RegExp(decimalString, "g");
   // Currency indicator preceding amount
-  let matchPattern = buildPrecedingMatchPattern(
-    currencySymbol,
-    currencyCode,
-    thousandsString,
-    decimalString
-  );
-  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function(e) {
+  let matchPattern = buildPrecedingMatchPattern();
+  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
     let multiplier = 1;
-    sourceMoney = e
-      .replace(thousands, "@")
-      .replace(decimal, "~")
-      .replace("~", ".")
-      .replace("@", "");
-    if (sourceMoney.toLowerCase().indexOf("t") > -1) {
-      multiplier = 1000000000000
-    } else if (sourceMoney.toLowerCase().indexOf("b") > -1) {
-      multiplier = 1000000000
-    } else if (sourceMoney.toLowerCase().indexOf('m') > -1) {
-      multiplier = 1000000
-    } else if (sourceMoney.toLowerCase().indexOf('k') > -1) {
-      multiplier = 1000
+    if (e.toLowerCase().indexOf("t") > -1) {
+      multiplier = 1000000000000;
+    } else if (e.toLowerCase().indexOf("b") > -1) {
+      multiplier = 1000000000;
+    } else if (e.toLowerCase().indexOf("m") > -1) {
+      multiplier = 1000000;
+    } else if (e.toLowerCase().indexOf("k") > -1) {
+      multiplier = 1000;
     }
-    sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, "")).toFixed(2);
+    sourceMoney = parseFloat(e.replace(/[^\d.]/g, "")).toFixed(2);
     return makeSnippet(e, sourceMoney * multiplier);
   });
   // Currency indicator concluding amount
-  matchPattern = buildConcludingMatchPattern(
-    currencySymbol,
-    currencyCode,
-    thousandsString,
-    decimalString
-  );
-  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function(e) {
-    sourceMoney = e
-      .replace(thousands, "@")
-      .replace(decimal, "~")
-      .replace("~", ".")
-      .replace("@", "");
-    sourceMoney = parseFloat(sourceMoney.replace(/[^\d.]/g, "")).toFixed(2);
+  matchPattern = buildConcludingMatchPattern();
+  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
+    sourceMoney = parseFloat(e.replace(/[^\d.]/g, "")).toFixed(2);
     return makeSnippet(e, sourceMoney);
   });
 };
 
 // Credit to t-j-crowder on StackOverflow for this walk function
 // http://bit.ly/1o47R7V
-const walk = node => {
+const walk = (node) => {
   let child, next, price;
 
   switch (node.nodeType) {
@@ -135,15 +85,29 @@ const walk = node => {
 
         // Check if child is Amazon display price
         const classes = child.classList;
-        if (classes && ["sx-price-currency", "a-price-symbol"].includes(classes.value)) {
+        if (
+          classes &&
+          ["sx-price-currency", "a-price-symbol"].includes(classes.value)
+        ) {
           price = child.firstChild.nodeValue.toString();
           child.firstChild.nodeValue = null;
-        } else if (classes && ["sx-price-whole", "a-price-whole", "a-price-decimal"].includes(classes.value)) {
-          price += child.firstChild.nodeValue.toString() + "." + next.firstChild.nodeValue.toString();
+        } else if (
+          classes &&
+          ["sx-price-whole", "a-price-whole", "a-price-decimal"].includes(
+            classes.value
+          )
+        ) {
+          price +=
+            child.firstChild.nodeValue.toString() +
+            "." +
+            next.firstChild.nodeValue.toString();
           child.firstChild.nodeValue = price;
           convert(child.firstChild);
           child = next;
-        } else if (classes && ["sx-price-fractional", "a-price-fraction"].includes(classes.value)) {
+        } else if (
+          classes &&
+          ["sx-price-fractional", "a-price-fraction"].includes(classes.value)
+        ) {
           child.firstChild.nodeValue = null;
           price = null;
         }
@@ -158,12 +122,16 @@ const walk = node => {
   }
 };
 
+// Run on page load
 (() => {
+  // Get current price of bitcoin in USD
   fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json")
-    .then(response => response.json())
-    .then(data => {
+    .then((response) => response.json())
+    .then((data) => {
+      // Save BTC and sat prices to globals
       btcPrice = parseFloat(data["bpi"]["USD"]["rate"].replace(",", ""));
       satPrice = btcPrice / 100000000;
+      // Read the page and annotate prices with their equivalent bitcoin values
       walk(document.body);
     });
 })();
