@@ -6,6 +6,11 @@ const thousandsSection = "(\\d|\\,)*";
 const decimalSection = "(\\.\\d+)?";
 const illions = "\\s?((t|b|m{1,2}|k)(r?illion|n)?(\\W|$))?";
 
+const ONE_TRILLION = 1000000000000;
+const ONE_BILLION = 1000000000;
+const ONE_MILLION = 1000000;
+const ONE_THOUSAND = 1000;
+
 const buildPrecedingMatchPattern = () => {
   return new RegExp(
     currencySection + "\\x20?\\d" + thousandsSection + decimalSection + illions,
@@ -16,8 +21,7 @@ const buildPrecedingMatchPattern = () => {
 // TODO: abstract regex from preceding match pattern and reuse here
 const buildConcludingMatchPattern = () => {
   return new RegExp(
-    currencySection +
-      "?\\x20?\\d" +
+    "\\d" +
       thousandsSection +
       decimalSection +
       illions +
@@ -44,29 +48,35 @@ const makeSnippet = (sourceElement, fiatAmount) => {
   }
 };
 
+const getMultiplier = (e) => {
+  let multiplier = 1;
+  if (e.toLowerCase().indexOf("t") > -1) {
+    multiplier = ONE_TRILLION;
+  } else if (e.toLowerCase().indexOf("b") > -1) {
+    multiplier = ONE_BILLION;
+  } else if (e.toLowerCase().indexOf("m") > -1) {
+    multiplier = ONE_MILLION;
+  } else if (e.toLowerCase().indexOf("k") > -1) {
+    multiplier = ONE_THOUSAND;
+  }
+  return multiplier;
+};
+
 const convert = (textNode) => {
   let sourceMoney;
   // Currency indicator preceding amount
   let matchPattern = buildPrecedingMatchPattern();
   textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
-    let multiplier = 1;
-    if (e.toLowerCase().indexOf("t") > -1) {
-      multiplier = 1000000000000;
-    } else if (e.toLowerCase().indexOf("b") > -1) {
-      multiplier = 1000000000;
-    } else if (e.toLowerCase().indexOf("m") > -1) {
-      multiplier = 1000000;
-    } else if (e.toLowerCase().indexOf("k") > -1) {
-      multiplier = 1000;
-    }
+    let multiplier = getMultiplier(e);
     sourceMoney = parseFloat(e.replace(/[^\d.]/g, "")).toFixed(2);
     return makeSnippet(e, sourceMoney * multiplier);
   });
   // Currency indicator concluding amount
   matchPattern = buildConcludingMatchPattern();
   textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
+    let multiplier = getMultiplier(e);
     sourceMoney = parseFloat(e.replace(/[^\d.]/g, "")).toFixed(2);
-    return makeSnippet(e, sourceMoney);
+    return makeSnippet(e, sourceMoney * multiplier);
   });
 };
 
