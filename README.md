@@ -1,10 +1,10 @@
-# SatoshiVision
+# Bitcoin Price Tag
 
-Automatically convert fiat prices online into bitcoin.
+Automatically annotate fiat prices online with their equivalents in bitcoin.
 
 ## Under the Hood
 
-**SatoshiVision** uses the CoinDesk API to fetch the current price of bitcoin and uses that to convert fiat-denominated prices to bitcoin.
+**Bitcoin Price Tag** uses the CoinDesk API to fetch the current price of bitcoin and uses that to convert fiat-denominated prices to bitcoin.
 
 ## License
 

@@ -133,7 +133,7 @@ const walk = (node) => {
 };
 
 // Run on page load
-(() => {
+(setTimeout(() => {
   // Get current price of bitcoin in USD
   fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json")
     .then((response) => response.json())
@@ -144,4 +144,4 @@ const walk = (node) => {
       // Read the page and annotate prices with their equivalent bitcoin values
       walk(document.body);
     });
-})();
+}, 2500))();
