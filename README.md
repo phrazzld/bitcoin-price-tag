@@ -1,6 +1,6 @@
 # Bitcoin Price Tag
 
-Automatically annotate fiat prices online with their equivalents in bitcoin.
+Automatically annotate fiat prices online with their equivalents in bitcoin. Download the Chrome extension [here](https://chrome.google.com/webstore/detail/bitcoin-price-tag/phjlopbkegpphenpgimnlckfmjfanceh).
 
 ## Under the Hood
 
