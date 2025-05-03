@@ -19,7 +19,8 @@
   },
 
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
 
   "host_permissions": ["*://*/*"],
@@ -36,6 +37,17 @@
       "run_at": "document_end"
     }
   ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["conversion.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
 
   "icons": {
     "16": "images/icon_16.png",

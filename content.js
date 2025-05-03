@@ -1,72 +1,18 @@
+// Import conversion functions
+import {
+  buildPrecedingMatchPattern,
+  buildConcludingMatchPattern,
+  extractNumericValue,
+  getMultiplier,
+  valueInSats,
+  valueInBtc,
+  makeSnippet,
+  calculateSatPrice
+} from './conversion.js';
+
 // Global price variables
 let btcPrice;
 let satPrice;
-
-// Constants for price conversion
-const currencySection = "(\\$|USD)";
-const thousandsSection = "(\\d|\\,)*";
-const decimalSection = "(\\.\\d+)?";
-const illions = "\\s?((t|b|m{1,2}|k)(r?illion|n)?(\\W|$))?";
-
-const ONE_TRILLION = 1000000000000;
-const ONE_BILLION = 1000000000;
-const ONE_MILLION = 1000000;
-const ONE_THOUSAND = 1000;
-
-// Regular expression pattern builders
-const buildPrecedingMatchPattern = () => {
-  return new RegExp(
-    currencySection + "\\x20?\\d" + thousandsSection + decimalSection + illions,
-    "gi"
-  );
-};
-
-// TODO: abstract regex from preceding match pattern and reuse here
-const buildConcludingMatchPattern = () => {
-  return new RegExp(
-    "\\d" +
-      thousandsSection +
-      decimalSection +
-      illions +
-      "\\x20?" +
-      currencySection,
-    "gi"
-  );
-};
-
-// Convert fiat amount to sats (satoshis)
-const valueInSats = (fiatAmount) => {
-  return parseFloat((fiatAmount / satPrice).toFixed(0)).toLocaleString();
-};
-
-// Convert fiat amount to BTC
-const valueInBtc = (fiatAmount) => {
-  return parseFloat((fiatAmount / btcPrice).toFixed(4)).toLocaleString();
-};
-
-// Build text element in the form of: original (conversion)
-const makeSnippet = (sourceElement, fiatAmount) => {
-  if (fiatAmount >= btcPrice) {
-    return `${sourceElement} (${valueInBtc(fiatAmount)} BTC) `;
-  } else {
-    return `${sourceElement} (${valueInSats(fiatAmount)} sats) `;
-  }
-};
-
-// Get multiplier for currency notation (k, m, b, t)
-const getMultiplier = (e) => {
-  let multiplier = 1;
-  if (e.toLowerCase().indexOf("t") > -1) {
-    multiplier = ONE_TRILLION;
-  } else if (e.toLowerCase().indexOf("b") > -1) {
-    multiplier = ONE_BILLION;
-  } else if (e.toLowerCase().indexOf("m") > -1) {
-    multiplier = ONE_MILLION;
-  } else if (e.toLowerCase().indexOf("k") > -1) {
-    multiplier = ONE_THOUSAND;
-  }
-  return multiplier;
-};
 
 // Convert prices in a text node
 const convert = (textNode) => {
@@ -75,15 +21,15 @@ const convert = (textNode) => {
   let matchPattern = buildPrecedingMatchPattern();
   textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
     let multiplier = getMultiplier(e);
-    sourceMoney = parseFloat(e.replace(/[^\d.]/g, "")).toFixed(2);
-    return makeSnippet(e, sourceMoney * multiplier);
+    sourceMoney = extractNumericValue(e).toFixed(2);
+    return makeSnippet(e, sourceMoney * multiplier, btcPrice, satPrice);
   });
   // Currency indicator concluding amount
   matchPattern = buildConcludingMatchPattern();
   textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
     let multiplier = getMultiplier(e);
-    sourceMoney = parseFloat(e.replace(/[^\d.]/g, "")).toFixed(2);
-    return makeSnippet(e, sourceMoney * multiplier);
+    sourceMoney = extractNumericValue(e).toFixed(2);
+    return makeSnippet(e, sourceMoney * multiplier, btcPrice, satPrice);
   });
 };
 
@@ -158,7 +104,7 @@ const getBitcoinPrice = () => {
 const processPage = (priceData) => {
   // Save BTC and sat prices to globals
   btcPrice = priceData.btcPrice;
-  satPrice = priceData.satPrice;
+  satPrice = priceData.satPrice || calculateSatPrice(btcPrice);
   
   // Read the page and annotate prices with their equivalent bitcoin values
   walk(document.body);

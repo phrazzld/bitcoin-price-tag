@@ -1,3 +1,5 @@
+import { calculateSatPrice } from './conversion.js';
+
 // Constants
 const PRICE_STORAGE_KEY = 'btcPriceData';
 const PRICE_FETCH_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -16,7 +18,7 @@ async function fetchAndStoreBitcoinPrice() {
     
     // Extract price data
     const btcPrice = parseFloat(data.bpi.USD.rate.replace(',', ''));
-    const satPrice = btcPrice / 100000000;
+    const satPrice = calculateSatPrice(btcPrice);
     
     // Create price data object
     const priceData = {
