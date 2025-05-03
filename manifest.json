@@ -34,13 +34,14 @@
     {
       "js": ["content.js"],
       "matches": ["*://*/*"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "type": "module"
     }
   ],
 
   "web_accessible_resources": [
     {
-      "resources": ["conversion.js"],
+      "resources": ["conversion.js", "browser-detect.js", "error-handling.js", "cache-manager.js", "debounce.js", "dom-scanner.js"],
       "matches": ["<all_urls>"]
     }
   ],
