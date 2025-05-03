@@ -8,13 +8,25 @@ import {
   withTimeout, 
   withRetry 
 } from './error-handling.js';
+import {
+  CACHE_KEYS,
+  CACHE_FRESHNESS,
+  CACHE_TTL,
+  cachePriceData,
+  getCachedPriceData as getMultiSourceCachedData,
+  shouldRefreshCache,
+  calculatePriceVolatility,
+  calculateCacheTTL,
+  determineCacheFreshness,
+  isOffline
+} from './cache-manager.js';
 
-// Constants
-const PRICE_STORAGE_KEY = 'btcPriceData';
-const PRICE_ERROR_KEY = 'btcPriceError';
-const PRICE_FETCH_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+// Constants - using new cache manager constants
+const PRICE_STORAGE_KEY = CACHE_KEYS.CHROME_STORAGE;
+const PRICE_ERROR_KEY = CACHE_KEYS.CACHE_ERROR;
+const PRICE_FETCH_INTERVAL = CACHE_TTL.FRESH; // 5 minutes in milliseconds
 const PRICE_FETCH_TIMEOUT = 10000; // 10 seconds timeout for API requests
-const MAX_CACHE_AGE = 24 * 60 * 60 * 1000; // 24 hours maximum cache age
+const MAX_CACHE_AGE = CACHE_TTL.VERY_STALE; // 24 hours maximum cache age
 const COINDESK_API_URL = 'https://api.coindesk.com/v1/bpi/currentprice/USD.json';
 const ALTERNATIVE_API_URLS = [
   'https://blockchain.info/ticker', // Alternative API 1
@@ -153,16 +165,16 @@ async function fetchFromAlternativeApis() {
 }
 
 /**
- * Get cached price data from local storage
+ * Get cached price data from all available caches
+ * This function is now a wrapper around the cache-manager's getMultiSourceCachedData
  * @returns {Promise<Object|null>} Cached price data or null
  */
 async function getCachedPriceData() {
   try {
-    const data = await chrome.storage.local.get(PRICE_STORAGE_KEY);
-    const cachedData = data[PRICE_STORAGE_KEY];
+    // Use the new cache manager to get cached data from all sources
+    const cachedData = await getMultiSourceCachedData();
     
     if (cachedData) {
-      // Add cached flag
       return {
         ...cachedData,
         cached: true,
@@ -256,11 +268,24 @@ async function fetchAndStoreBitcoinPrice() {
   }
   
   try {
-    // Store data in local storage (even if it's from fallback or cache)
-    // Don't overwrite newer data with older cached data
+    // Store data in all available caches using the cache manager
+    // The cache manager handles checking timestamps and not overwriting newer data
+    await cachePriceData(priceData);
+    
+    // If we have previous data, calculate volatility and update metadata
     const existingData = await getCachedPriceData();
-    if (!existingData || priceData.timestamp >= existingData.timestamp) {
-      await chrome.storage.local.set({ [PRICE_STORAGE_KEY]: priceData });
+    if (existingData && existingData.timestamp !== priceData.timestamp) {
+      const volatility = calculatePriceVolatility(priceData, existingData);
+      const ttl = calculateCacheTTL(volatility);
+      
+      // Log volatility for debugging
+      console.debug('Bitcoin price volatility:', {
+        volatility,
+        calculatedTTL: ttl,
+        oldPrice: existingData.btcPrice,
+        newPrice: priceData.btcPrice,
+        percentChange: ((priceData.btcPrice - existingData.btcPrice) / existingData.btcPrice * 100).toFixed(2) + '%'
+      });
     }
   } catch (storageError) {
     logError(storageError, {
@@ -332,24 +357,82 @@ function setupPeriodicUpdates() {
  */
 async function handleGetPriceData(sendResponse) {
   try {
-    // First check if we have fresh cached data
+    // Check offline status first
+    const offline = isOffline();
+    
+    // First check if we have any cached data
     const cachedData = await getCachedPriceData();
     
-    if (cachedData && (Date.now() - cachedData.timestamp < PRICE_FETCH_INTERVAL)) {
-      // Use fresh cache
+    // Determine if and how we should refresh based on cache freshness
+    const refreshInfo = shouldRefreshCache(cachedData);
+    
+    // If we're offline, always use cache regardless of freshness
+    if (offline) {
+      if (cachedData) {
+        sendResponse({
+          ...cachedData,
+          fromCache: true,
+          offlineMode: true,
+          status: 'success',
+          cacheAge: Date.now() - cachedData.timestamp,
+          freshness: determineCacheFreshness(cachedData.timestamp)
+        });
+        return;
+      } else {
+        // No cache and offline - we're out of luck
+        sendResponse({
+          status: 'error',
+          offlineMode: true,
+          error: {
+            message: 'No cached Bitcoin price data available and device is offline',
+            type: ErrorTypes.NETWORK
+          }
+        });
+        return;
+      }
+    }
+    
+    // If cache is fresh, use it
+    if (!refreshInfo.shouldRefresh && cachedData) {
       sendResponse({
         ...cachedData,
         fromCache: true,
-        status: 'success'
+        status: 'success',
+        freshness: determineCacheFreshness(cachedData.timestamp)
       });
+      
       return;
     }
     
-    // Try to fetch new data
+    // If we should refresh in the background (stale but usable cache),
+    // first send the cached data, then refresh
+    if (refreshInfo.shouldRefresh && !refreshInfo.immediately && cachedData) {
+      // Send cached data immediately
+      sendResponse({
+        ...cachedData,
+        fromCache: true,
+        status: 'success',
+        refreshing: true,
+        freshness: determineCacheFreshness(cachedData.timestamp)
+      });
+      
+      // Then trigger a background refresh without blocking
+      fetchAndStoreBitcoinPrice().catch(error => {
+        logError(error, {
+          severity: ErrorSeverity.ERROR,
+          context: 'background_refresh'
+        });
+      });
+      
+      return;
+    }
+    
+    // If we need to fetch new data (no cache or cache too old)
     const freshData = await fetchAndStoreBitcoinPrice();
     sendResponse({
       ...freshData,
-      status: 'success'
+      status: 'success',
+      freshness: CACHE_FRESHNESS.FRESH
     });
   } catch (error) {
     logError(error, {
@@ -357,16 +440,18 @@ async function handleGetPriceData(sendResponse) {
       context: 'price_data_request'
     });
     
-    // Get any cached data, regardless of age
+    // Get any cached data, regardless of age as a last resort
     const lastResortCache = await getCachedPriceData();
     
     if (lastResortCache) {
       // Return stale cache with error info
+      const freshness = determineCacheFreshness(lastResortCache.timestamp);
       sendResponse({
         ...lastResortCache,
         fromCache: true,
         cacheAge: Date.now() - lastResortCache.timestamp,
         staleCacheWarning: true,
+        freshness: freshness,
         status: 'error',
         error: {
           message: error.message,
@@ -419,6 +504,63 @@ async function handleGetErrorInfo(sendResponse) {
 // Initialize extension
 initialize();
 
+/**
+ * Handle request for cache status information
+ * @param {Function} sendResponse - Chrome message API response function
+ */
+async function handleGetCacheStatus(sendResponse) {
+  try {
+    // Get cache status report from the cache manager
+    const cacheStatus = await getCacheStatus();
+    
+    sendResponse({
+      status: 'success',
+      cacheStatus
+    });
+  } catch (error) {
+    logError(error, {
+      severity: ErrorSeverity.WARNING,
+      context: 'cache_status_request'
+    });
+    
+    sendResponse({
+      status: 'error',
+      error: {
+        message: 'Failed to get cache status',
+        type: categorizeError(error)
+      }
+    });
+  }
+}
+
+/**
+ * Handle request to clear all caches
+ * @param {Function} sendResponse - Chrome message API response function
+ */
+async function handleClearCache(sendResponse) {
+  try {
+    await clearAllCaches();
+    
+    sendResponse({
+      status: 'success',
+      message: 'All caches cleared successfully'
+    });
+  } catch (error) {
+    logError(error, {
+      severity: ErrorSeverity.ERROR,
+      context: 'clear_cache_request'
+    });
+    
+    sendResponse({
+      status: 'error',
+      error: {
+        message: 'Failed to clear caches',
+        type: categorizeError(error)
+      }
+    });
+  }
+}
+
 // Respond to content script messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Handle different message types
@@ -450,5 +592,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
       });
     return true; // Indicates we will respond asynchronously
+  }
+  else if (message.action === 'getCacheStatus') {
+    // Get cache status information
+    handleGetCacheStatus(sendResponse);
+    return true;
+  }
+  else if (message.action === 'clearCache') {
+    // Clear all caches
+    handleClearCache(sendResponse);
+    return true;
   }
 });

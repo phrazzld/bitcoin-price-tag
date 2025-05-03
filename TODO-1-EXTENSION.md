@@ -22,5 +22,5 @@ This file covers Chrome extension-specific tasks including Manifest V3 migration
 
 4. ## Performance
    - [x] Optimize DOM scanning algorithm
-   - [ ] Implement caching for bitcoin price
+   - [x] Implement caching for bitcoin price
    - [ ] Add debouncing for price updates

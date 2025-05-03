@@ -23,6 +23,17 @@ import {
   withTimeout
 } from './error-handling.js';
 
+// Import cache manager utilities
+import {
+  cachePriceData,
+  getCachedPriceData,
+  shouldRefreshCache,
+  determineCacheFreshness,
+  isOffline,
+  CACHE_KEYS,
+  CACHE_FRESHNESS
+} from './cache-manager.js';
+
 // Import optimized DOM scanning utilities
 import {
   convertPriceText,
@@ -59,19 +70,20 @@ const walk = (node) => {
 };
 
 /**
- * Checks for locally cached price data in localStorage
- * This is separate from the background script's storage and serves as an additional fallback
- * @returns {Object|null} - Cached price data or null
+ * Checks for cached price data using cache manager
+ * This now uses the multi-source cache system from cache-manager
+ * @returns {Promise<Object|null>} - Cached price data or null
  */
-const getLocalCachedPriceData = () => {
+const getLocalCachedPriceData = async () => {
   try {
-    const cachedData = localStorage.getItem('btcPriceTagLocalCache');
+    // Use cache-manager to get data from all cache sources
+    const cachedData = await getCachedPriceData();
     if (cachedData) {
-      const parsedData = JSON.parse(cachedData);
       return {
-        ...parsedData,
+        ...cachedData,
         fromLocalCache: true,
-        localCacheAge: Date.now() - parsedData.timestamp
+        localCacheAge: Date.now() - cachedData.timestamp,
+        freshness: determineCacheFreshness(cachedData.timestamp)
       };
     }
     return null;
@@ -85,18 +97,19 @@ const getLocalCachedPriceData = () => {
 };
 
 /**
- * Stores price data in localStorage as an additional fallback cache
+ * Stores price data using cache manager
+ * This now uses the multi-source cache system from cache-manager
  * @param {Object} priceData - The price data to cache
  */
-const storeLocalCache = (priceData) => {
+const storeLocalCache = async (priceData) => {
   try {
     if (priceData && priceData.btcPrice) {
-      localStorage.setItem('btcPriceTagLocalCache', JSON.stringify({
+      await cachePriceData({
         btcPrice: priceData.btcPrice,
         satPrice: priceData.satPrice,
         timestamp: priceData.timestamp || Date.now(),
-        source: priceData.source || 'local_cache'
-      }));
+        source: priceData.source || 'content_script'
+      });
     }
   } catch (error) {
     logError(error, {
@@ -142,7 +155,7 @@ const getBitcoinPrice = async () => {
     });
     
     // Try to get local cache as fallback
-    const localCache = getLocalCachedPriceData();
+    const localCache = await getLocalCachedPriceData();
     if (localCache) {
       return localCache;
     }
@@ -238,7 +251,7 @@ const getBitcoinPrice = async () => {
     });
     
     // Try to get local cache as fallback
-    const localCache = getLocalCachedPriceData();
+    const localCache = await getLocalCachedPriceData();
     if (localCache) {
       // Add warning about using stale data
       return {
@@ -304,7 +317,7 @@ const handlePriceDataWarnings = (priceData) => {
  * Enhanced with error handling and optimized DOM scanning
  * @param {Object} priceData - The price data to use
  */
-const processPage = (priceData) => {
+const processPage = async (priceData) => {
   try {
     // Check for valid price data
     if (!priceData || !priceData.btcPrice || isNaN(priceData.btcPrice) || priceData.btcPrice <= 0) {
@@ -326,7 +339,13 @@ const processPage = (priceData) => {
     initScanning(document, btcPrice, satPrice);
     
     // If everything succeeded, store the data locally as an additional cache layer
-    storeLocalCache(priceData);
+    // This is now asynchronous but we don't need to await it since DOM processing can continue
+    storeLocalCache(priceData).catch(cacheError => {
+      logError(cacheError, {
+        severity: ErrorSeverity.WARNING,
+        context: 'process_page_cache'
+      });
+    });
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.ERROR,
@@ -406,9 +425,45 @@ const init = async () => {
     });
     
     try {
-      // Request Bitcoin price from service worker
-      const priceData = await getBitcoinPrice();
-      processPage(priceData);
+      // First check for offline status
+      const offline = isOffline();
+      
+      // Check if we have cached data that we can use immediately
+      const cachedData = await getLocalCachedPriceData();
+      const refreshInfo = shouldRefreshCache(cachedData);
+      
+      // If we have usable cache, use it immediately, then maybe refresh in background
+      if (cachedData && (!refreshInfo.immediately || offline)) {
+        // Process the page with cached data immediately
+        await processPage({
+          ...cachedData,
+          offlineMode: offline,
+          fromCache: true
+        });
+        
+        // If we're online and should refresh (but not immediately), do it in background
+        if (!offline && refreshInfo.shouldRefresh) {
+          console.debug('Bitcoin Price Tag: Using cache while refreshing in background');
+          try {
+            const freshData = await getBitcoinPrice();
+            // If we got new data and it's actually different, update the page
+            if (freshData && freshData.btcPrice !== cachedData.btcPrice) {
+              // Only re-process if price actually changed
+              await processPage(freshData);
+            }
+          } catch (backgroundError) {
+            // Just log, don't disrupt the user experience
+            logError(backgroundError, {
+              severity: ErrorSeverity.INFO,
+              context: 'background_refresh_error'
+            });
+          }
+        }
+      } else {
+        // No usable cache or cache needs immediate refresh: get fresh data
+        const priceData = await getBitcoinPrice();
+        await processPage(priceData);
+      }
     } catch (priceError) {
       // Handle errors in getting price data
       logError(priceError, {
@@ -417,15 +472,15 @@ const init = async () => {
       });
       
       // Try to use locally cached data
-      const localCache = getLocalCachedPriceData();
+      const localCache = await getLocalCachedPriceData();
       if (localCache) {
-        processPage({
+        await processPage({
           ...localCache,
           warning: 'Using locally cached data due to error'
         });
       } else {
         // Use emergency data as last resort
-        processPage(createEmergencyPriceData());
+        await processPage(createEmergencyPriceData());
       }
     }
     
