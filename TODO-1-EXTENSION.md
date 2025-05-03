@@ -13,7 +13,7 @@ This file covers Chrome extension-specific tasks including Manifest V3 migration
 2. ## Testing
    - [x] Set up a testing framework (Vitest)
    - [x] Write unit tests for currency conversion functions
-   - [ ] Create integration tests for DOM manipulation
+   - [x] Create integration tests for DOM manipulation
    - [ ] Add browser compatibility tests
 
 3. ## Error Handling
