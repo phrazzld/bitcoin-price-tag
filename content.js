@@ -23,6 +23,14 @@ import {
   withTimeout
 } from './error-handling.js';
 
+// Import optimized DOM scanning utilities
+import {
+  convertPriceText,
+  scanDomForPrices,
+  setupMutationObserver as setupOptimizedMutationObserver,
+  initScanning
+} from './dom-scanner.js';
+
 // Global price variables
 let btcPrice;
 let satPrice;
@@ -37,101 +45,17 @@ if (!featureSupport.isSupported) {
   applyPolyfills();
 }
 
-// Convert prices in a text node
+// Legacy convert function - maintained for backward compatibility with tests
 const convert = (textNode) => {
-  let sourceMoney;
-  // Currency indicator preceding amount
-  let matchPattern = buildPrecedingMatchPattern();
-  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
-    let multiplier = getMultiplier(e);
-    sourceMoney = extractNumericValue(e).toFixed(2);
-    return makeSnippet(e, sourceMoney * multiplier, btcPrice, satPrice);
-  });
-  // Currency indicator concluding amount
-  matchPattern = buildConcludingMatchPattern();
-  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
-    let multiplier = getMultiplier(e);
-    sourceMoney = extractNumericValue(e).toFixed(2);
-    return makeSnippet(e, sourceMoney * multiplier, btcPrice, satPrice);
-  });
+  return convertPriceText(textNode, btcPrice, satPrice);
 };
 
-// Credit to t-j-crowder on StackOverflow for this walk function
+// Legacy walk function - maintained for backward compatibility
+// Credit to t-j-crowder on StackOverflow for the original version
 // http://bit.ly/1o47R7V
-// Enhanced with browser compatibility features
 const walk = (node) => {
-  let child, next, price;
-
-  // For safety, check if node exists
-  if (!node) return;
-
-  // Use appropriate text property based on browser detection
-  const textProperty = adaptations.textPropertyToUse;
-
-  switch (node.nodeType) {
-    case 1: // Element
-    case 9: // Document
-    case 11: // Document fragment
-      // Skip certain elements that should not be processed
-      const tagName = node.tagName && node.tagName.toLowerCase();
-      if (tagName === 'script' || tagName === 'style' || tagName === 'noscript') {
-        return;
-      }
-
-      child = node.firstChild;
-      while (child) {
-        next = child.nextSibling;
-
-        try {
-          // Check if child is Amazon display price
-          const classes = child.classList;
-          if (
-            classes &&
-            ["sx-price-currency", "a-price-symbol"].includes(classes.value) &&
-            child.firstChild
-          ) {
-            price = child.firstChild.nodeValue?.toString() || '';
-            child.firstChild.nodeValue = null;
-          } else if (
-            classes &&
-            ["sx-price-whole", "a-price-whole", "a-price-decimal"].includes(
-              classes.value
-            ) &&
-            child.firstChild &&
-            next?.firstChild
-          ) {
-            price = (price || '') +
-              (child.firstChild.nodeValue || '').toString() +
-              "." +
-              (next.firstChild.nodeValue || '').toString();
-            child.firstChild.nodeValue = price;
-            convert(child.firstChild);
-            child = next;
-          } else if (
-            classes &&
-            ["sx-price-fractional", "a-price-fraction"].includes(classes.value) &&
-            child.firstChild
-          ) {
-            if (child.firstChild) {
-              child.firstChild.nodeValue = null;
-            }
-            price = null;
-          }
-        } catch (e) {
-          console.error('Error processing element:', e);
-        }
-
-        walk(child);
-        child = next;
-      }
-      break;
-    case 3: // Text node
-      // Only process non-empty text nodes
-      if (node.nodeValue && node.nodeValue.trim() !== '') {
-        convert(node);
-      }
-      break;
-  }
+  // Use the optimized scanner instead of the original recursive algorithm
+  scanDomForPrices(node, btcPrice, satPrice);
 };
 
 /**
@@ -377,7 +301,7 @@ const handlePriceDataWarnings = (priceData) => {
 
 /**
  * Process the page with Bitcoin price data
- * Enhanced with error handling
+ * Enhanced with error handling and optimized DOM scanning
  * @param {Object} priceData - The price data to use
  */
 const processPage = (priceData) => {
@@ -398,8 +322,8 @@ const processPage = (priceData) => {
     btcPrice = priceData.btcPrice;
     satPrice = priceData.satPrice || calculateSatPrice(btcPrice);
     
-    // Read the page and annotate prices with their equivalent bitcoin values
-    walk(document.body);
+    // Initialize scanning with the optimized algorithm
+    initScanning(document, btcPrice, satPrice);
     
     // If everything succeeded, store the data locally as an additional cache layer
     storeLocalCache(priceData);
@@ -415,7 +339,7 @@ const processPage = (priceData) => {
     satPrice = emergencyData.satPrice;
     
     // Still try to process the page with emergency data
-    walk(document.body);
+    initScanning(document, btcPrice, satPrice);
   }
 };
 
@@ -524,24 +448,8 @@ const init = async () => {
 
 // Set up MutationObserver to handle dynamically added content
 function setupMutationObserver() {
-  // Use browser-specific adaptation settings
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === 'childList') {
-        // Process newly added nodes
-        for (let i = 0; i < mutation.addedNodes.length; i++) {
-          const node = mutation.addedNodes[i];
-          // Only process element nodes
-          if (node.nodeType === 1) {
-            walk(node);
-          }
-        }
-      }
-    }
-  });
-  
-  // Start observing with browser-specific configuration
-  observer.observe(document.body, adaptations.observerConfig);
+  // Use the optimized MutationObserver implementation
+  return setupOptimizedMutationObserver(document, btcPrice, satPrice, adaptations.observerConfig);
 }
 
 // Function to determine optimal delay based on browser and page complexity
