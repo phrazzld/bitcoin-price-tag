@@ -1,1 +1,19 @@
 .DS_Store
+
+# Claude
+**/.claude/settings.local.json
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Testing
+coverage/
+
+# Build
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

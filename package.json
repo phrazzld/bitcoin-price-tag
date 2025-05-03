@@ -1,0 +1,28 @@
+{
+  "name": "bitcoin-price-tag",
+  "version": "0.6.0",
+  "description": "Automatically annotate fiat prices online with their equivalents in bitcoin",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "bitcoin",
+    "chrome-extension",
+    "price-conversion"
+  ],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.10.0",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.1.2",
+    "happy-dom": "^17.4.6",
+    "vitest": "^3.1.2"
+  }
+}

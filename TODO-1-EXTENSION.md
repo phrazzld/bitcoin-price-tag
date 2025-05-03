@@ -11,7 +11,7 @@ This file covers Chrome extension-specific tasks including Manifest V3 migration
    - [x] Update permissions to more specific host permissions
 
 2. ## Testing
-   - [ ] Set up a testing framework (Jest)
+   - [x] Set up a testing framework (Vitest)
    - [ ] Write unit tests for currency conversion functions
    - [ ] Create integration tests for DOM manipulation
    - [ ] Add browser compatibility tests
