@@ -1,4 +1,4 @@
-import { calculateSatPrice } from './conversion.js';
+import { calculateSatPrice } from '/conversion.js';
 import { 
   ErrorTypes, 
   ErrorSeverity, 
@@ -7,7 +7,7 @@ import {
   createError, 
   withTimeout, 
   withRetry 
-} from './error-handling.js';
+} from '/error-handling.js';
 import {
   CACHE_KEYS,
   CACHE_FRESHNESS,
@@ -19,12 +19,12 @@ import {
   calculateCacheTTL,
   determineCacheFreshness,
   isOffline
-} from './cache-manager.js';
+} from '/cache-manager.js';
 import {
   debounce,
   throttle,
   coalesce
-} from './debounce.js';
+} from '/debounce.js';
 
 // Constants - using new cache manager constants
 const PRICE_STORAGE_KEY = CACHE_KEYS.CHROME_STORAGE;
@@ -40,67 +40,160 @@ const ALTERNATIVE_API_URLS = [
 
 /**
  * Fetches Bitcoin price data from CoinDesk API with enhanced error handling
+ * and detailed diagnostic logging
  * @returns {Promise<Object>} Price data object
  */
 async function fetchBitcoinPrice() {
+  console.debug(`Bitcoin Price Tag: Initiating price fetch from ${COINDESK_API_URL}`);
+  
   // Use withRetry for automatic retry with backoff
   return withRetry(
     async () => {
-      // Use withTimeout to ensure request doesn't hang
-      const response = await withTimeout(
-        fetch(COINDESK_API_URL), 
-        PRICE_FETCH_TIMEOUT,
-        'Bitcoin price API request timed out'
-      );
-      
-      if (!response.ok) {
-        const error = createError(
-          `API responded with status: ${response.status}`,
-          ErrorTypes.API,
-          { statusCode: response.status }
-        );
-        throw error;
-      }
+      // Start fetch lifecycle - log fetch initiation
+      console.debug('Bitcoin Price Tag: Fetch lifecycle - Starting request', {
+        url: COINDESK_API_URL, 
+        timestamp: new Date().toISOString(),
+        timeout: PRICE_FETCH_TIMEOUT
+      });
       
       try {
-        const data = await response.json();
+        // Use withTimeout to ensure request doesn't hang
+        const response = await withTimeout(
+          fetch(COINDESK_API_URL, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Cache-Control': 'no-cache'
+            }
+          }), 
+          PRICE_FETCH_TIMEOUT,
+          'Bitcoin price API request timed out'
+        );
         
-        // Validate data structure
-        if (!data || !data.bpi || !data.bpi.USD || !data.bpi.USD.rate) {
-          throw createError(
-            'Invalid API response format',
-            ErrorTypes.PARSING,
-            { data }
+        // Log fetch completion
+        console.debug('Bitcoin Price Tag: Fetch lifecycle - Received response', {
+          url: COINDESK_API_URL,
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries([...response.headers.entries()]),
+          timestamp: new Date().toISOString()
+        });
+        
+        if (!response.ok) {
+          // Collect as much diagnostic info as possible
+          const diagnosticInfo = {
+            url: COINDESK_API_URL,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries([...response.headers.entries()]),
+            timestamp: new Date().toISOString(),
+            fetchPhase: 'response_validation'
+          };
+          
+          // Try to get response text for more context
+          let responseText = null;
+          try {
+            // Clone the response to avoid consuming it
+            const clonedResponse = response.clone();
+            responseText = await clonedResponse.text();
+            diagnosticInfo.responseText = responseText.substring(0, 500); // Limit size
+          } catch (textError) {
+            diagnosticInfo.responseTextError = textError.message;
+          }
+          
+          const error = createError(
+            `API responded with status: ${response.status} - ${response.statusText}`,
+            ErrorTypes.API,
+            diagnosticInfo
           );
+          
+          throw error;
         }
         
-        // Extract price data
-        const btcPrice = parseFloat(data.bpi.USD.rate.replace(',', ''));
-        
-        // Validate price data
-        if (isNaN(btcPrice) || btcPrice <= 0) {
-          throw createError(
-            'Invalid price value from API',
-            ErrorTypes.PARSING,
-            { receivedValue: data.bpi.USD.rate }
-          );
+        try {
+          console.debug('Bitcoin Price Tag: Fetch lifecycle - Parsing JSON response');
+          const data = await response.json();
+          
+          // Validate data structure
+          if (!data || !data.bpi || !data.bpi.USD || !data.bpi.USD.rate) {
+            throw createError(
+              'Invalid API response format',
+              ErrorTypes.PARSING,
+              { 
+                data: JSON.stringify(data).substring(0, 500), // Limit size
+                url: COINDESK_API_URL,
+                fetchPhase: 'data_validation'
+              }
+            );
+          }
+          
+          // Extract price data
+          const btcPrice = parseFloat(data.bpi.USD.rate.replace(',', ''));
+          
+          // Validate price data
+          if (isNaN(btcPrice) || btcPrice <= 0) {
+            throw createError(
+              'Invalid price value from API',
+              ErrorTypes.PARSING,
+              { 
+                receivedValue: data.bpi.USD.rate,
+                fetchPhase: 'value_validation'
+              }
+            );
+          }
+          
+          const satPrice = calculateSatPrice(btcPrice);
+          
+          // Log successful fetch
+          console.debug('Bitcoin Price Tag: Fetch lifecycle - Successfully retrieved price data', {
+            btcPrice,
+            satPrice,
+            source: 'coindesk',
+            timestamp: new Date().toISOString()
+          });
+          
+          // Create price data object with success info
+          return {
+            btcPrice,
+            satPrice,
+            timestamp: Date.now(),
+            source: 'coindesk',
+            success: true
+          };
+        } catch (error) {
+          // Handle JSON parsing errors
+          console.error('Bitcoin Price Tag: Fetch lifecycle - Error parsing response', {
+            message: error.message,
+            phase: 'json_parsing',
+            url: COINDESK_API_URL
+          });
+          
+          if (error.type !== ErrorTypes.PARSING) {
+            error.type = ErrorTypes.PARSING;
+          }
+          
+          // Add fetch lifecycle context
+          error.details = {
+            ...error.details,
+            fetchPhase: 'response_parsing',
+            url: COINDESK_API_URL
+          };
+          
+          throw error;
         }
-        
-        const satPrice = calculateSatPrice(btcPrice);
-        
-        // Create price data object with success info
-        return {
-          btcPrice,
-          satPrice,
-          timestamp: Date.now(),
-          source: 'coindesk',
-          success: true
-        };
       } catch (error) {
-        // Handle JSON parsing errors
-        if (error.type !== ErrorTypes.PARSING) {
-          error.type = ErrorTypes.PARSING;
+        // Add fetch phase if not present
+        if (error.details && !error.details.fetchPhase) {
+          error.details.fetchPhase = 'request_execution';
         }
+        
+        console.error('Bitcoin Price Tag: Fetch lifecycle - Fetch operation failed', {
+          message: error.message,
+          type: error.type || categorizeError(error),
+          url: COINDESK_API_URL,
+          timestamp: new Date().toISOString()
+        });
+        
         throw error;
       }
     },
@@ -108,6 +201,12 @@ async function fetchBitcoinPrice() {
       retries: 3,
       initialBackoff: 1000,
       shouldRetry: (error) => {
+        // Log retry attempt
+        console.debug('Bitcoin Price Tag: Fetch lifecycle - Evaluating retry decision', {
+          errorType: error.type,
+          shouldRetry: error.type !== ErrorTypes.PARSING
+        });
+        
         // Don't retry parsing errors
         return error.type !== ErrorTypes.PARSING;
       }
@@ -117,55 +216,136 @@ async function fetchBitcoinPrice() {
 
 /**
  * Attempts to fetch Bitcoin price from alternative APIs if primary fails
+ * Enhanced with detailed diagnostic logging
  * @returns {Promise<Object>} Price data object
  */
 async function fetchFromAlternativeApis() {
+  console.debug('Bitcoin Price Tag: Attempting to fetch from alternative APIs');
+  
   // Try alternative APIs in sequence
   for (const apiUrl of ALTERNATIVE_API_URLS) {
+    console.debug(`Bitcoin Price Tag: Fetch lifecycle - Trying alternative API`, {
+      url: apiUrl,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       const response = await withTimeout(
-        fetch(apiUrl),
+        fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache'
+          }
+        }),
         PRICE_FETCH_TIMEOUT,
-        'Alternative API request timed out'
+        `Alternative API request to ${apiUrl} timed out`
       );
       
-      if (!response.ok) continue;
+      // Log response status
+      console.debug('Bitcoin Price Tag: Fetch lifecycle - Alternative API response received', {
+        url: apiUrl,
+        status: response.status,
+        statusText: response.statusText,
+        timestamp: new Date().toISOString()
+      });
       
+      if (!response.ok) {
+        // Log failed response but continue to next API
+        console.warn('Bitcoin Price Tag: Fetch lifecycle - Alternative API returned error status', {
+          url: apiUrl,
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries([...response.headers.entries()]),
+          timestamp: new Date().toISOString()
+        });
+        continue;
+      }
+      
+      console.debug('Bitcoin Price Tag: Fetch lifecycle - Parsing alternative API response');
       const data = await response.json();
       let btcPrice = null;
+      let source = '';
       
       // Different APIs have different response formats
       if (apiUrl.includes('blockchain.info')) {
         btcPrice = data.USD?.last;
+        source = 'blockchain';
       } else if (apiUrl.includes('coingecko')) {
         btcPrice = data.bitcoin?.usd;
+        source = 'coingecko';
       }
+      
+      // Log extraction attempt
+      console.debug('Bitcoin Price Tag: Fetch lifecycle - Extracted alternative API price data', {
+        url: apiUrl,
+        source,
+        btcPrice,
+        timestamp: new Date().toISOString()
+      });
       
       if (btcPrice && !isNaN(btcPrice) && btcPrice > 0) {
         const satPrice = calculateSatPrice(btcPrice);
+        
+        // Log successful alternative API fetch
+        console.debug('Bitcoin Price Tag: Fetch lifecycle - Successfully retrieved price from alternative API', {
+          url: apiUrl,
+          source,
+          btcPrice,
+          satPrice,
+          timestamp: new Date().toISOString()
+        });
+        
         return {
           btcPrice,
           satPrice,
           timestamp: Date.now(),
-          source: apiUrl.includes('blockchain') ? 'blockchain' : 'coingecko',
-          success: true
+          source,
+          success: true,
+          alternativeApi: true
         };
+      } else {
+        // Log invalid price data
+        console.warn('Bitcoin Price Tag: Fetch lifecycle - Invalid price data from alternative API', {
+          url: apiUrl,
+          source,
+          rawData: JSON.stringify(data).substring(0, 500),
+          extractedPrice: btcPrice,
+          timestamp: new Date().toISOString()
+        });
       }
     } catch (error) {
-      // Just log and continue to next API
+      // Add diagnostic info to the error
+      error.details = {
+        ...error.details,
+        url: apiUrl,
+        fetchPhase: 'alternative_api',
+        timestamp: new Date().toISOString()
+      };
+      
+      // Log and continue to next API
       logError(error, {
         severity: ErrorSeverity.WARNING,
         context: 'alternative_api',
-        url: apiUrl
+        url: apiUrl,
+        fetchPhase: error.details?.fetchPhase || 'unknown'
       });
+      
+      console.debug('Bitcoin Price Tag: Fetch lifecycle - Continuing to next alternative API after failure');
     }
   }
   
-  // If all alternative APIs fail, throw error
+  // If all alternative APIs fail, throw error with detailed info
+  console.error('Bitcoin Price Tag: Fetch lifecycle - All alternative APIs failed');
+  
   throw createError(
     'All alternative APIs failed',
     ErrorTypes.API,
-    { apiUrls: ALTERNATIVE_API_URLS }
+    { 
+      apiUrls: ALTERNATIVE_API_URLS,
+      fetchPhase: 'all_alternative_apis',
+      timestamp: new Date().toISOString()
+    }
   );
 }
 

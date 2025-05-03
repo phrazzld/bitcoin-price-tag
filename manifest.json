@@ -32,16 +32,15 @@
 
   "content_scripts": [
     {
-      "js": ["content.js"],
+      "js": ["content-script.js"],
       "matches": ["*://*/*"],
-      "run_at": "document_end",
-      "type": "module"
+      "run_at": "document_end"
     }
   ],
 
   "web_accessible_resources": [
     {
-      "resources": ["conversion.js", "browser-detect.js", "error-handling.js", "cache-manager.js", "debounce.js", "dom-scanner.js"],
+      "resources": ["content-module.js", "conversion.js", "browser-detect.js", "error-handling.js", "cache-manager.js", "debounce.js", "dom-scanner.js"],
       "matches": ["<all_urls>"]
     }
   ],

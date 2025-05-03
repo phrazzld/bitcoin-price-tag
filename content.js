@@ -8,10 +8,10 @@ import {
   valueInBtc,
   makeSnippet,
   calculateSatPrice
-} from './conversion.js';
+} from '/conversion.js';
 
 // Import browser detection utility
-import { detectBrowser, checkFeatureSupport, getBrowserAdaptations, applyPolyfills } from './browser-detect.js';
+import { detectBrowser, checkFeatureSupport, getBrowserAdaptations, applyPolyfills } from '/browser-detect.js';
 
 // Import error handling utilities
 import { 
@@ -21,7 +21,7 @@ import {
   categorizeError, 
   createError, 
   withTimeout
-} from './error-handling.js';
+} from '/error-handling.js';
 
 // Import cache manager utilities
 import {
@@ -32,14 +32,14 @@ import {
   isOffline,
   CACHE_KEYS,
   CACHE_FRESHNESS
-} from './cache-manager.js';
+} from '/cache-manager.js';
 
 // Import debouncing utilities
 import {
   debounce,
   throttle,
   batchProcessor
-} from './debounce.js';
+} from '/debounce.js';
 
 // Import optimized DOM scanning utilities
 import {
@@ -47,7 +47,7 @@ import {
   scanDomForPrices,
   setupMutationObserver as setupOptimizedMutationObserver,
   initScanning
-} from './dom-scanner.js';
+} from '/dom-scanner.js';
 
 // Global price variables
 let btcPrice;

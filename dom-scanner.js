@@ -10,13 +10,13 @@ import {
   extractNumericValue,
   getMultiplier,
   makeSnippet
-} from './conversion.js';
+} from '/conversion.js';
 
 import {
   debounce,
   throttle,
   batchProcessor
-} from './debounce.js';
+} from '/debounce.js';
 
 // Cache for processed nodes to avoid re-processing
 const processedNodes = new WeakSet();

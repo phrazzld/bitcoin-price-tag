@@ -33,13 +33,24 @@ export const ErrorSeverity = {
  * @param {string} [context.severity] - Error severity level
  */
 export function logError(error, context = {}) {
+  const errorType = error.type || categorizeError(error);
+  const severity = context.severity || ErrorSeverity.ERROR;
+  
+  // Create sanitized context for logging
+  const sanitizedContext = sanitizeContextForLogging(context);
+  
+  // Add enhanced diagnostics for network errors
+  if (errorType === ErrorTypes.NETWORK || errorType === ErrorTypes.API || errorType === ErrorTypes.TIMEOUT) {
+    addNetworkDiagnostics(sanitizedContext);
+  }
+  
   const errorDetails = {
     message: error.message,
-    type: error.type || categorizeError(error),
-    severity: context.severity || ErrorSeverity.ERROR,
+    type: errorType,
+    severity: severity,
     timestamp: new Date().toISOString(),
     stack: error.stack,
-    ...context
+    ...sanitizedContext
   };
   
   // Log to console with enhanced formatting
@@ -47,6 +58,74 @@ export function logError(error, context = {}) {
     errorDetails.message, errorDetails);
     
   // In the future, this could send telemetry if enabled by the user
+}
+
+/**
+ * Sanitize context object for logging to avoid [object Object] in error messages
+ * @param {Object} context - The context object to sanitize
+ * @returns {Object} - Sanitized context
+ */
+function sanitizeContextForLogging(context) {
+  const result = {};
+  
+  // Process each property to ensure it's loggable
+  for (const [key, value] of Object.entries(context)) {
+    if (value === null || value === undefined) {
+      result[key] = value;
+    } else if (value instanceof Error) {
+      // Extract useful info from nested errors
+      result[key] = {
+        message: value.message,
+        name: value.name,
+        type: value.type || categorizeError(value),
+        stack: value.stack ? value.stack.split('\n')[0] : undefined
+      };
+    } else if (typeof value === 'object') {
+      try {
+        // Try to stringify and parse to create a plain object
+        result[key] = JSON.parse(JSON.stringify(value));
+      } catch (e) {
+        // If circular references or non-serializable objects, convert to string
+        result[key] = `[${typeof value}]: ${String(value)}`;
+      }
+    } else {
+      result[key] = value;
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Add network diagnostic information to the context
+ * @param {Object} context - The context object to add diagnostics to
+ */
+function addNetworkDiagnostics(context) {
+  // Add network status
+  context.networkDiagnostics = {
+    online: typeof navigator !== 'undefined' ? navigator.onLine : 'unknown',
+    timestamp: new Date().toISOString(),
+    fetchPhase: context.fetchPhase || 'unknown'
+  };
+  
+  // Add request information if available
+  if (context.url) {
+    context.networkDiagnostics.url = context.url;
+  }
+  
+  // Add response information if available
+  if (context.status) {
+    context.networkDiagnostics.status = context.status;
+  }
+  
+  if (context.statusText) {
+    context.networkDiagnostics.statusText = context.statusText;
+  }
+  
+  // Add browser information if available
+  if (typeof navigator !== 'undefined') {
+    context.networkDiagnostics.userAgent = navigator.userAgent;
+  }
 }
 
 /**
