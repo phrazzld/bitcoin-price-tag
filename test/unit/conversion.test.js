@@ -170,6 +170,7 @@ describe('Bitcoin Price Tag Conversion Module', () => {
       const largeResult = makeSnippet('$60000', 60000, btcPrice, satPrice);
       expect(largeResult).toContain('BTC');
       expect(largeResult).not.toContain('sats');
+      // Updated to match the new friendly format
       expect(largeResult).toBe('$60000 (1.2 BTC) ');
     });
     
@@ -181,7 +182,8 @@ describe('Bitcoin Price Tag Conversion Module', () => {
       const smallResult = makeSnippet('$25', 25, btcPrice, satPrice);
       expect(smallResult).toContain('sats');
       expect(smallResult).not.toContain('BTC');
-      expect(smallResult).toBe('$25 (50,000 sats) ');
+      // Updated to match the new friendly format (using 'k' for thousands)
+      expect(smallResult).toBe('$25 (50k sats) ');
     });
     
     it('should handle edge cases properly', () => {
