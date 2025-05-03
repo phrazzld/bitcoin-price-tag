@@ -34,6 +34,13 @@ import {
   CACHE_FRESHNESS
 } from './cache-manager.js';
 
+// Import debouncing utilities
+import {
+  debounce,
+  throttle,
+  batchProcessor
+} from './debounce.js';
+
 // Import optimized DOM scanning utilities
 import {
   convertPriceText,
@@ -365,6 +372,7 @@ const processPage = async (priceData) => {
 /**
  * Try to refresh price data in the background
  * This doesn't affect the current display but prepares for future page loads
+ * This function is not debounced itself, but uses the debounced API
  */
 const backgroundRefresh = async () => {
   try {
@@ -385,6 +393,12 @@ const backgroundRefresh = async () => {
     });
   }
 };
+
+/**
+ * Debounced version of backgroundRefresh
+ * Only triggers once every 5 minutes
+ */
+const debouncedBackgroundRefresh = debounce(backgroundRefresh, 5 * 60 * 1000);
 
 /**
  * Initialize the extension by getting price and processing the page
@@ -489,8 +503,10 @@ const init = async () => {
       setupMutationObserver();
     }
     
-    // Schedule a background refresh after 5 minutes
-    setTimeout(backgroundRefresh, 5 * 60 * 1000);
+    // Schedule a debounced background refresh
+    // The function itself is debounced, so we can call it immediately
+    // It will only execute after 5 minutes of inactivity
+    debouncedBackgroundRefresh();
   } catch (error) {
     // This is the outermost try-catch to ensure the extension doesn't crash the page
     logError(error, {

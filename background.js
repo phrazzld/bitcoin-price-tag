@@ -20,6 +20,11 @@ import {
   determineCacheFreshness,
   isOffline
 } from './cache-manager.js';
+import {
+  debounce,
+  throttle,
+  coalesce
+} from './debounce.js';
 
 // Constants - using new cache manager constants
 const PRICE_STORAGE_KEY = CACHE_KEYS.CHROME_STORAGE;
@@ -217,9 +222,10 @@ async function storeErrorInfo(error) {
 
 /**
  * Main function to fetch and store Bitcoin price with comprehensive error handling
+ * This is the raw implementation without debouncing
  * @returns {Promise<Object>} Price data object
  */
-async function fetchAndStoreBitcoinPrice() {
+async function _rawFetchAndStoreBitcoinPrice() {
   let priceData = null;
   let fetchFailed = false;
   
@@ -298,6 +304,190 @@ async function fetchAndStoreBitcoinPrice() {
     ...priceData,
     fetchFailed: fetchFailed
   };
+}
+
+/**
+ * Tracking for fetch requests to implement backoff after failures
+ */
+const fetchTracker = {
+  lastFailure: 0,
+  consecutiveFailures: 0,
+  backoffTime: 1000, // Start with 1 second
+  
+  recordSuccess() {
+    this.consecutiveFailures = 0;
+    this.backoffTime = 1000;
+  },
+  
+  recordFailure() {
+    this.lastFailure = Date.now();
+    this.consecutiveFailures++;
+    // Exponential backoff capped at 5 minutes
+    this.backoffTime = Math.min(
+      this.backoffTime * 2,
+      5 * 60 * 1000
+    );
+  },
+  
+  shouldBackoff() {
+    if (this.consecutiveFailures === 0) return false;
+    
+    const timeSinceLastFailure = Date.now() - this.lastFailure;
+    return timeSinceLastFailure < this.backoffTime;
+  },
+  
+  getBackoffDelay() {
+    const timeSinceLastFailure = Date.now() - this.lastFailure;
+    return Math.max(0, this.backoffTime - timeSinceLastFailure);
+  }
+};
+
+/**
+ * Request queue for price updates
+ * This implements a queue system to track all pending price requests
+ */
+const priceRequestQueue = {
+  pendingRequests: new Map(),
+  currentRequest: null,
+  
+  // Add a request to the queue
+  addRequest(requestId, priority = 1) {
+    this.pendingRequests.set(requestId, {
+      id: requestId,
+      priority,
+      timestamp: Date.now()
+    });
+    
+    this.processNextRequest();
+  },
+  
+  // Process the next request in the queue
+  async processNextRequest() {
+    if (this.currentRequest) return; // Already processing
+    
+    // Get the highest priority request
+    const nextRequest = this.getHighestPriorityRequest();
+    if (!nextRequest) return; // No requests
+    
+    this.currentRequest = nextRequest;
+    this.pendingRequests.delete(nextRequest.id);
+    
+    try {
+      // Check if we should apply backoff after failures
+      if (fetchTracker.shouldBackoff()) {
+        console.debug('Applying backoff delay:', fetchTracker.getBackoffDelay());
+        await new Promise(resolve => setTimeout(resolve, fetchTracker.getBackoffDelay()));
+      }
+      
+      // Process the request
+      const result = await _rawFetchAndStoreBitcoinPrice();
+      fetchTracker.recordSuccess();
+      return result;
+    } catch (error) {
+      fetchTracker.recordFailure();
+      throw error;
+    } finally {
+      this.currentRequest = null;
+      // Process any remaining requests
+      if (this.pendingRequests.size > 0) {
+        this.processNextRequest();
+      }
+    }
+  },
+  
+  // Get the highest priority request
+  getHighestPriorityRequest() {
+    if (this.pendingRequests.size === 0) return null;
+    
+    // Sort by priority (desc) then timestamp (asc)
+    return Array.from(this.pendingRequests.values())
+      .sort((a, b) => {
+        if (b.priority !== a.priority) {
+          return b.priority - a.priority;
+        }
+        return a.timestamp - b.timestamp;
+      })[0];
+  }
+};
+
+/**
+ * Debounced version of fetchAndStoreBitcoinPrice
+ * Only allows one request every 2 seconds, and coalesces similar requests
+ */
+const debouncedFetchPrice = debounce(() => {
+  // Use a unique ID for each request
+  const requestId = `price_${Date.now()}`;
+  priceRequestQueue.addRequest(requestId, 1);
+  
+  // Return a promise that resolves when the data is fetched
+  return priceRequestQueue.processNextRequest();
+}, 2000, { leading: true });
+
+/**
+ * High-priority version for user-initiated requests
+ * This has higher priority but still enforces minimum time between requests
+ */
+const throttledFetchPrice = throttle(() => {
+  const requestId = `user_${Date.now()}`;
+  priceRequestQueue.addRequest(requestId, 10); // Higher priority
+  
+  return priceRequestQueue.processNextRequest();
+}, 1000, { leading: true });
+
+/**
+ * Coalesced request handler for concurrent tab requests
+ * This ensures that multiple tabs requesting at the same time only trigger one fetch
+ */
+const coalescedFetchPrice = coalesce(() => {
+  return debouncedFetchPrice();
+}, () => 'price', 50);
+
+/**
+ * Main function to fetch and store Bitcoin price with debouncing and coalescing
+ * @param {boolean} [highPriority=false] - Whether this is a high-priority (user-initiated) request
+ * @returns {Promise<Object>} Price data object
+ */
+async function fetchAndStoreBitcoinPrice(highPriority = false) {
+  try {
+    // Check if offline
+    if (isOffline()) {
+      console.debug('Device is offline, using cached data');
+      const cachedData = await getCachedPriceData();
+      if (cachedData) {
+        return {
+          ...cachedData,
+          fromCache: true,
+          offlineMode: true
+        };
+      }
+      throw createError('Device is offline and no cached data available', ErrorTypes.NETWORK);
+    }
+    
+    // Use appropriate fetch function based on priority
+    if (highPriority) {
+      return await throttledFetchPrice();
+    } else {
+      return await coalescedFetchPrice();
+    }
+  } catch (error) {
+    logError(error, {
+      severity: ErrorSeverity.ERROR,
+      context: 'debounced_fetch'
+    });
+    
+    // Fall back to cache if fetch fails
+    const cachedData = await getCachedPriceData();
+    if (cachedData) {
+      return {
+        ...cachedData,
+        fromCache: true,
+        fetchFailed: true
+      };
+    }
+    
+    // Re-throw if no cached data
+    throw error;
+  }
 }
 
 /**
@@ -575,9 +765,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Indicates we will respond asynchronously
   }
   else if (message.action === 'forceRefresh') {
-    // Force a refresh of price data
-    fetchAndStoreBitcoinPrice()
-      .then(data => sendResponse({ status: 'success', data }))
+    // Force a refresh of price data with high priority
+    fetchAndStoreBitcoinPrice(true) // Use high priority for user-initiated refresh
+      .then(data => sendResponse({ 
+        status: 'success', 
+        data,
+        debounced: data.debounced // Indicate if the request was debounced
+      }))
       .catch(error => {
         logError(error, {
           severity: ErrorSeverity.ERROR,

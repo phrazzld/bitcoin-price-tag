@@ -12,6 +12,12 @@ import {
   makeSnippet
 } from './conversion.js';
 
+import {
+  debounce,
+  throttle,
+  batchProcessor
+} from './debounce.js';
+
 // Cache for processed nodes to avoid re-processing
 const processedNodes = new WeakSet();
 
@@ -402,22 +408,39 @@ export function setupLazyProcessing(document, btcPrice, satPrice) {
     observer.observe(container);
   }
   
-  // Also watch for scrolling to trigger additional processing
-  let scrollTimeout;
-  window.addEventListener('scroll', () => {
-    if (scrollTimeout) clearTimeout(scrollTimeout);
+  // Create a throttled scroll handler
+  const throttledScrollHandler = throttle(() => {
+    // Find elements that might be newly visible
+    const visibleElements = document.querySelectorAll('div:not([data-btc-processed])');
     
-    scrollTimeout = setTimeout(() => {
-      // Find elements that might be newly visible
-      const visibleElements = document.querySelectorAll('div:not([data-btc-processed])');
-      for (const el of visibleElements) {
+    // Process in batches to avoid blocking the main thread
+    let index = 0;
+    
+    const processBatch = () => {
+      const endIndex = Math.min(index + 10, visibleElements.length);
+      
+      // Process a batch of 10 elements
+      for (let i = index; i < endIndex; i++) {
+        const el = visibleElements[i];
         if (isNodeVisible(el)) {
           el.setAttribute('data-btc-processed', 'true');
           walkDomTree(el, btcPrice, satPrice, false);
         }
       }
-    }, 200);
-  }, { passive: true });
+      
+      // Continue with next batch if more elements
+      index = endIndex;
+      if (index < visibleElements.length) {
+        setTimeout(processBatch, 0);
+      }
+    };
+    
+    // Start processing
+    processBatch();
+  }, 200, { leading: true, trailing: true });
+  
+  // Add the throttled scroll listener
+  window.addEventListener('scroll', throttledScrollHandler, { passive: true });
 }
 
 /**
@@ -431,41 +454,38 @@ export function setupMutationObserver(document, btcPrice, satPrice, observerConf
   childList: true,
   subtree: true
 }) {
-  // Use a debounced version of processing to avoid excessive work on large updates
-  let processingTimeout;
-  const pendingNodes = new Set();
+  // Create a batch processor for DOM nodes
+  // This processes nodes in batches of up to 10 with a 100ms delay
+  const batchWalker = batchProcessor((nodes) => {
+    for (const node of nodes) {
+      if (node.nodeType === 1 && !processedNodes.has(node)) {
+        walkDomTree(node, btcPrice, satPrice, false);
+      }
+    }
+    return Promise.resolve();
+  }, 100, 10);
   
-  const observer = new MutationObserver((mutations) => {
-    let hasNewNodes = false;
-    
+  // Create a throttled processor for high-frequency mutations
+  // This ensures we process at most once every 150ms during rapid DOM changes
+  const throttledProcessMutations = throttle((mutations) => {
     for (const mutation of mutations) {
       if (mutation.type === 'childList') {
         // Process newly added nodes
         for (let i = 0; i < mutation.addedNodes.length; i++) {
           const node = mutation.addedNodes[i];
-          // Only process element nodes and skip already processed ones
-          if (node.nodeType === 1 && !processedNodes.has(node)) {
-            pendingNodes.add(node);
-            hasNewNodes = true;
+          // Queue node for processing
+          if (node.nodeType === 1) {
+            batchWalker(node);
           }
         }
       }
     }
-    
-    if (hasNewNodes) {
-      // Clear existing timeout for processing
-      if (processingTimeout) {
-        clearTimeout(processingTimeout);
-      }
-      
-      // Batch process after a short delay
-      processingTimeout = setTimeout(() => {
-        pendingNodes.forEach(node => {
-          walkDomTree(node, btcPrice, satPrice, false);
-        });
-        pendingNodes.clear();
-      }, 50);
-    }
+  }, 150);
+  
+  // Set up the mutation observer
+  const observer = new MutationObserver((mutations) => {
+    // Use throttled processor to handle mutations
+    throttledProcessMutations(mutations);
   });
   
   // Start observing with the provided configuration
