@@ -2,6 +2,8 @@
 
 # Claude
 **/.claude/settings.local.json
+SCOPE-*.md
+TODO-*.md
 
 # Dependencies
 node_modules/
