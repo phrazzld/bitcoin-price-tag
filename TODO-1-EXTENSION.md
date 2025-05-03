@@ -1,0 +1,26 @@
+# Extension TODO
+
+This file covers Chrome extension-specific tasks including Manifest V3 migration, error handling, and performance optimizations.
+
+## Execution Order
+
+1. ## Manifest V3 Migration
+   - [x] Update manifest.json to version 3
+   - [x] Replace browser_action with action
+   - [ ] Replace background scripts with service workers
+   - [x] Update permissions to more specific host permissions
+
+2. ## Testing
+   - [ ] Set up a testing framework (Jest)
+   - [ ] Write unit tests for currency conversion functions
+   - [ ] Create integration tests for DOM manipulation
+   - [ ] Add browser compatibility tests
+
+3. ## Error Handling
+   - [ ] Add proper error handling for API calls
+   - [ ] Create fallback mechanisms when API is unavailable
+
+4. ## Performance
+   - [ ] Optimize DOM scanning algorithm
+   - [ ] Implement caching for bitcoin price
+   - [ ] Add debouncing for price updates

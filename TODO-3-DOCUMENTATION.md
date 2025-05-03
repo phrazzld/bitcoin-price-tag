@@ -1,0 +1,37 @@
+# Documentation TODO
+
+This file covers documentation tasks for the project.
+
+## Execution Order
+
+1. ## Basic Documentation
+   - [ ] Update MIT LICENSE file
+     - [ ] Update year and copyright holder
+   - [ ] Create basic README.md
+     - [ ] Project description and purpose
+     - [ ] Installation instructions
+     - [ ] Basic usage information
+
+2. ## Development Documentation
+   - [ ] Create CONTRIBUTING.md
+     - [ ] Document development workflow
+     - [ ] Explain branch and PR conventions
+     - [ ] Add code style and testing requirements
+
+3. ## Comprehensive Documentation
+   - [ ] Enhance README.md
+     - [ ] Add detailed features list
+     - [ ] Include usage examples with code
+     - [ ] Add development setup guide
+     - [ ] Expand contribution guidelines
+
+4. ## Visual Documentation
+   - [ ] Add screenshots and demo GIFs
+     - [ ] Capture before/after price conversion examples
+     - [ ] Create animation showing the extension in action
+     - [ ] Add to README.md
+
+5. ## Release Documentation
+   - [ ] Create a changelog
+     - [ ] Document version history
+     - [ ] Note major feature additions and fixes
