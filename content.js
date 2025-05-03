@@ -39,13 +39,34 @@ const valueInBtc = (fiatAmount) => {
   return parseFloat((fiatAmount / btcPrice).toFixed(4)).toLocaleString();
 };
 
+// [min magnitude, denominator magnitude, suffix]
+const friendlySuffixes = [
+  [0, 0, ' sats'],
+  [4, 3, 'k sats'],
+  [6, 6, 'M sats'],
+  [8, 8, ' BTC'],
+  [12, 11, 'k BTC'],
+  [14, 14, 'M BTC'],
+]
+function round(x, y) { return Math.round(x * 10 ** y) / 10 ** y }
+const valueFriendly = (fiatAmount) => {
+  let sats = Math.floor(fiatAmount / satPrice)
+  let m = String(sats).length
+  let si = friendlySuffixes.findIndex(([l]) => l >= m)
+  si = si < 0 ? friendlySuffixes.length : si
+  let [l, d, suffix] = friendlySuffixes[si - 1]
+  let roundDigits = Math.max(0, 3 - (m - d))
+  return round(sats / 10 ** d, roundDigits).toLocaleString() + suffix
+}
+
 // Build text element in the form of: original (conversion)
 const makeSnippet = (sourceElement, fiatAmount) => {
-  if (fiatAmount >= btcPrice) {
+  /*if (fiatAmount >= btcPrice) {
     return `${sourceElement} (${valueInBtc(fiatAmount)} BTC) `;
   } else {
     return `${sourceElement} (${valueInSats(fiatAmount)} sats) `;
-  }
+  }*/
+  return `${sourceElement} (${valueFriendly(fiatAmount)}) `
 };
 
 const getMultiplier = (e) => {
@@ -133,7 +154,7 @@ const walk = (node) => {
 };
 
 // Run on page load
-(setTimeout(() => {
+(window.setTimeout(() => {
   // Get current price of bitcoin in USD
   fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json")
     .then((response) => response.json())
