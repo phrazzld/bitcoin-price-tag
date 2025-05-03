@@ -78,15 +78,55 @@ function sanitizeContextForLogging(context) {
         message: value.message,
         name: value.name,
         type: value.type || categorizeError(value),
-        stack: value.stack ? value.stack.split('\n')[0] : undefined
+        stack: value.stack ? value.stack.split('\n')[0] : undefined,
+        details: value.details ? sanitizeContextForLogging(value.details) : undefined
+      };
+    } else if (value instanceof Response) {
+      // Handle Response objects specially
+      result[key] = {
+        status: value.status,
+        statusText: value.statusText,
+        url: value.url,
+        headers: Object.fromEntries(
+          // Safely extract headers if possible
+          typeof value.headers?.entries === 'function' 
+            ? [...value.headers.entries()]
+            : []
+        ),
+        type: value.type
       };
     } else if (typeof value === 'object') {
       try {
         // Try to stringify and parse to create a plain object
         result[key] = JSON.parse(JSON.stringify(value));
       } catch (e) {
-        // If circular references or non-serializable objects, convert to string
-        result[key] = `[${typeof value}]: ${String(value)}`;
+        try {
+          // If standard serialization fails, try a more verbose approach
+          // that handles common non-serializable objects
+          const objDesc = {};
+          
+          // Try to extract common properties safely
+          if (value.constructor && value.constructor.name) {
+            objDesc.type = value.constructor.name;
+          }
+          
+          // Extract a few common properties if they exist
+          ['message', 'name', 'url', 'status', 'code'].forEach(prop => {
+            if (value[prop] !== undefined) {
+              objDesc[prop] = String(value[prop]);
+            }
+          });
+          
+          // If we couldn't extract any properties, use basic string conversion
+          if (Object.keys(objDesc).length === 0) {
+            result[key] = `[${typeof value}]: ${String(value)}`;
+          } else {
+            result[key] = objDesc;
+          }
+        } catch (deepError) {
+          // Last resort for truly problematic objects
+          result[key] = `[Unserializable ${typeof value}]`;
+        }
       }
     } else {
       result[key] = value;

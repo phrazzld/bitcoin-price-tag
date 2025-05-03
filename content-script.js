@@ -1,30 +1,18 @@
-// Non-module content script that loads the real content module
+// Non-module content script that loads the real content module via an external file
 (async function() {
   try {
-    // Create the module script element
+    // Get extension URL for the bootstrap module
+    const bootstrapUrl = chrome.runtime.getURL('bootstrap-module.js');
+    
+    // Create the module script element referencing the external file
     const moduleScript = document.createElement('script');
     moduleScript.type = 'module';
-    
-    // We'll use a self-executing module with inline content
-    // This approach avoids the content script needing to be a module itself
-    moduleScript.textContent = `
-      import { initBitcoinPriceTag } from '/content-module.js';
-      
-      // Initialize the module
-      try {
-        initBitcoinPriceTag();
-        console.log('Bitcoin Price Tag module initialized successfully');
-      } catch (error) {
-        console.error('Bitcoin Price Tag module initialization error:', error);
-      }
-    `;
+    moduleScript.src = bootstrapUrl;
     
     // Append to document to execute it
     (document.head || document.documentElement).appendChild(moduleScript);
     
-    // Optional: Remove after execution (though this may not be necessary)
-    moduleScript.parentNode.removeChild(moduleScript);
-    
+    // Log successful loader execution
     console.log('Bitcoin Price Tag loader executed');
   } catch (error) {
     console.error('Bitcoin Price Tag loader error:', error);

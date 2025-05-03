@@ -40,7 +40,7 @@
 
   "web_accessible_resources": [
     {
-      "resources": ["content-module.js", "conversion.js", "browser-detect.js", "error-handling.js", "cache-manager.js", "debounce.js", "dom-scanner.js"],
+      "resources": ["bootstrap-module.js", "content-module.js", "conversion.js", "browser-detect.js", "error-handling.js", "cache-manager.js", "debounce.js", "dom-scanner.js"],
       "matches": ["<all_urls>"]
     }
   ],
