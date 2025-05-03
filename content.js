@@ -1,6 +1,8 @@
+// Global price variables
 let btcPrice;
 let satPrice;
 
+// Constants for price conversion
 const currencySection = "(\\$|USD)";
 const thousandsSection = "(\\d|\\,)*";
 const decimalSection = "(\\.\\d+)?";
@@ -11,6 +13,7 @@ const ONE_BILLION = 1000000000;
 const ONE_MILLION = 1000000;
 const ONE_THOUSAND = 1000;
 
+// Regular expression pattern builders
 const buildPrecedingMatchPattern = () => {
   return new RegExp(
     currencySection + "\\x20?\\d" + thousandsSection + decimalSection + illions,
@@ -31,10 +34,12 @@ const buildConcludingMatchPattern = () => {
   );
 };
 
+// Convert fiat amount to sats (satoshis)
 const valueInSats = (fiatAmount) => {
   return parseFloat((fiatAmount / satPrice).toFixed(0)).toLocaleString();
 };
 
+// Convert fiat amount to BTC
 const valueInBtc = (fiatAmount) => {
   return parseFloat((fiatAmount / btcPrice).toFixed(4)).toLocaleString();
 };
@@ -48,6 +53,7 @@ const makeSnippet = (sourceElement, fiatAmount) => {
   }
 };
 
+// Get multiplier for currency notation (k, m, b, t)
 const getMultiplier = (e) => {
   let multiplier = 1;
   if (e.toLowerCase().indexOf("t") > -1) {
@@ -62,6 +68,7 @@ const getMultiplier = (e) => {
   return multiplier;
 };
 
+// Convert prices in a text node
 const convert = (textNode) => {
   let sourceMoney;
   // Currency indicator preceding amount
@@ -132,16 +139,41 @@ const walk = (node) => {
   }
 };
 
-// Run on page load
-(setTimeout(() => {
-  // Get current price of bitcoin in USD
-  fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json")
-    .then((response) => response.json())
-    .then((data) => {
-      // Save BTC and sat prices to globals
-      btcPrice = parseFloat(data["bpi"]["USD"]["rate"].replace(",", ""));
-      satPrice = btcPrice / 100000000;
-      // Read the page and annotate prices with their equivalent bitcoin values
-      walk(document.body);
+// Function to request Bitcoin price from the service worker
+const getBitcoinPrice = () => {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({ action: 'getBitcoinPrice' }, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError);
+      } else if (!response) {
+        reject(new Error('No price data available'));
+      } else {
+        resolve(response);
+      }
     });
-}, 2500))();
+  });
+};
+
+// Process the page with Bitcoin price data
+const processPage = (priceData) => {
+  // Save BTC and sat prices to globals
+  btcPrice = priceData.btcPrice;
+  satPrice = priceData.satPrice;
+  
+  // Read the page and annotate prices with their equivalent bitcoin values
+  walk(document.body);
+};
+
+// Initialize the extension by getting price and processing the page
+const init = async () => {
+  try {
+    // Request Bitcoin price from service worker
+    const priceData = await getBitcoinPrice();
+    processPage(priceData);
+  } catch (error) {
+    console.error('Bitcoin Price Tag: Failed to get price data', error);
+  }
+};
+
+// Run initialization after a short delay to ensure page is fully loaded
+setTimeout(init, 2500);

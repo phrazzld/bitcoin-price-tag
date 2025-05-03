@@ -7,7 +7,7 @@ This file covers Chrome extension-specific tasks including Manifest V3 migration
 1. ## Manifest V3 Migration
    - [x] Update manifest.json to version 3
    - [x] Replace browser_action with action
-   - [ ] Replace background scripts with service workers
+   - [x] Replace background scripts with service workers
    - [x] Update permissions to more specific host permissions
 
 2. ## Testing
