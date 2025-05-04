@@ -30,7 +30,7 @@
     - **Depends On:** [T021]
     - **AC Ref:** None
 
-- [ ] **T026:** Refactor Amazon DOM Processing for Resilience and Context Awareness
+- [x] **T026:** Refactor Amazon DOM Processing for Resilience and Context Awareness
     - **Action:** Update Amazon-specific DOM processing logic (e.g., in `src/content/amazon.ts`, `src/content/domScanner.ts`). Add defensive checks against unexpected DOM structures. Ensure complex or potentially error-prone DOM operations are skipped entirely when running in a restricted context detected by T021. Review `WeakSet` usage for correctness if applicable.
     - **Depends On:** [T021]
     - **AC Ref:** None

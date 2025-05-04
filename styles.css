@@ -1,1 +1,87 @@
+/* Bitcoin Price Tag Styles */
 
+/* General price conversion styles */
+.btc-price-tag-converted {
+  display: inline;
+  padding: 0 2px;
+  color: #f7931a; /* Bitcoin orange */
+  font-weight: bold;
+}
+
+/* Amazon-specific price conversion styles */
+.btc-price-converted-amazon {
+  display: block;
+  margin: 4px 0;
+  padding: 2px 4px;
+  color: #f7931a; /* Bitcoin orange */
+  font-weight: bold;
+  font-size: 1.05em; /* Slightly larger than original */
+  position: relative;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+/* Highlight style on hover */
+.btc-price-converted-amazon:hover {
+  background-color: rgba(247, 147, 26, 0.1); /* Light Bitcoin orange background */
+}
+
+/* For price-range containers */
+.btc-price-range {
+  display: block;
+  margin: 4px 0;
+}
+
+/* Status indicator for price data freshness */
+.btc-price-status {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 4px;
+  vertical-align: super;
+  font-size: 0.8em;
+}
+
+.btc-price-status.fresh {
+  background-color: #0f0; /* Green */
+}
+
+.btc-price-status.stale {
+  background-color: #fc0; /* Yellow */
+}
+
+.btc-price-status.very-stale {
+  background-color: #f00; /* Red */
+}
+
+/* Tooltip for stale price data */
+.btc-price-tooltip {
+  position: relative;
+}
+
+.btc-price-tooltip:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 999;
+}
+
+/* Animation for price updates */
+@keyframes btc-price-update {
+  0% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
+
+.btc-price-updated {
+  animation: btc-price-update 0.5s ease-in;
+}
