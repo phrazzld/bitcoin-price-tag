@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+coverage/
+test-results/
+playwright-report/
+
+# Generated files
+*.min.js
+*.map
+
+# Specific files with formatting issues that need manual fixing
+background.js
+content-module.js
+content-script.js
+content.js
+dom-scanner.js
+
+# Other
+.git/
+pnpm-lock.yaml

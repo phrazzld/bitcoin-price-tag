@@ -11,7 +11,14 @@
     "test:browser:chrome": "playwright test --project=chromium",
     "test:browser:firefox": "playwright test --project=firefox",
     "test:browser:webkit": "playwright test --project=webkit",
-    "test:all": "pnpm test && pnpm test:browser"
+    "test:all": "pnpm test && pnpm test:browser",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
+    "lint:format": "eslint . --ext .js --fix --rule 'prettier/prettier: error' --rule 'no-console: 0' --rule 'no-unused-vars: 0'",
+    "lint:check": "eslint . --ext .js --max-warnings 0",
+    "lint:safe": "eslint . --ext .js --fix --quiet --rule 'no-undef: 1'",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [
     "bitcoin",
@@ -26,10 +33,17 @@
     "pnpm": ">=8"
   },
   "devDependencies": {
+    "@eslint/js": "9.26.0",
     "@playwright/test": "1.52.0",
     "@vitest/coverage-v8": "^3.1.2",
+    "eslint": "9.26.0",
+    "eslint-config-prettier": "10.1.2",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-prettier": "5.3.1",
+    "eslint-plugin-vitest": "0.5.4",
     "happy-dom": "^17.4.6",
     "playwright": "1.52.0",
+    "prettier": "3.5.3",
     "vitest": "^3.1.2"
   }
 }
