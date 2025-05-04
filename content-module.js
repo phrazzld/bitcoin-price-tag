@@ -20,7 +20,8 @@ import {
   logError, 
   categorizeError, 
   createError, 
-  withTimeout
+  withTimeout,
+  logContextDetection
 } from '/error-handling.js';
 
 // Import cache manager utilities
@@ -46,7 +47,9 @@ import {
   convertPriceText,
   scanDomForPrices,
   setupMutationObserver as setupOptimizedMutationObserver,
-  initScanning
+  initScanning,
+  isInRestrictedIframe,
+  isAmazonRestrictedIframe
 } from '/dom-scanner.js';
 
 // Global price variables
@@ -54,10 +57,109 @@ let btcPrice;
 let satPrice;
 
 /**
+ * Comprehensive check for the execution context's safety
+ * This centralizes all context detection logic for consistent early exits
+ * @returns {Object} The context state with detailed information
+ */
+function checkExecutionContext() {
+  const result = {
+    isRestricted: false,
+    restrictionReason: null,
+    isAmazonFrame: false,
+    details: {}
+  };
+  
+  try {
+    // Check for general iframe restrictions
+    const iframeRestrictions = isInRestrictedIframe();
+    result.details.iframeRestrictions = iframeRestrictions;
+    
+    // Check for Amazon-specific restrictions
+    const amazonRestrictions = isAmazonRestrictedIframe();
+    result.isAmazonFrame = amazonRestrictions.isAmazon && amazonRestrictions.details.isIframe;
+    result.details.amazonRestrictions = amazonRestrictions;
+    
+    // Combine results to determine if we should exit
+    result.isRestricted = iframeRestrictions.restricted || 
+                         (amazonRestrictions.isAmazon && amazonRestrictions.restricted);
+    
+    // Set the reason based on which check failed
+    if (result.isRestricted) {
+      result.restrictionReason = amazonRestrictions.restricted ? 
+                             `Amazon restricted frame: ${amazonRestrictions.reason}` : 
+                             `Restricted iframe: ${iframeRestrictions.reason}`;
+    }
+    
+    // Check for extension API access
+    try {
+      result.details.hasExtensionApi = typeof chrome !== 'undefined' && 
+                                     typeof chrome.runtime !== 'undefined' && 
+                                     typeof chrome.runtime.sendMessage === 'function';
+      
+      // Try to actively use the API to confirm it works
+      if (result.details.hasExtensionApi) {
+        try {
+          // Getting the extension ID will throw in some restricted contexts
+          const extensionId = chrome.runtime.id;
+          result.details.extensionId = extensionId;
+          result.details.apiAccessConfirmed = true;
+        } catch (apiError) {
+          result.details.apiAccessError = apiError.message;
+          result.isRestricted = true;
+          result.restrictionReason = result.restrictionReason || 'extension_api_blocked';
+        }
+      } else if (window !== window.top) {
+        // If extension API is unavailable and we're in an iframe, mark as restricted
+        result.isRestricted = true;
+        result.restrictionReason = result.restrictionReason || 'extension_api_unavailable';
+      }
+    } catch (error) {
+      // If checking for API access itself fails, that's a restriction
+      result.isRestricted = true;
+      result.restrictionReason = result.restrictionReason || 'api_check_error';
+      result.details.apiCheckError = error.message;
+    }
+    
+    // Check for messaging bridge availability in window context
+    result.details.hasBridge = typeof window !== 'undefined' && 
+                             typeof window.bitcoinPriceTagBridge !== 'undefined' &&
+                             typeof window.bitcoinPriceTagBridge.sendMessageToBackground === 'function';
+    
+    // If we're in an iframe without messaging bridge, that's a problem
+    if (window !== window.top && !result.details.hasBridge) {
+      result.isRestricted = true;
+      result.restrictionReason = result.restrictionReason || 'missing_bridge_in_iframe';
+    }
+    
+    return result;
+  } catch (e) {
+    // If our detection logic itself fails, assume restricted for safety
+    console.warn('Bitcoin Price Tag: Error in context detection, assuming restricted', e.message);
+    return {
+      isRestricted: true,
+      restrictionReason: 'detection_error',
+      isAmazonFrame: false,
+      details: { error: e.message }
+    };
+  }
+}
+
+/**
  * Main entry point for the Bitcoin Price Tag module
  */
 export function initBitcoinPriceTag() {
-  // Apply browser-specific adaptations
+  // Perform early context detection before any other operations
+  // This is crucial for handling restricted environments properly
+  const contextState = checkExecutionContext();
+  
+  // If we're in a restricted context where we can't safely operate, exit early
+  if (contextState.isRestricted) {
+    // Use structured logging for the early exit
+    logContextDetection(contextState, 'content_module', true);
+    return; // Exit completely from the module initialization
+  }
+  
+  // Apply browser-specific adaptations only if safe to proceed
   const browserInfo = detectBrowser();
   const featureSupport = checkFeatureSupport();
   const adaptations = getBrowserAdaptations();
@@ -154,7 +256,9 @@ export function initBitcoinPriceTag() {
    */
   const getBitcoinPrice = async () => {
     // Check for bridge availability instead of direct Chrome API access
-    const isBridgeAvailable = typeof window !== 'undefined' && window.bitcoinPriceTagBridge;
+    const isBridgeAvailable = typeof window !== 'undefined' && 
+                            window.bitcoinPriceTagBridge && 
+                            typeof window.bitcoinPriceTagBridge.sendMessageToBackground === 'function';
     
     if (!isBridgeAvailable) {
       const error = createError(
@@ -207,8 +311,8 @@ export function initBitcoinPriceTag() {
                   // We can use the data but should log the error
                   logError(
                     createError(
-                      `Service worker reported error: ${response.error?.message || 'Unknown error'}`,
-                      response.error?.type || ErrorTypes.UNKNOWN,
+                      `Service worker reported error: ${response.error && response.error.message ? response.error.message : 'Unknown error'}`,
+                      response.error && response.error.type ? response.error.type : ErrorTypes.UNKNOWN,
                       response.error
                     ),
                     {
@@ -326,6 +430,15 @@ export function initBitcoinPriceTag() {
    */
   const processPage = async (priceData) => {
     try {
+      // Check context again before performing DOM operations
+      // This ensures we don't try to process DOM in a restricted context
+      const contextState = checkExecutionContext();
+      if (contextState.isRestricted) {
+        // Use structured logging for process-time early exit
+        logContextDetection(contextState, 'content_process', true);
+        return; // Exit without processing
+      }
+      
       // Check for valid price data
       if (!priceData || !priceData.btcPrice || isNaN(priceData.btcPrice) || priceData.btcPrice <= 0) {
         throw createError(
@@ -412,6 +525,17 @@ export function initBitcoinPriceTag() {
    */
   const init = async () => {
     try {
+      // Perform a secondary context check before the main initialization
+      // This catches any issues that might have arisen since the initial check
+      const contextState = checkExecutionContext();
+      
+      // If context is now restricted, exit early before any API/DOM operations
+      if (contextState.isRestricted) {
+        // Use structured logging for the early exit
+        logContextDetection(contextState, 'content_init', true);
+        return; // Exit without initializing
+      }
+      
       // Check if the browser is supported before proceeding
       if (!featureSupport.isSupported) {
         console.warn('Bitcoin Price Tag: Browser may not fully support all required features');

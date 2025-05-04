@@ -13,6 +13,12 @@ export const ErrorTypes = {
   STORAGE: 'storage',        // Chrome storage errors
   RUNTIME: 'runtime',        // Chrome runtime API errors
   EXTENSION: 'extension',    // Other extension-specific errors
+  IFRAME: 'iframe',          // Cross-origin iframe restrictions
+  CALLBACK: 'callback',      // Callback execution errors
+  DOM: 'dom',                // DOM access errors
+  CONTEXT: 'context',        // Execution context errors
+  EARLY_EXIT: 'early_exit',  // Early exit due to context restrictions
+  AMAZON: 'amazon',          // Amazon-specific issues
   UNKNOWN: 'unknown'         // Uncategorized errors
 };
 
@@ -20,21 +26,83 @@ export const ErrorTypes = {
  * Error severity levels
  */
 export const ErrorSeverity = {
+  DEBUG: 'debug',       // Debug-level, not shown in production
   INFO: 'info',         // Informational, non-critical
   WARNING: 'warning',   // Warning, might affect functionality
   ERROR: 'error',       // Error, affects functionality but non-fatal
   CRITICAL: 'critical'  // Critical, prevents core functionality
 };
 
+// Global logging settings - can be adjusted dynamically
+const logSettings = {
+  minLevel: 'info',     // Minimum level to log: debug, info, warning, error, critical
+  console: true,        // Whether to log to console
+  verbose: false,       // Whether to include full details
+  prefix: 'Bitcoin Price Tag:',  // Prefix for all logs
+  levelsMap: {
+    'debug': 0,
+    'info': 1,
+    'warning': 2,
+    'error': 3,
+    'critical': 4
+  },
+  consoleMethodsMap: {
+    'debug': 'debug',
+    'info': 'info',
+    'warning': 'warn',
+    'error': 'error',
+    'critical': 'error'
+  }
+};
+
 /**
- * Enhanced error logger
+ * Configure global logging settings
+ * @param {Object} settings - New settings to apply
+ */
+export function configureLogging(settings = {}) {
+  if (settings.minLevel && logSettings.levelsMap[settings.minLevel] !== undefined) {
+    logSettings.minLevel = settings.minLevel;
+  }
+  
+  if (typeof settings.console === 'boolean') {
+    logSettings.console = settings.console;
+  }
+  
+  if (typeof settings.verbose === 'boolean') {
+    logSettings.verbose = settings.verbose;
+  }
+  
+  if (typeof settings.prefix === 'string') {
+    logSettings.prefix = settings.prefix;
+  }
+}
+
+/**
+ * Determine if a message should be logged based on its severity
+ * @param {string} severity - The severity level to check
+ * @returns {boolean} Whether the message should be logged
+ */
+function shouldLog(severity) {
+  const minLevel = logSettings.levelsMap[logSettings.minLevel] || 0;
+  const messageLevel = logSettings.levelsMap[severity] || 0;
+  return messageLevel >= minLevel;
+}
+
+/**
+ * Enhanced error logger that controls output format and verbosity
  * @param {Error} error - The error object
  * @param {Object} context - Additional context information
  * @param {string} [context.severity] - Error severity level
+ * @param {boolean} [context.silent] - Whether to suppress console output
  */
 export function logError(error, context = {}) {
   const errorType = error.type || categorizeError(error);
   const severity = context.severity || ErrorSeverity.ERROR;
+  
+  // Skip if below minimum logging level
+  if (!shouldLog(severity)) {
+    return;
+  }
   
   // Create sanitized context for logging
   const sanitizedContext = sanitizeContextForLogging(context);
@@ -49,15 +117,27 @@ export function logError(error, context = {}) {
     type: errorType,
     severity: severity,
     timestamp: new Date().toISOString(),
-    stack: error.stack,
+    ...(logSettings.verbose ? { stack: error.stack } : {}),
     ...sanitizedContext
   };
   
-  // Log to console with enhanced formatting
-  console.error(`Bitcoin Price Tag Error [${errorDetails.type}][${errorDetails.severity}]:`, 
-    errorDetails.message, errorDetails);
+  // Log to console with consistent formatting if not silent
+  if (logSettings.console && !context.silent) {
+    // Get appropriate console method based on severity
+    const consoleMethod = logSettings.consoleMethodsMap[severity] || 'error';
     
-  // In the future, this could send telemetry if enabled by the user
+    // Format log message
+    const message = `${logSettings.prefix} [${errorDetails.type}] ${errorDetails.message}`;
+    
+    if (logSettings.verbose) {
+      console[consoleMethod](message, errorDetails);
+    } else {
+      console[consoleMethod](message);
+    }
+  }
+  
+  // Record error for potential telemetry (not implemented yet)
+  // This would store errors for later reporting if the user has consented
 }
 
 /**
@@ -329,4 +409,74 @@ export async function withRetry(fn, options = {}) {
   
   // Should never get here
   throw createError('Unexpected error in retry logic', ErrorTypes.UNKNOWN);
+}
+
+/**
+ * Log a context detection event with detailed information
+ * This is specifically for logging context detection and early exits
+ * 
+ * @param {Object} contextState - The context detection result
+ * @param {string} source - Where this detection occurred (e.g., "bootstrap", "content", "init")
+ * @param {boolean} exited - Whether this resulted in an early exit
+ */
+export function logContextDetection(contextState, source, exited = false) {
+  // Skip if below minimum logging level
+  const severity = exited ? ErrorSeverity.WARNING : ErrorSeverity.DEBUG;
+  if (!shouldLog(severity)) {
+    return;
+  }
+  
+  // Prepare structured log message
+  const logEntry = {
+    type: exited ? 'early_exit' : 'context_detection',
+    source: source,
+    isRestricted: contextState.isRestricted,
+    restrictionReason: contextState.restrictionReason,
+    isAmazonFrame: contextState.isAmazonFrame,
+    exited: exited,
+    timestamp: new Date().toISOString(),
+    details: sanitizeContextForLogging(contextState.details || {})
+  };
+  
+  // Construct base message
+  const baseMessage = exited 
+    ? `${logSettings.prefix} Early exit in ${source}` 
+    : `${logSettings.prefix} Context detected in ${source}`;
+  
+  // Add restriction reason if present
+  const message = contextState.restrictionReason 
+    ? `${baseMessage} - ${contextState.restrictionReason}` 
+    : baseMessage;
+  
+  // Use appropriate console method based on severity
+  const consoleMethod = logSettings.consoleMethodsMap[severity] || 'debug';
+  
+  // Log to console with appropriate verbosity
+  if (logSettings.console) {
+    if (logSettings.verbose) {
+      console[consoleMethod](message, logEntry);
+    } else {
+      console[consoleMethod](message);
+    }
+  }
+  
+  // If this was an early exit, log it as an error for tracking
+  if (exited) {
+    const errorType = contextState.isAmazonFrame ? ErrorTypes.AMAZON : ErrorTypes.IFRAME;
+    const exitError = createError(
+      `Early exit in ${source}: ${contextState.restrictionReason || 'unknown reason'}`,
+      ErrorTypes.EARLY_EXIT,
+      {
+        source: source,
+        context: contextState
+      }
+    );
+    
+    // Use the standard error logging
+    logError(exitError, {
+      severity: ErrorSeverity.WARNING,
+      context: `${source}_early_exit`,
+      silent: true // Don't duplicate the console output
+    });
+  }
 }

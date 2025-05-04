@@ -619,7 +619,7 @@ export function scanDomForPrices(root, btcPrice, satPrice) {
  * Check if we're in a cross-origin iframe where DOM access may be restricted
  * @returns {Object} Details about the restricted status
  */
-function isInRestrictedIframe() {
+export function isInRestrictedIframe() {
   const result = {
     restricted: false,
     reason: null,
@@ -734,7 +734,7 @@ function isInRestrictedIframe() {
  * Check if current page is in an Amazon iframe with typical restrictions
  * @returns {Object} Details about the Amazon frame
  */
-function isAmazonRestrictedIframe() {
+export function isAmazonRestrictedIframe() {
   const result = {
     isAmazon: false,
     restricted: false,
