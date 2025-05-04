@@ -10,7 +10,7 @@
     - **Depends On:** [T020]
     - **AC Ref:** None
 
-- [ ] **T022:** Implement Safe Callback Wrapping Utility
+- [x] **T022:** Implement Safe Callback Wrapping Utility
     - **Action:** Create or enhance a `safeCallback` utility function (e.g., in `src/utils/callbacks.ts`) that wraps callback functions. This wrapper should check if the provided callback is actually a function before attempting to execute it, logging an error or warning if it's not.
     - **Depends On:** None
     - **AC Ref:** None
