@@ -24,6 +24,13 @@ import {
   logContextDetection
 } from '/error-handling.js';
 
+// Import safe callback utilities
+import {
+  safeCallback,
+  safeExecute,
+  safeChromeCallback
+} from '/callback-utils.js';
+
 // Import cache manager utilities
 import {
   cachePriceData,
@@ -299,49 +306,62 @@ export function initBitcoinPriceTag() {
             // Use the bridge to send the message to the background script
             window.bitcoinPriceTagBridge.sendMessageToBackground(
               { action: 'getBitcoinPrice' },
-              (response) => {
-                if (!response) {
-                  reject(createError('No response from service worker', ErrorTypes.RUNTIME));
-                  return;
-                }
-                
-                // If the response has an error status, handle appropriately
-                if (response.status === 'error') {
-                  // This means background script had an error but still returned data
-                  // We can use the data but should log the error
-                  logError(
-                    createError(
-                      `Service worker reported error: ${response.error && response.error.message ? response.error.message : 'Unknown error'}`,
-                      response.error && response.error.type ? response.error.type : ErrorTypes.UNKNOWN,
-                      response.error
-                    ),
-                    {
-                      severity: ErrorSeverity.WARNING,
-                      context: 'background_reported_error'
-                    }
-                  );
-                  
-                  // If we have cached data in the response, use it
-                  if (response.btcPrice) {
-                    // Also cache locally
-                    storeLocalCache(response);
-                    resolve(response);
+              safeCallback(
+                (response) => {
+                  if (!response) {
+                    reject(createError('No response from service worker', ErrorTypes.RUNTIME));
                     return;
                   }
                   
-                  reject(createError(
-                    'Service worker error',
-                    ErrorTypes.RUNTIME,
-                    response.error
-                  ));
-                  return;
+                  // If the response has an error status, handle appropriately
+                  if (response.status === 'error') {
+                    // This means background script had an error but still returned data
+                    // We can use the data but should log the error
+                    logError(
+                      createError(
+                        `Service worker reported error: ${response.error && response.error.message ? response.error.message : 'Unknown error'}`,
+                        response.error && response.error.type ? response.error.type : ErrorTypes.UNKNOWN,
+                        response.error
+                      ),
+                      {
+                        severity: ErrorSeverity.WARNING,
+                        context: 'background_reported_error'
+                      }
+                    );
+                    
+                    // If we have cached data in the response, use it
+                    if (response.btcPrice) {
+                      // Also cache locally
+                      storeLocalCache(response);
+                      resolve(response);
+                      return;
+                    }
+                    
+                    reject(createError(
+                      'Service worker error',
+                      ErrorTypes.RUNTIME,
+                      response.error
+                    ));
+                    return;
+                  }
+                  
+                  // Success case
+                  // Cache successfully retrieved data locally
+                  storeLocalCache(response);
+                  resolve(response);
+                },
+                {
+                  context: 'getBitcoinPrice_bridge',
+                  fallback: () => {
+                    // If the callback fails, handle this as a rejection
+                    reject(createError(
+                      'Messaging bridge callback failed',
+                      ErrorTypes.CALLBACK,
+                      { action: 'getBitcoinPrice' }
+                    ));
+                  }
                 }
-                
-                // Success case
-                // Cache successfully retrieved data locally
-                storeLocalCache(response);
-                resolve(response);
-              }
+              )
             );
           } catch (error) {
             reject(createError(
@@ -499,11 +519,20 @@ export function initBitcoinPriceTag() {
       
       // We don't care about the immediate result, this is just to
       // ensure fresh data for future uses
-      window.bitcoinPriceTagBridge.sendMessageToBackground(refreshMessage, (response) => {
-        if (response && response.status === 'success') {
-          console.debug('Bitcoin Price Tag: Background refresh successful');
-        }
-      });
+      window.bitcoinPriceTagBridge.sendMessageToBackground(
+        refreshMessage, 
+        safeCallback(
+          (response) => {
+            if (response && response.status === 'success') {
+              console.debug('Bitcoin Price Tag: Background refresh successful');
+            }
+          },
+          {
+            context: 'backgroundRefresh_bridge',
+            silent: true // No need to log errors for this non-critical operation
+          }
+        )
+      );
     } catch (error) {
       // Just log, don't throw - this is a non-critical operation
       logError(error, {

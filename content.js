@@ -24,6 +24,13 @@ import {
   logContextDetection
 } from '/error-handling.js';
 
+// Import safe callback utilities
+import {
+  safeCallback,
+  safeExecute,
+  safeChromeCallback
+} from '/callback-utils.js';
+
 // Import cache manager utilities
 import {
   cachePriceData,
@@ -296,59 +303,67 @@ const getBitcoinPrice = async () => {
     return await withTimeout(
       new Promise((resolve, reject) => {
         try {
-          chrome.runtime.sendMessage({ action: 'getBitcoinPrice' }, function(response) {
-            if (chrome.runtime.lastError) {
-              const error = createError(
-                `Chrome runtime error: ${chrome.runtime.lastError.message}`,
-                ErrorTypes.RUNTIME,
-                { originalError: chrome.runtime.lastError }
-              );
-              reject(error);
-              return;
-            }
-            
-            if (!response) {
-              reject(createError('No response from service worker', ErrorTypes.RUNTIME));
-              return;
-            }
-            
-            // If the response has an error status, handle appropriately
-            if (response.status === 'error') {
-              // This means background script had an error but still returned data
-              // We can use the data but should log the error
-              logError(
-                createError(
-                  `Service worker reported error: ${response.error ? response.error.message : 'Unknown error'}`,
-                  response.error ? response.error.type : ErrorTypes.UNKNOWN,
-                  response.error
-                ),
-                {
-                  severity: ErrorSeverity.WARNING,
-                  context: 'background_reported_error'
+          // Use safeChromeCallback to handle chrome.runtime.lastError and other error cases
+          chrome.runtime.sendMessage(
+            { action: 'getBitcoinPrice' }, 
+            safeChromeCallback(
+              function(response) {
+                // If no response received
+                if (!response) {
+                  reject(createError('No response from service worker', ErrorTypes.RUNTIME));
+                  return;
                 }
-              );
-              
-              // If we have cached data in the response, use it
-              if (response.btcPrice) {
-                // Also cache locally
+                
+                // If the response has an error status, handle appropriately
+                if (response.status === 'error') {
+                  // This means background script had an error but still returned data
+                  // We can use the data but should log the error
+                  logError(
+                    createError(
+                      `Service worker reported error: ${response.error ? response.error.message : 'Unknown error'}`,
+                      response.error ? response.error.type : ErrorTypes.UNKNOWN,
+                      response.error
+                    ),
+                    {
+                      severity: ErrorSeverity.WARNING,
+                      context: 'background_reported_error'
+                    }
+                  );
+                  
+                  // If we have cached data in the response, use it
+                  if (response.btcPrice) {
+                    // Also cache locally
+                    storeLocalCache(response);
+                    resolve(response);
+                    return;
+                  }
+                  
+                  reject(createError(
+                    'Service worker error',
+                    ErrorTypes.RUNTIME,
+                    response.error
+                  ));
+                  return;
+                }
+                
+                // Success case
+                // Cache successfully retrieved data locally
                 storeLocalCache(response);
                 resolve(response);
-                return;
+              },
+              {
+                context: 'getBitcoinPrice',
+                fallback: () => {
+                  // If the callback fails, handle this as a rejection
+                  reject(createError(
+                    'Chrome messaging callback failed',
+                    ErrorTypes.CALLBACK,
+                    { action: 'getBitcoinPrice' }
+                  ));
+                }
               }
-              
-              reject(createError(
-                'Service worker error',
-                ErrorTypes.RUNTIME,
-                response.error
-              ));
-              return;
-            }
-            
-            // Success case
-            // Cache successfully retrieved data locally
-            storeLocalCache(response);
-            resolve(response);
-          });
+            )
+          );
         } catch (error) {
           reject(createError(
             `Exception sending message: ${error.message}`,
@@ -499,11 +514,20 @@ const backgroundRefresh = async () => {
     
     // We don't care about the immediate result, this is just to
     // ensure fresh data for future uses
-    chrome.runtime.sendMessage(refreshMessage, (response) => {
-      if (response && response.status === 'success') {
-        console.debug('Bitcoin Price Tag: Background refresh successful');
-      }
-    });
+    chrome.runtime.sendMessage(
+      refreshMessage, 
+      safeChromeCallback(
+        (response) => {
+          if (response && response.status === 'success') {
+            console.debug('Bitcoin Price Tag: Background refresh successful');
+          }
+        },
+        {
+          context: 'backgroundRefresh',
+          silent: true // No need to log errors for this non-critical operation
+        }
+      )
+    );
   } catch (error) {
     // Just log, don't throw - this is a non-critical operation
     logError(error, {

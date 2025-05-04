@@ -39,6 +39,102 @@
       };
     })();
     
+    // Import the callback utilities if available
+    let safeCallbackUtils;
+    try {
+      // Try to dynamically import the callback utilities
+      // This might fail in some environments due to CSP
+      const callbackUtilsModule = await import('/callback-utils.js');
+      safeCallbackUtils = callbackUtilsModule;
+      console.debug('Bitcoin Price Tag: Successfully imported callback utilities');
+    } catch (importError) {
+      console.debug('Bitcoin Price Tag: Failed to import callback utilities', importError.message);
+      // Create fallback utilities
+      safeCallbackUtils = {
+        // Simplified version of the utilities for environments where imports fail
+        safeCallback: (callback, options = {}) => {
+          const context = options.context || 'unknown';
+          const silent = options.silent || false;
+          const thisArg = options.thisArg;
+          
+          return function(...args) {
+            if (typeof callback !== 'function') {
+              if (!silent) {
+                console.debug(`Bitcoin Price Tag: Non-function callback received (${typeof callback}) in ${context}`);
+              }
+              if ('fallback' in options) {
+                return typeof options.fallback === 'function' 
+                  ? options.fallback(...args) 
+                  : options.fallback;
+              }
+              return undefined;
+            }
+            
+            try {
+              return thisArg ? callback.apply(thisArg, args) : callback(...args);
+            } catch (error) {
+              if (!silent) {
+                console.debug(`Bitcoin Price Tag: Error in callback execution in ${context}:`, error.message);
+              }
+              if ('fallback' in options) {
+                return typeof options.fallback === 'function' 
+                  ? options.fallback(...args) 
+                  : options.fallback;
+              }
+              return undefined;
+            }
+          };
+        },
+        
+        safeExecute: (callback, args = [], options = {}) => {
+          return safeCallbackUtils.safeCallback(callback, options)(...args);
+        },
+        
+        safeChromeCallback: (callback, options = {}) => {
+          const context = options.context || 'chrome_messaging';
+          const fullOptions = { ...options, context };
+          
+          return function(response) {
+            if (chrome?.runtime?.lastError) {
+              console.debug('Bitcoin Price Tag: Chrome runtime error:', chrome.runtime.lastError.message);
+              
+              if (typeof callback === 'function') {
+                try {
+                  // Format a standardized error response
+                  const errorResponse = {
+                    status: 'error',
+                    error: {
+                      message: chrome.runtime.lastError.message,
+                      type: 'runtime'
+                    },
+                    // Default fallback data
+                    btcPrice: 50000,
+                    satPrice: 0.0005,
+                    timestamp: Date.now(),
+                    source: 'runtime_error'
+                  };
+                  return callback(errorResponse);
+                } catch (callbackError) {
+                  console.debug('Bitcoin Price Tag: Error in chrome callback error handler:', callbackError.message);
+                }
+              }
+              
+              if ('fallback' in options) {
+                return typeof options.fallback === 'function'
+                  ? options.fallback(response)
+                  : options.fallback;
+              }
+              
+              return undefined;
+            }
+            
+            // If no runtime error, proceed with normal safe callback execution
+            return safeCallbackUtils.safeCallback(callback, fullOptions)(response);
+          };
+        }
+      };
+    }
+
     // Create a messaging bridge before loading the module
     // This will allow the module to communicate with the extension
     window.bitcoinPriceTagBridge = {
@@ -50,7 +146,16 @@
        * @param {string} context - Context for error logging
        */
       safeCallback: (callback, data, context = 'unknown') => {
-        // Safety check and standardization for all callback executions
+        // Use the safeCuallbackUtils implementation if available
+        // Otherwise, fall back to simplified implementation
+        if (safeCallbackUtils && safeCallbackUtils.safeExecute) {
+          return safeCallbackUtils.safeExecute(callback, [data], {
+            context: context,
+            silent: false
+          });
+        }
+        
+        // Fallback implementation when utility is not available
         if (typeof callback !== 'function') {
           console.debug(`Bitcoin Price Tag: Non-function callback detected in ${context}, using fallback`);
           return; // Just return without executing anything
@@ -104,57 +209,58 @@
           });
           
           try {
-            // Send message with error handling
-            chrome.runtime.sendMessage(message, function(response) {
-              // Handle runtime errors first
-              if (chrome.runtime.lastError) {
-                console.debug('Bitcoin Price Tag: Chrome runtime error', {
-                  error: chrome.runtime.lastError.message
-                });
-                
-                // Create object without spread operator
-                const responseObj = Object.assign({}, fallbackData, {
-                  status: 'error',
-                  error: { message: chrome.runtime.lastError.message, type: 'runtime' },
-                  source: 'runtime_error'
-                });
-                safeCallback(responseObj);
-                return;
-              }
-              
-              // Handle missing/invalid response
-              if (!response) {
-                console.debug('Bitcoin Price Tag: No response from background');
-                // Create object without spread operator
-                const responseObj = Object.assign({}, fallbackData, {
-                  status: 'error',
-                  error: { message: 'No response from background script', type: 'runtime' },
-                  source: 'empty_response'
-                });
-                safeCallback(responseObj);
-                return;
-              }
-              
-              // Store price data if available - but do it safely
-              try {
-                if (response.btcPrice && message.action === 'getBitcoinPrice') {
-                  window.bitcoinPriceTagBridge.priceDataInfo = {
-                    btcPrice: response.btcPrice,
-                    satPrice: response.satPrice || 0.0005,
-                    timestamp: response.timestamp || Date.now(),
-                    freshness: response.freshness || 'fresh',
-                    fromCache: !!response.fromCache,
-                    lastUpdated: Date.now()
-                  };
+            // Send message with error handling using our utility
+            chrome.runtime.sendMessage(
+              message, 
+              safeCallbackUtils.safeChromeCallback(
+                function(response) {
+                  // Handle missing/invalid response
+                  if (!response) {
+                    console.debug('Bitcoin Price Tag: No response from background');
+                    // Create object without spread operator
+                    const responseObj = Object.assign({}, fallbackData, {
+                      status: 'error',
+                      error: { message: 'No response from background script', type: 'runtime' },
+                      source: 'empty_response'
+                    });
+                    safeCallback(responseObj);
+                    return;
+                  }
+                  
+                  // Store price data if available - but do it safely
+                  try {
+                    if (response.btcPrice && message.action === 'getBitcoinPrice') {
+                      window.bitcoinPriceTagBridge.priceDataInfo = {
+                        btcPrice: response.btcPrice,
+                        satPrice: response.satPrice || 0.0005,
+                        timestamp: response.timestamp || Date.now(),
+                        freshness: response.freshness || 'fresh',
+                        fromCache: !!response.fromCache,
+                        lastUpdated: Date.now()
+                      };
+                    }
+                  } catch (cacheError) {
+                    console.debug('Bitcoin Price Tag: Error caching price data', { error: cacheError.message });
+                    // Continue despite cache error - non-critical
+                  }
+                  
+                  // Return response through safe callback
+                  safeCallback(response);
+                },
+                {
+                  context: 'bridge_sendMessageToBackground',
+                  fallback: () => {
+                    // Create object without spread operator for fallback response
+                    const responseObj = Object.assign({}, fallbackData, {
+                      status: 'error',
+                      error: { message: 'Error in Chrome messaging callback', type: 'callback' },
+                      source: 'callback_error'
+                    });
+                    safeCallback(responseObj);
+                  }
                 }
-              } catch (cacheError) {
-                console.debug('Bitcoin Price Tag: Error caching price data', { error: cacheError.message });
-                // Continue despite cache error - non-critical
-              }
-              
-              // Return response through safe callback
-              safeCallback(response);
-            });
+              )
+            );
           } catch (runtimeError) {
             console.debug('Bitcoin Price Tag: Error sending message', {
               error: runtimeError.message

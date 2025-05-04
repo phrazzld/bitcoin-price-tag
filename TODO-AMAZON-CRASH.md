@@ -15,7 +15,7 @@
     - **Depends On:** None
     - **AC Ref:** None
 
-- [ ] **T023:** Apply Safe Callback Wrapper to Messaging Bridge Calls
+- [x] **T023:** Apply Safe Callback Wrapper to Messaging Bridge Calls
     - **Action:** Audit all calls to `chrome.runtime.sendMessage` (primarily in `src/content/` and `src/bridge/`) and ensure the callback argument is passed through the `safeCallback` utility created in T022.
     - **Depends On:** [T022]
     - **AC Ref:** None
