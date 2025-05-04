@@ -35,7 +35,7 @@
     - **Depends On:** [T021]
     - **AC Ref:** None
 
-- [ ] **T027:** Enhance Contextual Error Logging Across Key Modules
+- [x] **T027:** Enhance Contextual Error Logging Across Key Modules
     - **Action:** Implement structured, context-aware logging (following project standards) in modules modified by T020, T021, T023, T024, T025, T026. Logs should capture context (e.g., URL, detected context type), decision points (e.g., early exit triggered), and specific error details to facilitate debugging, especially on Amazon.
     - **Depends On:** [T021, T023, T024, T025, T026]
     - **AC Ref:** None
