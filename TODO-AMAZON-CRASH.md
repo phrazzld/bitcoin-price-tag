@@ -25,7 +25,7 @@
     - **Depends On:** None
     - **AC Ref:** None
 
-- [ ] **T025:** Harden Messaging Bridge Availability Checks and Fallbacks
+- [x] **T025:** Harden Messaging Bridge Availability Checks and Fallbacks
     - **Action:** Refactor logic that uses the messaging bridge (e.g., `src/bridge/index.ts`, `src/content/index.ts`) to perform robust checks for the availability and integrity of the bridge (`chrome.runtime.sendMessage`, etc.) before use, especially considering context limitations (T021). Implement clear fallback behaviors (e.g., logging errors, disabling features, returning default error objects) when the bridge is unavailable or fails.
     - **Depends On:** [T021]
     - **AC Ref:** None

@@ -138,7 +138,143 @@
     // Create a messaging bridge before loading the module
     // This will allow the module to communicate with the extension
     window.bitcoinPriceTagBridge = {
-      // Method to send messages to the background script
+      // Bridge health status
+      _bridgeStatus: {
+        available: true,          // Overall availability
+        chrome: true,             // Is Chrome object available
+        runtime: true,            // Is runtime API available 
+        sendMessage: true,        // Is sendMessage function available
+        lastCheck: Date.now(),    // When bridge was last checked
+        consecutiveErrors: 0,     // Count of consecutive errors
+        maxErrors: 3,             // Max errors before degrading bridge
+        lastError: null,          // Last error encountered
+        healthCheckInterval: null // Reference to periodic health check
+      },
+      
+      /**
+       * Check the health and integrity of the messaging bridge
+       * @returns {Object} Status of the bridge
+       */
+      checkBridgeHealth: () => {
+        const status = window.bitcoinPriceTagBridge._bridgeStatus;
+        status.lastCheck = Date.now();
+        
+        try {
+          // Verify Chrome object exists
+          status.chrome = typeof chrome !== 'undefined';
+          
+          // Verify runtime API exists
+          status.runtime = status.chrome && typeof chrome.runtime !== 'undefined';
+          
+          // Verify sendMessage function exists and is callable
+          status.sendMessage = status.runtime && 
+                             typeof chrome.runtime.sendMessage === 'function';
+                             
+          // Verify extension context by trying to access runtime ID
+          let runtimeAccessible = false;
+          if (status.runtime) {
+            try {
+              // This will throw in some restricted contexts
+              const extensionId = chrome.runtime.id;
+              const extensionUrl = chrome.runtime.getURL('');
+              runtimeAccessible = true;
+            } catch (runtimeError) {
+              console.debug('Bitcoin Price Tag: Runtime API exists but not fully accessible', {
+                error: runtimeError.message
+              });
+              status.lastError = {
+                type: 'runtime_access',
+                message: runtimeError.message,
+                timestamp: Date.now()
+              };
+              runtimeAccessible = false;
+            }
+          }
+          
+          // Overall availability requires all checks to pass
+          status.available = status.sendMessage && runtimeAccessible;
+          
+          // Reset error count if bridge is healthy
+          if (status.available) {
+            status.consecutiveErrors = 0;
+          }
+          
+          return {
+            available: status.available,
+            chrome: status.chrome,
+            runtime: status.runtime,
+            sendMessage: status.sendMessage,
+            runtimeAccessible: runtimeAccessible,
+            lastCheck: status.lastCheck
+          };
+        } catch (error) {
+          // If checking itself fails, bridge is definitely not available
+          status.available = false;
+          status.lastError = {
+            type: 'bridge_check_failure',
+            message: error.message,
+            timestamp: Date.now()
+          };
+          
+          return {
+            available: false,
+            error: error.message,
+            lastCheck: status.lastCheck
+          };
+        }
+      },
+      
+      /**
+       * Start periodic health check for the bridge
+       * This ensures we detect when the bridge becomes unavailable
+       */
+      startHealthMonitoring: () => {
+        // Clear any existing interval first
+        if (window.bitcoinPriceTagBridge._bridgeStatus.healthCheckInterval) {
+          clearInterval(window.bitcoinPriceTagBridge._bridgeStatus.healthCheckInterval);
+        }
+        
+        // Initial check
+        window.bitcoinPriceTagBridge.checkBridgeHealth();
+        
+        // Set up recurring checks every 30 seconds
+        window.bitcoinPriceTagBridge._bridgeStatus.healthCheckInterval = setInterval(() => {
+          window.bitcoinPriceTagBridge.checkBridgeHealth();
+        }, 30000);
+      },
+      
+      /**
+       * Record a successful bridge operation
+       */
+      recordSuccess: () => {
+        const status = window.bitcoinPriceTagBridge._bridgeStatus;
+        status.consecutiveErrors = 0;
+        status.available = true;
+      },
+      
+      /**
+       * Record a bridge operation failure
+       * @param {Error|Object} error - The error that occurred
+       */
+      recordError: (error) => {
+        const status = window.bitcoinPriceTagBridge._bridgeStatus;
+        status.consecutiveErrors += 1;
+        status.lastError = {
+          type: error.type || 'unknown',
+          message: error.message || String(error),
+          timestamp: Date.now()
+        };
+        
+        // If too many consecutive errors, mark bridge as degraded
+        if (status.consecutiveErrors >= status.maxErrors) {
+          status.available = false;
+          console.warn('Bitcoin Price Tag: Bridge marked as unavailable after multiple failures', {
+            consecutiveErrors: status.consecutiveErrors,
+            lastError: status.lastError
+          });
+        }
+      },
+      
       /**
        * Safe callback executor that ensures callback is a function and handles exceptions
        * @param {Function|any} callback - The callback to safely execute
@@ -172,7 +308,7 @@
       },
       
       /**
-       * Send a message to the background script with enhanced error handling
+       * Send a message to the background script with comprehensive error handling
        * @param {Object} message - The message to send
        * @param {Function|any} rawCallback - Callback that might not be a function
        */
@@ -191,7 +327,26 @@
         };
         
         try {
-          // Check if chrome runtime is available
+          // Check bridge health before attempting to use it
+          const bridgeHealth = window.bitcoinPriceTagBridge.checkBridgeHealth();
+          
+          if (!bridgeHealth.available) {
+            console.debug('Bitcoin Price Tag: Bridge not available, using fallback', bridgeHealth);
+            // Create object without spread operator
+            const responseObj = Object.assign({}, fallbackData, {
+              status: 'error',
+              error: { 
+                message: 'Messaging bridge not available',
+                type: 'bridge',
+                details: bridgeHealth
+              },
+              source: 'bridge_unavailable'
+            });
+            safeCallback(responseObj);
+            return;
+          }
+          
+          // If we explicitly know chrome runtime is not available, use fallback
           if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
             console.debug('Bitcoin Price Tag: Chrome runtime not available, using fallback');
             // Create object without spread operator
@@ -201,6 +356,12 @@
               source: 'chrome_unavailable'
             });
             safeCallback(responseObj);
+            
+            // Record error to potentially update bridge status
+            window.bitcoinPriceTagBridge.recordError({
+              type: 'runtime_missing',
+              message: 'Chrome runtime API not available'
+            });
             return;
           }
           
@@ -209,6 +370,11 @@
           });
           
           try {
+            // Verify sendMessage is actually a function before using it
+            if (typeof chrome.runtime.sendMessage !== 'function') {
+              throw new Error('chrome.runtime.sendMessage is not a function');
+            }
+            
             // Send message with error handling using our utility
             chrome.runtime.sendMessage(
               message, 
@@ -224,6 +390,12 @@
                       source: 'empty_response'
                     });
                     safeCallback(responseObj);
+                    
+                    // Record error to potentially update bridge status
+                    window.bitcoinPriceTagBridge.recordError({
+                      type: 'empty_response',
+                      message: 'No response from background script'
+                    });
                     return;
                   }
                   
@@ -244,6 +416,9 @@
                     // Continue despite cache error - non-critical
                   }
                   
+                  // Record success to update bridge health status
+                  window.bitcoinPriceTagBridge.recordSuccess();
+                  
                   // Return response through safe callback
                   safeCallback(response);
                 },
@@ -257,6 +432,12 @@
                       source: 'callback_error'
                     });
                     safeCallback(responseObj);
+                    
+                    // Record error to potentially update bridge status
+                    window.bitcoinPriceTagBridge.recordError({
+                      type: 'callback_error',
+                      message: 'Error in Chrome messaging callback'
+                    });
                   }
                 }
               )
@@ -264,6 +445,12 @@
           } catch (runtimeError) {
             console.debug('Bitcoin Price Tag: Error sending message', {
               error: runtimeError.message
+            });
+            
+            // Record error to potentially update bridge status
+            window.bitcoinPriceTagBridge.recordError({
+              type: 'runtime_error',
+              message: runtimeError.message
             });
             
             // Create object without spread operator
@@ -277,6 +464,12 @@
         } catch (error) {
           console.debug('Bitcoin Price Tag: Bridge error', {
             error: error.message
+          });
+          
+          // Record bridge error
+          window.bitcoinPriceTagBridge.recordError({
+            type: 'bridge_error',
+            message: error.message
           });
           
           // Create object without spread operator
@@ -593,6 +786,9 @@
           configureLogging({ minLevel: 'error', verbose: false });
         }
       }
+      
+      // Start bridge health monitoring
+      window.bitcoinPriceTagBridge.startHealthMonitoring();
       
       // Log context information to help with debugging
       console.debug('Bitcoin Price Tag: Context detection results', {

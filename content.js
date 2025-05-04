@@ -261,27 +261,144 @@ const createEmergencyPriceData = () => {
 };
 
 /**
+ * Validates the availability and integrity of the chrome.runtime API
+ * @returns {Object} Validation results indicating API availability status
+ */
+const validateRuntimeAPI = () => {
+  const result = {
+    available: false,
+    chromeExists: false,
+    runtimeExists: false,
+    sendMessageExists: false,
+    runtimeAccessible: false,
+    lastErrorAccessible: false,
+    details: {},
+    fallbackReason: null
+  };
+  
+  try {
+    // Check if Chrome is defined
+    result.chromeExists = typeof chrome !== 'undefined';
+    
+    // If Chrome exists, check runtime
+    if (result.chromeExists) {
+      result.runtimeExists = typeof chrome.runtime !== 'undefined';
+      
+      // If runtime exists, check sendMessage
+      if (result.runtimeExists) {
+        result.sendMessageExists = typeof chrome.runtime.sendMessage === 'function';
+        
+        // Check if lastError is accessible
+        try {
+          // Just accessing lastError should not throw if the runtime API works correctly
+          const lastErrorExists = 'lastError' in chrome.runtime;
+          result.lastErrorAccessible = lastErrorExists;
+        } catch (lastErrorError) {
+          result.details.lastErrorError = lastErrorError.message;
+          result.lastErrorAccessible = false;
+        }
+        
+        // Verify extension context by trying to actually use the runtime API
+        try {
+          // Getting extension ID will throw in some restricted contexts
+          const extensionId = chrome.runtime.id;
+          // Getting a URL shouldn't throw in most contexts if the runtime API is usable
+          const url = chrome.runtime.getURL('');
+          result.runtimeAccessible = true;
+          result.details.extensionId = extensionId;
+        } catch (runtimeError) {
+          result.details.runtimeError = runtimeError.message;
+          result.runtimeAccessible = false;
+          result.fallbackReason = 'runtime_access_denied';
+        }
+      } else {
+        result.fallbackReason = 'runtime_missing';
+      }
+    } else {
+      result.fallbackReason = 'chrome_missing';
+    }
+    
+    // Determine overall availability based on all checks
+    result.available = result.chromeExists && 
+                       result.runtimeExists && 
+                       result.sendMessageExists && 
+                       result.runtimeAccessible;
+    
+    return result;
+  } catch (error) {
+    // If validation itself fails, the API is definitely not working
+    return {
+      available: false,
+      error: error.message,
+      fallbackReason: 'validation_error'
+    };
+  }
+};
+
+/**
  * Function to request Bitcoin price from the service worker
  * Enhanced with comprehensive error handling
  * @returns {Promise<Object>} - Bitcoin price data
  */
 const getBitcoinPrice = async () => {
-  // Check for chrome API access
-  if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+  // Validate the runtime API before using it
+  const runtimeValidation = validateRuntimeAPI();
+  
+  // Log the validation results for debugging
+  console.debug('Bitcoin Price Tag: Runtime API validation', runtimeValidation);
+  
+  // If runtime API is not available, use fallbacks
+  if (!runtimeValidation.available) {
     const error = createError(
-      'Chrome runtime API not available',
+      `Chrome runtime API not available: ${runtimeValidation.fallbackReason || 'unknown reason'}`,
       ErrorTypes.RUNTIME,
-      { browserName: browserInfo.name }
+      { 
+        browserName: browserInfo.name,
+        validation: runtimeValidation
+      }
     );
     logError(error, {
       severity: ErrorSeverity.ERROR,
-      context: 'runtime_api_check'
+      context: 'runtime_api_validation'
     });
+    
+    // Check if bridge is available as an alternative approach
+    const hasBridge = typeof window !== 'undefined' && 
+                    window.bitcoinPriceTagBridge && 
+                    typeof window.bitcoinPriceTagBridge.sendMessageToBackground === 'function';
+    
+    if (hasBridge) {
+      console.debug('Bitcoin Price Tag: Using messaging bridge as runtime API fallback');
+      try {
+        // Create a promise that will be resolved with the bridge response
+        return await new Promise((resolve, reject) => {
+          window.bitcoinPriceTagBridge.sendMessageToBackground(
+            { action: 'getBitcoinPrice' },
+            (response) => {
+              if (!response) {
+                reject(new Error('No response from bridge'));
+                return;
+              }
+              resolve(response);
+            }
+          );
+        });
+      } catch (bridgeError) {
+        console.debug('Bitcoin Price Tag: Bridge fallback failed', bridgeError.message);
+        // Continue to other fallbacks if bridge fails
+      }
+    }
     
     // Try to get local cache as fallback
     const localCache = await getLocalCachedPriceData();
     if (localCache) {
-      return localCache;
+      return {
+        ...localCache,
+        apiValidation: {
+          available: false,
+          reason: runtimeValidation.fallbackReason
+        }
+      };
     }
     
     // If in testing mode, return test data
@@ -295,14 +412,120 @@ const getBitcoinPrice = async () => {
     }
     
     // Emergency fallback
-    return createEmergencyPriceData();
+    return {
+      ...createEmergencyPriceData(),
+      apiValidation: {
+        available: false,
+        reason: runtimeValidation.fallbackReason
+      }
+    };
   }
   
   try {
+    // Check runtime API one more time just before sending the message
+    // This catches cases where the API becomes unavailable after our initial validation
+    if (runtimeValidation.runtimeAccessible && runtimeValidation.sendMessageExists) {
+      try {
+        // Try to use the runtime API once more to ensure it's actually working
+        const testUrl = chrome.runtime.getURL('');
+      } catch (lastMinuteError) {
+        // API became unavailable, try bridge instead
+        throw createError(
+          'Runtime API became unavailable before message send',
+          ErrorTypes.RUNTIME,
+          { lastMinuteError, validation: runtimeValidation }
+        );
+      }
+    }
+    
+    // Check if bridge might be a better option if runtime is partially available
+    // This handles edge cases where runtime exists but might be degraded
+    const hasBridge = typeof window !== 'undefined' && 
+                    window.bitcoinPriceTagBridge && 
+                    typeof window.bitcoinPriceTagBridge.sendMessageToBackground === 'function' &&
+                    typeof window.bitcoinPriceTagBridge.checkBridgeHealth === 'function';
+                    
+    // If we have a bridge with health check, evaluate if we should use it instead
+    let useBridgeInstead = false;
+    let bridgeHealth = null;
+    
+    if (hasBridge) {
+      try {
+        bridgeHealth = window.bitcoinPriceTagBridge.checkBridgeHealth();
+        
+        // Use bridge if one of these conditions is true:
+        // 1. Runtime is partially available but not fully accessible
+        // 2. lastError is not accessible which indicates potential issues
+        // 3. Bridge is fully available and healthy
+        useBridgeInstead = (
+          (runtimeValidation.available && !runtimeValidation.lastErrorAccessible) ||
+          (!runtimeValidation.runtimeAccessible && runtimeValidation.sendMessageExists) ||
+          (bridgeHealth && bridgeHealth.available && runtimeValidation.fallbackReason)
+        );
+        
+        if (useBridgeInstead) {
+          console.debug('Bitcoin Price Tag: Using bridge instead of direct runtime', {
+            reason: 'runtime_degraded',
+            bridgeHealth
+          });
+          
+          // Create a promise that will be resolved with the bridge response
+          return await withTimeout(
+            new Promise((resolve, reject) => {
+              window.bitcoinPriceTagBridge.sendMessageToBackground(
+                { action: 'getBitcoinPrice' },
+                (response) => {
+                  if (!response) {
+                    reject(createError('No response from bridge', ErrorTypes.BRIDGE));
+                    return;
+                  }
+                  
+                  // Add validation context to response
+                  const enhancedResponse = {
+                    ...response,
+                    messageMethod: 'bridge_fallback',
+                    runtimeValidation: {
+                      available: runtimeValidation.available,
+                      reason: runtimeValidation.fallbackReason
+                    }
+                  };
+                  
+                  // Cache the response locally if it has price data
+                  if (response.btcPrice) {
+                    storeLocalCache(enhancedResponse);
+                  }
+                  
+                  resolve(enhancedResponse);
+                }
+              );
+            }),
+            12000, // Slightly longer timeout for bridge approach
+            'Bridge Bitcoin price request timed out'
+          );
+        }
+      } catch (healthError) {
+        // Continue with normal runtime if bridge health check fails
+        console.debug('Bitcoin Price Tag: Bridge health check failed, using runtime', 
+                       healthError.message);
+      }
+    }
+    
+    // Determine if we should use a slower timeout for degraded API
+    const timeoutDuration = runtimeValidation.fallbackReason ? 15000 : 10000;
+    
     // Use withTimeout for automatic timeout handling
     return await withTimeout(
       new Promise((resolve, reject) => {
         try {
+          // Final type check before invocation to be extra safe
+          if (typeof chrome.runtime.sendMessage !== 'function') {
+            throw createError(
+              'chrome.runtime.sendMessage is not a function',
+              ErrorTypes.RUNTIME,
+              { validation: runtimeValidation }
+            );
+          }
+          
           // Use safeChromeCallback to handle chrome.runtime.lastError and other error cases
           chrome.runtime.sendMessage(
             { action: 'getBitcoinPrice' }, 
@@ -310,9 +533,23 @@ const getBitcoinPrice = async () => {
               function(response) {
                 // If no response received
                 if (!response) {
-                  reject(createError('No response from service worker', ErrorTypes.RUNTIME));
+                  reject(createError(
+                    'No response from service worker', 
+                    ErrorTypes.RUNTIME,
+                    { validation: runtimeValidation }
+                  ));
                   return;
                 }
+                
+                // Add validation context to response
+                const enhancedResponse = {
+                  ...response,
+                  messageMethod: 'direct_runtime',
+                  runtimeValidation: {
+                    available: runtimeValidation.available,
+                    status: runtimeValidation.fallbackReason ? 'degraded' : 'healthy'
+                  }
+                };
                 
                 // If the response has an error status, handle appropriately
                 if (response.status === 'error') {
@@ -322,7 +559,10 @@ const getBitcoinPrice = async () => {
                     createError(
                       `Service worker reported error: ${response.error ? response.error.message : 'Unknown error'}`,
                       response.error ? response.error.type : ErrorTypes.UNKNOWN,
-                      response.error
+                      {
+                        ...response.error,
+                        validation: runtimeValidation
+                      }
                     ),
                     {
                       severity: ErrorSeverity.WARNING,
@@ -333,23 +573,65 @@ const getBitcoinPrice = async () => {
                   // If we have cached data in the response, use it
                   if (response.btcPrice) {
                     // Also cache locally
-                    storeLocalCache(response);
-                    resolve(response);
+                    storeLocalCache(enhancedResponse);
+                    resolve(enhancedResponse);
                     return;
+                  }
+                  
+                  // Check for bridge fallback
+                  if (hasBridge && bridgeHealth && bridgeHealth.available) {
+                    console.debug('Bitcoin Price Tag: Service worker error, trying bridge fallback');
+                    try {
+                      // Create a promise that will be resolved with the bridge response
+                      const bridgeResponse = await new Promise((innerResolve, innerReject) => {
+                        window.bitcoinPriceTagBridge.sendMessageToBackground(
+                          { action: 'getBitcoinPrice' },
+                          (bridgeResponse) => {
+                            if (!bridgeResponse) {
+                              innerReject(new Error('No response from bridge'));
+                              return;
+                            }
+                            innerResolve(bridgeResponse);
+                          }
+                        );
+                      });
+                      
+                      if (bridgeResponse && bridgeResponse.btcPrice) {
+                        // Also cache locally
+                        const bridgeEnhanced = {
+                          ...bridgeResponse,
+                          messageMethod: 'bridge_after_runtime_error',
+                          runtimeValidation: {
+                            available: runtimeValidation.available,
+                            status: 'error_fallback'
+                          }
+                        };
+                        storeLocalCache(bridgeEnhanced);
+                        resolve(bridgeEnhanced);
+                        return;
+                      }
+                    } catch (bridgeFallbackError) {
+                      // Continue with rejection if bridge also fails
+                      console.debug('Bitcoin Price Tag: Bridge fallback also failed', 
+                                     bridgeFallbackError.message);
+                    }
                   }
                   
                   reject(createError(
                     'Service worker error',
                     ErrorTypes.RUNTIME,
-                    response.error
+                    {
+                      ...response.error,
+                      validation: runtimeValidation
+                    }
                   ));
                   return;
                 }
                 
                 // Success case
                 // Cache successfully retrieved data locally
-                storeLocalCache(response);
-                resolve(response);
+                storeLocalCache(enhancedResponse);
+                resolve(enhancedResponse);
               },
               {
                 context: 'getBitcoinPrice',
@@ -358,29 +640,142 @@ const getBitcoinPrice = async () => {
                   reject(createError(
                     'Chrome messaging callback failed',
                     ErrorTypes.CALLBACK,
-                    { action: 'getBitcoinPrice' }
+                    { 
+                      action: 'getBitcoinPrice',
+                      validation: runtimeValidation
+                    }
                   ));
                 }
               }
             )
           );
         } catch (error) {
+          // If runtime API fails, try bridge as fallback if available
+          if (hasBridge && bridgeHealth && bridgeHealth.available) {
+            console.debug('Bitcoin Price Tag: Runtime API failed, trying bridge fallback');
+            try {
+              window.bitcoinPriceTagBridge.sendMessageToBackground(
+                { action: 'getBitcoinPrice' },
+                (response) => {
+                  if (!response) {
+                    reject(createError('No response from bridge fallback', ErrorTypes.BRIDGE));
+                    return;
+                  }
+                  
+                  // Add validation context to response
+                  const enhancedResponse = {
+                    ...response,
+                    messageMethod: 'bridge_after_runtime_exception',
+                    runtimeValidation: {
+                      available: false,
+                      error: error.message
+                    }
+                  };
+                  
+                  // Cache the response locally if it has price data
+                  if (response.btcPrice) {
+                    storeLocalCache(enhancedResponse);
+                  }
+                  
+                  resolve(enhancedResponse);
+                }
+              );
+              
+              // Don't reject here - let the bridge handle the response
+              return;
+            } catch (bridgeError) {
+              // Continue with rejection if bridge also fails
+              console.debug('Bitcoin Price Tag: Bridge fallback also failed after runtime exception', 
+                           bridgeError.message);
+            }
+          }
+          
           reject(createError(
             `Exception sending message: ${error.message}`,
             ErrorTypes.RUNTIME,
-            { originalError: error }
+            { 
+              originalError: error,
+              validation: runtimeValidation
+            }
           ));
         }
       }),
-      10000, // 10 seconds timeout
+      timeoutDuration,
       'Bitcoin price request timed out'
     );
   } catch (error) {
     // Handle all errors from the service worker request
     logError(error, {
       severity: ErrorSeverity.ERROR,
-      context: 'service_worker_request'
+      context: 'service_worker_request',
+      runtimeValidation: runtimeValidation
     });
+    
+    // Try bridge as fallback if we didn't already try it above
+    // This covers cases where error occurred in the main try block
+    const hasBridge = typeof window !== 'undefined' && 
+                    window.bitcoinPriceTagBridge && 
+                    typeof window.bitcoinPriceTagBridge.sendMessageToBackground === 'function';
+    
+    if (hasBridge && !error.message.includes('bridge')) {
+      console.debug('Bitcoin Price Tag: Trying bridge as final fallback after runtime errors');
+      try {
+        // Create a promise that will be resolved with the bridge response
+        const bridgeResponse = await new Promise((resolve, reject) => {
+          window.bitcoinPriceTagBridge.sendMessageToBackground(
+            { action: 'getBitcoinPrice' },
+            (response) => {
+              if (!response) {
+                reject(new Error('No response from bridge'));
+                return;
+              }
+              resolve(response);
+            }
+          );
+        });
+        
+        if (bridgeResponse && bridgeResponse.btcPrice) {
+          // Add context to the response
+          const enhancedResponse = {
+            ...bridgeResponse,
+            messageMethod: 'bridge_final_fallback',
+            runtimeValidation: {
+              available: false,
+              error: error.message
+            }
+          };
+          
+          // Cache the response
+          await storeLocalCache(enhancedResponse);
+          
+          return enhancedResponse;
+        }
+      } catch (bridgeError) {
+        console.debug('Bitcoin Price Tag: Final bridge fallback also failed', bridgeError.message);
+        // Continue to other fallbacks
+      }
+    }
+    
+    // Try to get fallback data from bridge if available
+    if (hasBridge && typeof window.bitcoinPriceTagBridge.getFallbackPriceData === 'function') {
+      try {
+        const fallbackData = window.bitcoinPriceTagBridge.getFallbackPriceData();
+        if (fallbackData && fallbackData.btcPrice) {
+          console.debug('Bitcoin Price Tag: Using bridge fallback data');
+          return {
+            ...fallbackData,
+            messageMethod: 'bridge_fallback_data',
+            warning: 'Using bridge fallback data due to errors',
+            error: {
+              message: error.message,
+              type: error.type || categorizeError(error)
+            }
+          };
+        }
+      } catch (fallbackError) {
+        console.debug('Bitcoin Price Tag: Error getting bridge fallback data', fallbackError.message);
+      }
+    }
     
     // Try to get local cache as fallback
     const localCache = await getLocalCachedPriceData();
@@ -392,12 +787,26 @@ const getBitcoinPrice = async () => {
         error: {
           message: error.message,
           type: error.type || categorizeError(error)
+        },
+        runtimeValidation: {
+          available: runtimeValidation.available,
+          reason: runtimeValidation.fallbackReason || 'runtime_error'
         }
       };
     }
     
     // Last resort emergency fallback
-    return createEmergencyPriceData();
+    return {
+      ...createEmergencyPriceData(),
+      error: {
+        message: error.message,
+        type: error.type || categorizeError(error)
+      },
+      runtimeValidation: {
+        available: runtimeValidation.available,
+        reason: runtimeValidation.fallbackReason || 'runtime_error'
+      }
+    };
   }
 };
 

@@ -19,6 +19,9 @@ export const ErrorTypes = {
   CONTEXT: 'context',        // Execution context errors
   EARLY_EXIT: 'early_exit',  // Early exit due to context restrictions
   AMAZON: 'amazon',          // Amazon-specific issues
+  BRIDGE: 'bridge',          // Messaging bridge errors
+  VALIDATION: 'validation',  // API or bridge validation errors
+  INTEGRITY: 'integrity',    // API or bridge integrity checking errors
   UNKNOWN: 'unknown'         // Uncategorized errors
 };
 
@@ -285,10 +288,41 @@ export function categorizeError(error) {
     return ErrorTypes.STORAGE;
   }
   
+  // Bridge-related errors
+  if (error.message.includes('bridge') || 
+      error.message.includes('Bridge') ||
+      error.message.includes('bitcoinPriceTagBridge')) {
+    return ErrorTypes.BRIDGE;
+  }
+  
+  // Validation errors
+  if (error.message.includes('validation') || 
+      error.message.includes('validate') ||
+      error.message.includes('invalid') ||
+      error.message.includes('not available')) {
+    return ErrorTypes.VALIDATION;
+  }
+  
+  // Context or integrity errors
+  if (error.message.includes('Context') || 
+      error.message.includes('context') ||
+      error.message.includes('integrity') ||
+      error.message.includes('health check') ||
+      error.message.includes('unavailable')) {
+    return ErrorTypes.INTEGRITY;
+  }
+  
   // Chrome runtime errors
   if (error.message.includes('chrome.runtime') || 
-      error.message.includes('Extension context')) {
+      error.message.includes('Extension context') ||
+      error.message.includes('runtime')) {
     return ErrorTypes.RUNTIME;
+  }
+  
+  // Amazon-specific errors
+  if (error.message.includes('amazon') || 
+      error.message.includes('Amazon')) {
+    return ErrorTypes.AMAZON;
   }
   
   // API errors (typically have status codes)

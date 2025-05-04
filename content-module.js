@@ -257,31 +257,139 @@ export function initBitcoinPriceTag() {
   };
   
   /**
+   * Perform comprehensive validation of the messaging bridge
+   * @returns {Object} Bridge validation results with availability status and details
+   */
+  const validateMessagingBridge = () => {
+    const result = {
+      available: false,
+      isFullyFunctional: false,
+      hasBridge: false,
+      hasSendMessage: false,
+      hasGetFallbackData: false,
+      details: {},
+      fallbackReason: null
+    };
+    
+    try {
+      // Basic checks for bridge existence
+      result.hasBridge = typeof window !== 'undefined' && 
+                         typeof window.bitcoinPriceTagBridge === 'object' &&
+                         window.bitcoinPriceTagBridge !== null;
+                         
+      // If bridge exists, check individual functions
+      if (result.hasBridge) {
+        result.hasSendMessage = typeof window.bitcoinPriceTagBridge.sendMessageToBackground === 'function';
+        result.hasGetFallbackData = typeof window.bitcoinPriceTagBridge.getFallbackPriceData === 'function';
+        result.hasCheckHealth = typeof window.bitcoinPriceTagBridge.checkBridgeHealth === 'function';
+        
+        // If bridge has health check, use it to get detailed status
+        if (result.hasCheckHealth) {
+          try {
+            const bridgeHealth = window.bitcoinPriceTagBridge.checkBridgeHealth();
+            result.details.bridgeHealth = bridgeHealth;
+            result.available = result.hasSendMessage && bridgeHealth.available;
+          } catch (healthError) {
+            // If health check throws, bridge is not fully functional
+            result.details.healthCheckError = healthError.message;
+            result.available = result.hasSendMessage; // Use basic check
+            result.fallbackReason = 'health_check_error';
+          }
+        } else {
+          // No health check, use basic availability check
+          result.available = result.hasSendMessage;
+          result.fallbackReason = result.hasSendMessage ? null : 'missing_send_message';
+        }
+        
+        // If internal bridge status is available, use it
+        if (window.bitcoinPriceTagBridge._bridgeStatus) {
+          result.details.bridgeStatus = {
+            available: window.bitcoinPriceTagBridge._bridgeStatus.available,
+            consecutiveErrors: window.bitcoinPriceTagBridge._bridgeStatus.consecutiveErrors,
+            lastCheck: window.bitcoinPriceTagBridge._bridgeStatus.lastCheck,
+            lastError: window.bitcoinPriceTagBridge._bridgeStatus.lastError
+          };
+          
+          // If bridge is tracking errors, factor that into availability
+          if (window.bitcoinPriceTagBridge._bridgeStatus.consecutiveErrors >= 
+              window.bitcoinPriceTagBridge._bridgeStatus.maxErrors) {
+            result.available = false;
+            result.fallbackReason = 'consecutive_errors';
+          }
+        }
+        
+        // Bridge is fully functional if all critical functions exist
+        result.isFullyFunctional = result.hasSendMessage && 
+                                   result.hasGetFallbackData && 
+                                   result.available &&
+                                   !result.fallbackReason;
+      } else {
+        result.fallbackReason = 'missing_bridge';
+      }
+      
+      return result;
+    } catch (error) {
+      // If the validation itself fails, the bridge is definitely problematic
+      return {
+        available: false,
+        isFullyFunctional: false,
+        hasBridge: false,
+        error: error.message,
+        fallbackReason: 'validation_error'
+      };
+    }
+  };
+  
+  /**
    * Function to request Bitcoin price from the service worker
    * Enhanced with comprehensive error handling and using the messaging bridge
    * @returns {Promise<Object>} - Bitcoin price data
    */
   const getBitcoinPrice = async () => {
-    // Check for bridge availability instead of direct Chrome API access
-    const isBridgeAvailable = typeof window !== 'undefined' && 
-                            window.bitcoinPriceTagBridge && 
-                            typeof window.bitcoinPriceTagBridge.sendMessageToBackground === 'function';
+    // Comprehensive bridge validation
+    const bridgeValidation = validateMessagingBridge();
     
-    if (!isBridgeAvailable) {
+    // Log bridge status for debugging
+    console.debug('Bitcoin Price Tag: Bridge validation results', bridgeValidation);
+    
+    if (!bridgeValidation.available) {
       const error = createError(
-        'Extension messaging bridge not available',
+        `Messaging bridge not available: ${bridgeValidation.fallbackReason || 'unknown reason'}`,
         ErrorTypes.RUNTIME,
-        { browserName: browserInfo.name }
+        { 
+          browserName: browserInfo.name,
+          bridgeValidation
+        }
       );
       logError(error, {
         severity: ErrorSeverity.ERROR,
-        context: 'bridge_availability_check'
+        context: 'bridge_validation'
       });
+      
+      // Try to get fallback data from bridge if that function exists
+      if (bridgeValidation.hasBridge && bridgeValidation.hasGetFallbackData) {
+        try {
+          const bridgeFallback = window.bitcoinPriceTagBridge.getFallbackPriceData();
+          if (bridgeFallback && bridgeFallback.btcPrice) {
+            console.debug('Bitcoin Price Tag: Using bridge fallback data');
+            return {
+              ...bridgeFallback,
+              source: bridgeFallback.source || 'bridge_fallback',
+              bridgeFallbackReason: bridgeValidation.fallbackReason
+            };
+          }
+        } catch (fallbackError) {
+          console.debug('Bitcoin Price Tag: Error getting bridge fallback data', fallbackError.message);
+        }
+      }
       
       // Try to get local cache as fallback
       const localCache = await getLocalCachedPriceData();
       if (localCache) {
-        return localCache;
+        return {
+          ...localCache,
+          bridgeFallbackReason: bridgeValidation.fallbackReason
+        };
       }
       
       // If in testing mode, return test data
@@ -299,17 +407,44 @@ export function initBitcoinPriceTag() {
     }
     
     try {
+      // Store validation results for error handling context
+      const validationContext = {
+        bridgeIsFullyFunctional: bridgeValidation.isFullyFunctional,
+        hasBridgeHealth: bridgeValidation.hasCheckHealth,
+        validationReason: bridgeValidation.fallbackReason
+      };
+      
+      // Set a longer timeout if the bridge is not fully functional
+      // This gives potentially degraded bridges more time to respond
+      const timeoutDuration = bridgeValidation.isFullyFunctional ? 10000 : 15000;
+      
       // Use withTimeout for automatic timeout handling
       return await withTimeout(
         new Promise((resolve, reject) => {
           try {
+            // If health check is available, verify bridge health once more before sending
+            // This handles cases where the bridge becomes unavailable after our initial check
+            if (bridgeValidation.hasCheckHealth) {
+              const currentHealth = window.bitcoinPriceTagBridge.checkBridgeHealth();
+              if (!currentHealth.available) {
+                throw createError(
+                  'Bridge became unavailable before sending message',
+                  ErrorTypes.RUNTIME,
+                  { 
+                    bridgeHealth: currentHealth,
+                    checkTime: new Date().toISOString()
+                  }
+                );
+              }
+            }
+            
             // Use the bridge to send the message to the background script
             window.bitcoinPriceTagBridge.sendMessageToBackground(
               { action: 'getBitcoinPrice' },
               safeCallback(
                 (response) => {
                   if (!response) {
-                    reject(createError('No response from service worker', ErrorTypes.RUNTIME));
+                    reject(createError('No response from service worker', ErrorTypes.RUNTIME, validationContext));
                     return;
                   }
                   
@@ -321,7 +456,10 @@ export function initBitcoinPriceTag() {
                       createError(
                         `Service worker reported error: ${response.error && response.error.message ? response.error.message : 'Unknown error'}`,
                         response.error && response.error.type ? response.error.type : ErrorTypes.UNKNOWN,
-                        response.error
+                        {
+                          ...response.error,
+                          ...validationContext
+                        }
                       ),
                       {
                         severity: ErrorSeverity.WARNING,
@@ -331,24 +469,45 @@ export function initBitcoinPriceTag() {
                     
                     // If we have cached data in the response, use it
                     if (response.btcPrice) {
+                      // Add bridge validation context to the response
+                      const enhancedResponse = {
+                        ...response,
+                        bridgeInfo: {
+                          isFullyFunctional: bridgeValidation.isFullyFunctional,
+                          hadWarnings: !!bridgeValidation.fallbackReason
+                        }
+                      };
+                      
                       // Also cache locally
-                      storeLocalCache(response);
-                      resolve(response);
+                      storeLocalCache(enhancedResponse);
+                      resolve(enhancedResponse);
                       return;
                     }
                     
                     reject(createError(
                       'Service worker error',
                       ErrorTypes.RUNTIME,
-                      response.error
+                      {
+                        ...response.error,
+                        ...validationContext
+                      }
                     ));
                     return;
                   }
                   
                   // Success case
+                  // Add bridge validation context to the response
+                  const enhancedResponse = {
+                    ...response,
+                    bridgeInfo: {
+                      isFullyFunctional: bridgeValidation.isFullyFunctional,
+                      hadWarnings: !!bridgeValidation.fallbackReason
+                    }
+                  };
+                  
                   // Cache successfully retrieved data locally
-                  storeLocalCache(response);
-                  resolve(response);
+                  storeLocalCache(enhancedResponse);
+                  resolve(enhancedResponse);
                 },
                 {
                   context: 'getBitcoinPrice_bridge',
@@ -357,7 +516,10 @@ export function initBitcoinPriceTag() {
                     reject(createError(
                       'Messaging bridge callback failed',
                       ErrorTypes.CALLBACK,
-                      { action: 'getBitcoinPrice' }
+                      { 
+                        action: 'getBitcoinPrice',
+                        ...validationContext
+                      }
                     ));
                   }
                 }
@@ -367,19 +529,66 @@ export function initBitcoinPriceTag() {
             reject(createError(
               `Exception sending bridge message: ${error.message}`,
               ErrorTypes.RUNTIME,
-              { originalError: error }
+              { 
+                originalError: error,
+                ...validationContext
+              }
             ));
           }
         }),
-        10000, // 10 seconds timeout
+        timeoutDuration,
         'Bitcoin price request timed out'
       );
     } catch (error) {
       // Handle all errors from the service worker request
       logError(error, {
         severity: ErrorSeverity.ERROR,
-        context: 'bridge_message_error'
+        context: 'bridge_message_error',
+        bridgeValidation: {
+          available: bridgeValidation.available,
+          isFullyFunctional: bridgeValidation.isFullyFunctional,
+          fallbackReason: bridgeValidation.fallbackReason
+        }
       });
+      
+      // After bridge failure, recheck bridge health to update status
+      if (bridgeValidation.hasCheckHealth) {
+        try {
+          window.bitcoinPriceTagBridge.checkBridgeHealth();
+          
+          // Record error in bridge to possibly degrade it
+          if (typeof window.bitcoinPriceTagBridge.recordError === 'function') {
+            window.bitcoinPriceTagBridge.recordError({
+              type: error.type || categorizeError(error),
+              message: error.message,
+              source: 'content_module'
+            });
+          }
+        } catch (healthError) {
+          // Ignore health check errors, just for updating status
+        }
+      }
+      
+      // Try to get bridge fallback data first if available
+      if (bridgeValidation.hasBridge && bridgeValidation.hasGetFallbackData) {
+        try {
+          const bridgeFallback = window.bitcoinPriceTagBridge.getFallbackPriceData();
+          if (bridgeFallback && bridgeFallback.btcPrice) {
+            console.debug('Bitcoin Price Tag: Using bridge fallback data after error');
+            return {
+              ...bridgeFallback,
+              source: bridgeFallback.source || 'bridge_fallback_after_error',
+              warning: 'Using bridge fallback data due to error',
+              error: {
+                message: error.message,
+                type: error.type || categorizeError(error)
+              }
+            };
+          }
+        } catch (fallbackError) {
+          console.debug('Bitcoin Price Tag: Error getting bridge fallback data after error', fallbackError.message);
+        }
+      }
       
       // Try to get local cache as fallback
       const localCache = await getLocalCachedPriceData();
@@ -391,12 +600,25 @@ export function initBitcoinPriceTag() {
           error: {
             message: error.message,
             type: error.type || categorizeError(error)
+          },
+          bridgeErrorDetails: {
+            available: bridgeValidation.available,
+            isFullyFunctional: bridgeValidation.isFullyFunctional,
+            fallbackReason: bridgeValidation.fallbackReason
           }
         };
       }
       
       // Last resort emergency fallback
-      return createEmergencyPriceData();
+      const emergencyData = createEmergencyPriceData();
+      return {
+        ...emergencyData,
+        bridgeErrorDetails: {
+          available: bridgeValidation.available,
+          isFullyFunctional: bridgeValidation.isFullyFunctional,
+          fallbackReason: bridgeValidation.fallbackReason
+        }
+      };
     }
   };
   
