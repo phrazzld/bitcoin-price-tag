@@ -705,10 +705,23 @@ function setupPeriodicUpdates() {
       if (alarm.name === 'updateBitcoinPrice') {
         // Don't await, let it run in the background
         fetchAndStoreBitcoinPrice().catch(error => {
-          logError(error, {
-            severity: ErrorSeverity.ERROR,
-            context: 'alarm_triggered_update'
-          });
+          // Verify error is actually an Error object before using logError
+          if (error instanceof Error) {
+            logError(error, {
+              severity: ErrorSeverity.ERROR,
+              context: 'alarm_triggered_update'
+            });
+          } else {
+            // If error is not an Error object, create one
+            logError(createError(
+              `Non-error object rejected in alarm update: ${String(error)}`,
+              ErrorTypes.UNKNOWN,
+              { originalValue: error }
+            ), {
+              severity: ErrorSeverity.ERROR,
+              context: 'alarm_triggered_update'
+            });
+          }
         });
       }
     });
@@ -726,6 +739,11 @@ function setupPeriodicUpdates() {
  * @param {Function} sendResponse - Chrome message API response function
  */
 async function handleGetPriceData(sendResponse) {
+  // Verify sendResponse is actually a function before using it
+  if (typeof sendResponse !== 'function') {
+    console.error('Bitcoin Price Tag: Non-function sendResponse received in handleGetPriceData');
+    return;
+  }
   try {
     // Check offline status first
     const offline = isOffline();
@@ -788,10 +806,23 @@ async function handleGetPriceData(sendResponse) {
       
       // Then trigger a background refresh without blocking
       fetchAndStoreBitcoinPrice().catch(error => {
-        logError(error, {
-          severity: ErrorSeverity.ERROR,
-          context: 'background_refresh'
-        });
+        // Type check for the error object
+        if (error instanceof Error) {
+          logError(error, {
+            severity: ErrorSeverity.ERROR,
+            context: 'background_refresh'
+          });
+        } else {
+          // If error is not an Error object, create one
+          logError(createError(
+            `Non-error object rejected in background refresh: ${String(error)}`,
+            ErrorTypes.UNKNOWN,
+            { originalValue: error }
+          ), {
+            severity: ErrorSeverity.ERROR,
+            context: 'background_refresh'
+          });
+        }
       });
       
       return;
@@ -846,6 +877,11 @@ async function handleGetPriceData(sendResponse) {
  * @param {Function} sendResponse - Chrome message API response function
  */
 async function handleGetErrorInfo(sendResponse) {
+  // Verify sendResponse is actually a function before using it
+  if (typeof sendResponse !== 'function') {
+    console.error('Bitcoin Price Tag: Non-function sendResponse received in handleGetErrorInfo');
+    return;
+  }
   try {
     const data = await chrome.storage.local.get(PRICE_ERROR_KEY);
     const errorInfo = data[PRICE_ERROR_KEY];
@@ -879,6 +915,11 @@ initialize();
  * @param {Function} sendResponse - Chrome message API response function
  */
 async function handleGetCacheStatus(sendResponse) {
+  // Verify sendResponse is actually a function before using it
+  if (typeof sendResponse !== 'function') {
+    console.error('Bitcoin Price Tag: Non-function sendResponse received in handleGetCacheStatus');
+    return;
+  }
   try {
     // Get cache status report from the cache manager
     const cacheStatus = await getCacheStatus();
@@ -908,6 +949,11 @@ async function handleGetCacheStatus(sendResponse) {
  * @param {Function} sendResponse - Chrome message API response function
  */
 async function handleClearCache(sendResponse) {
+  // Verify sendResponse is actually a function before using it
+  if (typeof sendResponse !== 'function') {
+    console.error('Bitcoin Price Tag: Non-function sendResponse received in handleClearCache');
+    return;
+  }
   try {
     await clearAllCaches();
     
@@ -933,6 +979,15 @@ async function handleClearCache(sendResponse) {
 
 // Respond to content script messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Verify sendResponse is a function before proceeding
+  if (typeof sendResponse !== 'function') {
+    console.error('Bitcoin Price Tag: Received message with invalid sendResponse callback', {
+      action: message?.action || 'unknown',
+      callbackType: typeof sendResponse
+    });
+    return false; // Don't expect an asynchronous response
+  }
+  
   // Handle different message types
   if (message.action === 'getBitcoinPrice') {
     // Handle price data request
@@ -953,10 +1008,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         debounced: data.debounced // Indicate if the request was debounced
       }))
       .catch(error => {
+        // Type check for the error object
+        if (!(error instanceof Error)) {
+          error = createError(
+            `Non-error object rejected in forced refresh: ${String(error)}`,
+            ErrorTypes.UNKNOWN,
+            { originalValue: error }
+          );
+        }
+        
         logError(error, {
           severity: ErrorSeverity.ERROR,
           context: 'forced_refresh'
         });
+        
         sendResponse({
           status: 'error',
           error: {

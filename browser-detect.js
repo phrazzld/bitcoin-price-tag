@@ -146,13 +146,23 @@ export function applyPolyfills() {
       local: {
         get: (key, callback) => {
           const data = localStorage.getItem(key);
-          callback(data ? JSON.parse(data) : {});
+          // Add type check for the callback
+          if (typeof callback === 'function') {
+            callback(data ? JSON.parse(data) : {});
+          } else {
+            console.error('Bitcoin Price Tag: Non-function callback provided to chrome.storage.local.get polyfill');
+          }
         },
         set: (data, callback) => {
           Object.keys(data).forEach(key => {
             localStorage.setItem(key, JSON.stringify(data[key]));
           });
-          if (callback) callback();
+          // Add type check for the callback
+          if (callback && typeof callback === 'function') {
+            callback();
+          } else if (callback !== undefined) {
+            console.error('Bitcoin Price Tag: Non-function callback provided to chrome.storage.local.set polyfill');
+          }
         }
       }
     };

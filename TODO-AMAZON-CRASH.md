@@ -20,7 +20,7 @@
     - **Depends On:** [T022]
     - **AC Ref:** None
 
-- [ ] **T024:** Add Robust Type Checks Before Invoking Received Callbacks
+- [x] **T024:** Add Robust Type Checks Before Invoking Received Callbacks
     - **Action:** Review message handling logic (e.g., in `src/background/messageHandler.ts`, `src/bridge/index.ts`) where callbacks received via messages are invoked. Implement explicit `typeof callback === 'function'` checks immediately before invocation to prevent errors if an invalid callback was somehow passed.
     - **Depends On:** None
     - **AC Ref:** None
