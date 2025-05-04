@@ -19,7 +19,9 @@ import {
 } from '/debounce.js';
 
 // Cache for processed nodes to avoid re-processing
-const processedNodes = new WeakSet();
+// Using a variable to hold the WeakSet instance so we can replace it
+// WeakSet doesn't have a clear() method, so we'll create a new instance when needed
+let processedNodes = new WeakSet();
 
 // Elements that are unlikely to contain price text
 const SKIP_TAGS = new Set([
@@ -368,8 +370,9 @@ export function scanDomForPrices(root, btcPrice, satPrice) {
  * @param {number} satPrice - Satoshi price
  */
 export function initScanning(document, btcPrice, satPrice) {
-  // Reset the processed nodes cache
-  processedNodes.clear();
+  // Reset the processed nodes cache by creating a new WeakSet instance
+  // (WeakSet doesn't have a clear() method)
+  processedNodes = new WeakSet();
   
   // Scan the visible DOM first
   scanDomForPrices(document.body, btcPrice, satPrice);

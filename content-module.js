@@ -149,20 +149,22 @@ export function initBitcoinPriceTag() {
   
   /**
    * Function to request Bitcoin price from the service worker
-   * Enhanced with comprehensive error handling
+   * Enhanced with comprehensive error handling and using the messaging bridge
    * @returns {Promise<Object>} - Bitcoin price data
    */
   const getBitcoinPrice = async () => {
-    // Check for chrome API access
-    if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+    // Check for bridge availability instead of direct Chrome API access
+    const isBridgeAvailable = typeof window !== 'undefined' && window.bitcoinPriceTagBridge;
+    
+    if (!isBridgeAvailable) {
       const error = createError(
-        'Chrome runtime API not available',
+        'Extension messaging bridge not available',
         ErrorTypes.RUNTIME,
         { browserName: browserInfo.name }
       );
       logError(error, {
         severity: ErrorSeverity.ERROR,
-        context: 'runtime_api_check'
+        context: 'bridge_availability_check'
       });
       
       // Try to get local cache as fallback
@@ -190,62 +192,56 @@ export function initBitcoinPriceTag() {
       return await withTimeout(
         new Promise((resolve, reject) => {
           try {
-            chrome.runtime.sendMessage({ action: 'getBitcoinPrice' }, (response) => {
-              if (chrome.runtime.lastError) {
-                const error = createError(
-                  `Chrome runtime error: ${chrome.runtime.lastError.message}`,
-                  ErrorTypes.RUNTIME,
-                  { originalError: chrome.runtime.lastError }
-                );
-                reject(error);
-                return;
-              }
-              
-              if (!response) {
-                reject(createError('No response from service worker', ErrorTypes.RUNTIME));
-                return;
-              }
-              
-              // If the response has an error status, handle appropriately
-              if (response.status === 'error') {
-                // This means background script had an error but still returned data
-                // We can use the data but should log the error
-                logError(
-                  createError(
-                    `Service worker reported error: ${response.error?.message || 'Unknown error'}`,
-                    response.error?.type || ErrorTypes.UNKNOWN,
-                    response.error
-                  ),
-                  {
-                    severity: ErrorSeverity.WARNING,
-                    context: 'background_reported_error'
-                  }
-                );
-                
-                // If we have cached data in the response, use it
-                if (response.btcPrice) {
-                  // Also cache locally
-                  storeLocalCache(response);
-                  resolve(response);
+            // Use the bridge to send the message to the background script
+            window.bitcoinPriceTagBridge.sendMessageToBackground(
+              { action: 'getBitcoinPrice' },
+              (response) => {
+                if (!response) {
+                  reject(createError('No response from service worker', ErrorTypes.RUNTIME));
                   return;
                 }
                 
-                reject(createError(
-                  'Service worker error',
-                  ErrorTypes.RUNTIME,
-                  response.error
-                ));
-                return;
+                // If the response has an error status, handle appropriately
+                if (response.status === 'error') {
+                  // This means background script had an error but still returned data
+                  // We can use the data but should log the error
+                  logError(
+                    createError(
+                      `Service worker reported error: ${response.error?.message || 'Unknown error'}`,
+                      response.error?.type || ErrorTypes.UNKNOWN,
+                      response.error
+                    ),
+                    {
+                      severity: ErrorSeverity.WARNING,
+                      context: 'background_reported_error'
+                    }
+                  );
+                  
+                  // If we have cached data in the response, use it
+                  if (response.btcPrice) {
+                    // Also cache locally
+                    storeLocalCache(response);
+                    resolve(response);
+                    return;
+                  }
+                  
+                  reject(createError(
+                    'Service worker error',
+                    ErrorTypes.RUNTIME,
+                    response.error
+                  ));
+                  return;
+                }
+                
+                // Success case
+                // Cache successfully retrieved data locally
+                storeLocalCache(response);
+                resolve(response);
               }
-              
-              // Success case
-              // Cache successfully retrieved data locally
-              storeLocalCache(response);
-              resolve(response);
-            });
+            );
           } catch (error) {
             reject(createError(
-              `Exception sending message: ${error.message}`,
+              `Exception sending bridge message: ${error.message}`,
               ErrorTypes.RUNTIME,
               { originalError: error }
             ));
@@ -258,7 +254,7 @@ export function initBitcoinPriceTag() {
       // Handle all errors from the service worker request
       logError(error, {
         severity: ErrorSeverity.ERROR,
-        context: 'service_worker_request'
+        context: 'bridge_message_error'
       });
       
       // Try to get local cache as fallback
@@ -380,11 +376,17 @@ export function initBitcoinPriceTag() {
    */
   const backgroundRefresh = async () => {
     try {
+      // Check for bridge availability
+      if (!window.bitcoinPriceTagBridge) {
+        console.warn('Bitcoin Price Tag: Bridge not available for background refresh');
+        return;
+      }
+      
       const refreshMessage = { action: 'forceRefresh' };
       
       // We don't care about the immediate result, this is just to
       // ensure fresh data for future uses
-      chrome.runtime.sendMessage(refreshMessage, (response) => {
+      window.bitcoinPriceTagBridge.sendMessageToBackground(refreshMessage, (response) => {
         if (response && response.status === 'success') {
           console.debug('Bitcoin Price Tag: Background refresh successful');
         }
