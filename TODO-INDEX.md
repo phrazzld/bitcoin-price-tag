@@ -8,6 +8,10 @@ This project's tasks have been split into multiple focused files for easier impl
 2. [TODO-2-INFRASTRUCTURE.md](TODO-2-INFRASTRUCTURE.md) - CI setup, git hooks, quality standards
 3. [TODO-3-DOCUMENTATION.md](TODO-3-DOCUMENTATION.md) - README, LICENSE, CONTRIBUTING
 
+## Completed Tasks
+
+- [x] [TODO-AMAZON-CRASH.md](TODO-AMAZON-CRASH.md) - Amazon crash bug fixes completed
+
 ## Implementation Strategy
 
 Each TODO file represents a logical group of tasks that can be implemented as a separate pull request. The numbered filenames indicate the recommended order of implementation.
