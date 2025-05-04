@@ -40,7 +40,7 @@
     - **Depends On:** [T021, T023, T024, T025, T026]
     - **AC Ref:** None
 
-- [ ] **T028:** Comprehensive Testing and Verification on Amazon Pages
+- [x] **T028:** Comprehensive Testing and Verification on Amazon Pages
     - **Action:** Perform thorough manual and automated (e.g., Cypress, Playwright) testing across a variety of Amazon pages (product, cart, search, pages with known iframes). Verify: (1) No crashes or blank pages occur. (2) Extension functionality works as expected in supported contexts. (3) Graceful degradation or early exit occurs in restricted contexts. (4) Console errors related to context, callbacks, bridge, and DOM processing are eliminated.
     - **Depends On:** [T027] // Depends on all implementation tasks being logged correctly for verification
     - **AC Ref:** None

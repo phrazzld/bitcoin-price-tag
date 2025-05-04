@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Amazon.com: Page with Iframes</title>
+  </head>
+  <body>
+    <h1>Page with Amazon iframe</h1>
+    
+    <!-- Regular iframe -->
+    <iframe id="regular-iframe" srcdoc="
+      <html>
+        <head><title>Normal Frame</title></head>
+        <body>
+          <h2>Normal iframe content</h2>
+          <div>Price: $99.99</div>
+        </body>
+      </html>
+    " width="400" height="200"></iframe>
+    
+    <!-- Sandboxed iframe to simulate restriction -->
+    <iframe id="restricted-iframe" sandbox="allow-scripts" srcdoc="
+      <html>
+        <head><title>Restricted Frame</title></head>
+        <body>
+          <h2>Restricted iframe content</h2>
+          <div class='a-price'>
+            <span class='a-price-symbol'>$</span>
+            <span class='a-price-whole'>149</span>
+            <span class='a-price-fraction'>99</span>
+          </div>
+        </body>
+      </html>
+    " width="400" height="200"></iframe>
+    
+    <!-- Cross-origin iframe placeholder -->
+    <div>
+      <h3>Cross-origin iframe would be here</h3>
+      <p>Price: $199.99</p>
+    </div>
+  </body>
+</html>
