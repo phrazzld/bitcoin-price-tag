@@ -26,9 +26,9 @@ This file covers development infrastructure tasks including CI setup, git hooks,
      - [x] Enforce conventional commit format
      - [ ] Re-enable ESLint in pre-commit hooks (after fixing linting issues)
      - [ ] Fix pre-commit hook errors and stop using HUSKY=0 for bypassing hooks
-   - [ ] Configure post-commit hooks
-     - [ ] Set up `glance ./` to run async
-     - [ ] Generate documentation updates if needed
+   - [x] Configure post-commit hooks
+     - [x] Set up `glance ./` to run async
+     - [x] Generate documentation updates if needed
    - [x] Configure pre-push hooks
      - [x] Run complete test suite
      - [x] Enforce branch naming conventions

@@ -40,6 +40,18 @@ Valid types:
 - style: Changes that do not affect the meaning of the code (white-space, formatting, etc)
 - test: Adding missing tests or correcting existing tests
 
+### Post-commit
+
+The post-commit hook runs after a commit is successfully created:
+
+1. **Project Analysis**: Runs `glance ./` asynchronously to analyze project structure
+2. **Documentation Generation**: Automatically updates documentation when relevant files change:
+   - Updates component documentation when component files are modified
+   - Updates API documentation when API-related files are modified
+   - Logs all actions to `.git/post-commit.log` for review
+
+Since these operations run asynchronously, they won't block your workflow.
+
 ### Pre-push
 
 The pre-push hook runs before pushing commits to the remote repository:
