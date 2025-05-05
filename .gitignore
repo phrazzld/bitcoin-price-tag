@@ -3,7 +3,6 @@
 # Claude
 **/.claude/settings.local.json
 SCOPE-*.md
-TODO-*.md
 
 # Dependencies
 node_modules/
@@ -11,6 +10,12 @@ node_modules/
 
 # Testing
 coverage/
+test-results/
+playwright-report/
+
+# Planning artifacts
+*-plan.md
+*-task.md
 
 # Build
 dist/
