@@ -68,7 +68,7 @@ The project uses ESLint with strict rules. Run `pnpm lint` to check for issues.
 - No var, use const and let
 - Prefer const when variables are not reassigned
 - No duplicate imports
-- No unused variables (except those prefixed with _)
+- No unused variables (except those prefixed with \_)
 - No parameter reassignment
 - No eval statements
 - Proper file and function length limits
@@ -83,5 +83,5 @@ Some complex files are exempted from certain rules due to their nature:
 - context-provider.js
 - debounce.js
 
-These files may exceed length limits or other thresholds as they contain core utilities that 
+These files may exceed length limits or other thresholds as they contain core utilities that
 require more complex implementation.

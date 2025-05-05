@@ -63,12 +63,12 @@ export default [
 
       // Code quality
       'max-lines': [
-        'warn', 
-        { 
-          max: 500, 
-          skipBlankLines: true, 
-          skipComments: true 
-        }
+        'warn',
+        {
+          max: 500,
+          skipBlankLines: true,
+          skipComments: true,
+        },
       ],
       'max-lines-per-function': ['warn', { max: 50, skipBlankLines: true, skipComments: true }],
       complexity: ['warn', 10],
@@ -239,13 +239,13 @@ export default [
     ],
     rules: {
       'max-lines': [
-        'error', 
-        { 
-          max: 1000, 
-          skipBlankLines: true, 
-          skipComments: true 
-        }
+        'error',
+        {
+          max: 1000,
+          skipBlankLines: true,
+          skipComments: true,
+        },
       ],
-    }
+    },
   },
 ];
