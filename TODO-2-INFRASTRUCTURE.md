@@ -11,10 +11,10 @@ This file covers development infrastructure tasks including CI setup, git hooks,
    - [x] Implement file length enforcement
      - [x] Configure warning at 500 lines
      - [x] Configure error at 1000 lines
-   - [ ] Enforce pnpm as package manager
-     - [ ] Add pnpm-lock.yaml
-     - [ ] Configure .npmrc
-     - [ ] Add engine rules to package.json
+   - [x] Enforce pnpm as package manager
+     - [x] Add pnpm-lock.yaml
+     - [x] Configure .npmrc
+     - [x] Add engine rules to package.json
 
 2. ## Git Hooks
 

@@ -2,6 +2,14 @@
 
 This document outlines the coding standards for the Bitcoin Price Tag extension.
 
+## Development Environment
+
+### Package Manager
+
+- pnpm is the required package manager for this project
+- Use of npm or yarn is not supported
+- Node.js v18+ is required
+
 ## File Organization
 
 - Files should be focused and have a single responsibility
