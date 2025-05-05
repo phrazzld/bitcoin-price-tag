@@ -10,11 +10,11 @@ export function detectBrowser() {
   const userAgent = navigator.userAgent;
   let browserName;
   let browserVersion;
-  
+
   // Detect Chrome
   if (userAgent.match(/chrome|chromium|crios/i)) {
     browserName = 'chrome';
-  } 
+  }
   // Detect Firefox
   else if (userAgent.match(/firefox|fxios/i)) {
     browserName = 'firefox';
@@ -35,11 +35,11 @@ export function detectBrowser() {
   else {
     browserName = 'unknown';
   }
-  
+
   // Extract version (implementation varies by browser)
   const versionMatch = userAgent.match(/(chrome|firefox|safari|opr|edge|edg|msie)\/(\d+(\.\d+)?)/i);
   browserVersion = versionMatch ? versionMatch[2] : 'unknown';
-  
+
   return {
     name: browserName,
     version: browserVersion,
@@ -48,7 +48,7 @@ export function detectBrowser() {
     isFirefox: browserName === 'firefox',
     isSafari: browserName === 'safari',
     isEdge: browserName === 'edge',
-    isOpera: browserName === 'opera'
+    isOpera: browserName === 'opera',
   };
 }
 
@@ -61,15 +61,15 @@ export function checkFeatureSupport() {
     // Basic features
     storageAPI: typeof chrome !== 'undefined' && !!chrome.storage,
     runtimeAPI: typeof chrome !== 'undefined' && !!chrome.runtime,
-    
+
     // DOM APIs
     mutationObserver: typeof MutationObserver !== 'undefined',
     documentFragment: typeof DocumentFragment !== 'undefined',
     querySelectorAll: typeof document.querySelectorAll === 'function',
-    
+
     // ES6+ features
     promiseSupport: typeof Promise !== 'undefined',
-    asyncAwaitSupport: (function() {
+    asyncAwaitSupport: (function () {
       try {
         eval('async function test() {}');
         return true;
@@ -77,23 +77,22 @@ export function checkFeatureSupport() {
         return false;
       }
     })(),
-    
+
     // API access
     fetchSupport: typeof fetch !== 'undefined',
-    
+
     // Overall support status
-    isSupported: true // Will be updated based on required features
+    isSupported: true, // Will be updated based on required features
   };
-  
+
   // Check essential features that are required
-  features.isSupported = (
+  features.isSupported =
     features.storageAPI &&
     features.runtimeAPI &&
     features.mutationObserver &&
     features.querySelectorAll &&
-    features.promiseSupport
-  );
-  
+    features.promiseSupport;
+
   return features;
 }
 
@@ -104,29 +103,29 @@ export function checkFeatureSupport() {
 export function getBrowserAdaptations() {
   const browser = detectBrowser();
   const features = checkFeatureSupport();
-  
+
   // Default adaptations
   const adaptations = {
     usePolyfills: !features.isSupported,
     textPropertyToUse: 'textContent', // textContent or innerText
     observerConfig: {
       childList: true,
-      subtree: true
-    }
+      subtree: true,
+    },
   };
-  
+
   // Firefox-specific adaptations
   if (browser.isFirefox) {
     // Firefox handles MutationObserver slightly differently
     adaptations.observerConfig.characterData = true;
   }
-  
+
   // Safari-specific adaptations
   if (browser.isSafari) {
     // Safari may require different text handling
     adaptations.textPropertyToUse = 'innerText';
   }
-  
+
   return adaptations;
 }
 
@@ -136,10 +135,10 @@ export function getBrowserAdaptations() {
  */
 export function applyPolyfills() {
   const features = checkFeatureSupport();
-  
+
   // Only apply polyfills if needed
   if (features.isSupported) return;
-  
+
   // Polyfill for chrome.storage if needed
   if (!features.storageAPI && typeof chrome !== 'undefined') {
     chrome.storage = {
@@ -150,24 +149,28 @@ export function applyPolyfills() {
           if (typeof callback === 'function') {
             callback(data ? JSON.parse(data) : {});
           } else {
-            console.error('Bitcoin Price Tag: Non-function callback provided to chrome.storage.local.get polyfill');
+            console.error(
+              'Bitcoin Price Tag: Non-function callback provided to chrome.storage.local.get polyfill',
+            );
           }
         },
         set: (data, callback) => {
-          Object.keys(data).forEach(key => {
+          Object.keys(data).forEach((key) => {
             localStorage.setItem(key, JSON.stringify(data[key]));
           });
           // Add type check for the callback
           if (callback && typeof callback === 'function') {
             callback();
           } else if (callback !== undefined) {
-            console.error('Bitcoin Price Tag: Non-function callback provided to chrome.storage.local.set polyfill');
+            console.error(
+              'Bitcoin Price Tag: Non-function callback provided to chrome.storage.local.set polyfill',
+            );
           }
-        }
-      }
+        },
+      },
     };
   }
-  
+
   // Polyfill for MutationObserver
   if (!features.mutationObserver) {
     // Simple polling-based fallback for MutationObserver
@@ -177,31 +180,33 @@ export function applyPolyfills() {
         this.observed = [];
         this.intervalId = null;
       }
-      
+
       observe(target, config) {
         this.observed.push({ target, config, innerHTML: target.innerHTML });
-        
+
         if (!this.intervalId) {
           this.intervalId = setInterval(() => {
             this.checkForChanges();
           }, 1000); // Poll every second
         }
       }
-      
+
       checkForChanges() {
         for (const item of this.observed) {
           if (item.target.innerHTML !== item.innerHTML) {
             item.innerHTML = item.target.innerHTML;
-            this.callback([{
-              type: 'childList',
-              target: item.target,
-              addedNodes: [],
-              removedNodes: []
-            }]);
+            this.callback([
+              {
+                type: 'childList',
+                target: item.target,
+                addedNodes: [],
+                removedNodes: [],
+              },
+            ]);
           }
         }
       }
-      
+
       disconnect() {
         if (this.intervalId) {
           clearInterval(this.intervalId);

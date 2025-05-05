@@ -18,28 +18,28 @@ export function createMockExtensionEnvironment() {
               callback({
                 btcPrice: 50000, // $50,000 per BTC
                 satPrice: 0.0005, // $0.0005 per sat
-                timestamp: Date.now()
+                timestamp: Date.now(),
               });
             }, 100);
           }
         },
         onMessage: {
           addListener: () => {},
-          removeListener: () => {}
+          removeListener: () => {},
         },
-        lastError: null
+        lastError: null,
       },
       storage: {
         local: {
           get: (key, callback) => {
             callback({});
           },
-          set: () => {}
-        }
-      }
+          set: () => {},
+        },
+      },
     };
   }
-  
+
   // Flag to track if the environment has been initialized
   window._mockExtensionInitialized = true;
 }
@@ -54,19 +54,19 @@ export async function injectExtensionScripts(conversionScriptUrl, contentScriptU
   if (window._mockExtensionInitialized) {
     return;
   }
-  
+
   // Create mock extension environment
   createMockExtensionEnvironment();
-  
+
   // Load scripts
   try {
     // First load conversion.js
     const conversionModule = await import(conversionScriptUrl);
     window.conversion = conversionModule;
-    
+
     // Then load content.js which depends on conversion.js
     await import(contentScriptUrl);
-    
+
     console.log('Extension scripts loaded successfully');
   } catch (error) {
     console.error('Failed to load extension scripts:', error);

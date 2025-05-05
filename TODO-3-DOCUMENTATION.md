@@ -5,6 +5,7 @@ This file covers documentation tasks for the project.
 ## Execution Order
 
 1. ## Basic Documentation
+
    - [ ] Update MIT LICENSE file
      - [ ] Update year and copyright holder
    - [ ] Create basic README.md
@@ -13,12 +14,14 @@ This file covers documentation tasks for the project.
      - [ ] Basic usage information
 
 2. ## Development Documentation
+
    - [ ] Create CONTRIBUTING.md
      - [ ] Document development workflow
      - [ ] Explain branch and PR conventions
      - [ ] Add code style and testing requirements
 
 3. ## Comprehensive Documentation
+
    - [ ] Enhance README.md
      - [ ] Add detailed features list
      - [ ] Include usage examples with code
@@ -26,6 +29,7 @@ This file covers documentation tasks for the project.
      - [ ] Expand contribution guidelines
 
 4. ## Visual Documentation
+
    - [ ] Add screenshots and demo GIFs
      - [ ] Capture before/after price conversion examples
      - [ ] Create animation showing the extension in action

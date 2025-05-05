@@ -9,6 +9,7 @@ This report documents the testing verification of the Amazon crash bug fixes imp
 Tests were conducted using the following approaches:
 
 1. **Automated testing with Playwright**:
+
    - Created mock Amazon page templates for product, search, cart, and iframe scenarios
    - Implemented tests for normal operation, restricted contexts, and error handling
    - Verified error handling and graceful degradation
@@ -17,17 +18,18 @@ Tests were conducted using the following approaches:
 
 ## Test Cases
 
-| Test Case | Description | Status | Notes |
-|-----------|-------------|--------|-------|
-| **Amazon Product Pages** | Tests price conversion on Amazon product detail pages | ✅ PASS | Successfully converts all price formats |
-| **Amazon Search Results** | Tests conversion of multiple search result items | ✅ PASS | Handles both BTC and satoshi conversion depending on price magnitude |
-| **Amazon Cart Pages** | Tests cart item and subtotal conversion | ✅ PASS | Successfully handles dynamic updates |
-| **Restricted Iframes** | Tests behavior in sandboxed/restricted iframes | ✅ PASS | Graceful degradation with no crashes |
-| **Error Handling** | Tests resilience to various error conditions | ✅ PASS | Continues functioning despite simulated errors |
+| Test Case                 | Description                                           | Status  | Notes                                                                |
+| ------------------------- | ----------------------------------------------------- | ------- | -------------------------------------------------------------------- |
+| **Amazon Product Pages**  | Tests price conversion on Amazon product detail pages | ✅ PASS | Successfully converts all price formats                              |
+| **Amazon Search Results** | Tests conversion of multiple search result items      | ✅ PASS | Handles both BTC and satoshi conversion depending on price magnitude |
+| **Amazon Cart Pages**     | Tests cart item and subtotal conversion               | ✅ PASS | Successfully handles dynamic updates                                 |
+| **Restricted Iframes**    | Tests behavior in sandboxed/restricted iframes        | ✅ PASS | Graceful degradation with no crashes                                 |
+| **Error Handling**        | Tests resilience to various error conditions          | ✅ PASS | Continues functioning despite simulated errors                       |
 
 ## Detailed Results
 
 ### Amazon Product Pages
+
 - ✅ Successfully converted main product price
 - ✅ Converted supplementary prices (comparison prices, etc.)
 - ✅ Properly handled both BTC and satoshi conversions
@@ -35,24 +37,28 @@ Tests were conducted using the following approaches:
 - ✅ Handled various Amazon price component structures
 
 ### Amazon Search Results
+
 - ✅ Converted all search result prices
 - ✅ Handled different price magnitudes appropriately
 - ✅ Correctly processed complex DOM structures
 - ✅ No performance issues with multiple conversions
 
 ### Amazon Cart Pages
+
 - ✅ Converted individual cart item prices
 - ✅ Converted cart subtotal correctly
 - ✅ Successfully handled dynamic updates to cart
 - ✅ Maintained accuracy after price changes
 
 ### Restricted Context Handling
+
 - ✅ Detected restricted iframe context correctly
 - ✅ Skipped DOM operations in restricted contexts
 - ✅ No crashes when attempting to access restricted frames
 - ✅ Continued to function in main page despite restricted subframes
 
 ### Error Handling
+
 - ✅ Logged errors properly with context information
 - ✅ Maintained functionality despite simulated errors
 - ✅ Provided appropriate fallbacks when operations failed

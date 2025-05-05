@@ -58,56 +58,89 @@ async function fetchBitcoinPrice() {
       
       try {
         // Use withTimeout to ensure request doesn't hang
-        const response = await withTimeout(
-          fetch(COINDESK_API_URL, {
+        // First create a controller for abort signal
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), PRICE_FETCH_TIMEOUT);
+        
+        try {
+          const response = await fetch(COINDESK_API_URL, {
             method: 'GET',
             headers: {
               'Accept': 'application/json',
               'Cache-Control': 'no-cache'
-            }
-          }), 
-          PRICE_FETCH_TIMEOUT,
-          'Bitcoin price API request timed out'
-        );
-        
-        // Log fetch completion
-        console.debug('Bitcoin Price Tag: Fetch lifecycle - Received response', {
-          url: COINDESK_API_URL,
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries([...response.headers.entries()]),
-          timestamp: new Date().toISOString()
-        });
-        
-        if (!response.ok) {
-          // Collect as much diagnostic info as possible
-          const diagnosticInfo = {
+            },
+            signal: controller.signal
+          });
+          
+          // Clear the timeout since fetch completed
+          clearTimeout(timeoutId);
+          
+          // Log fetch completion
+          console.debug('Bitcoin Price Tag: Fetch lifecycle - Received response', {
             url: COINDESK_API_URL,
             status: response.status,
             statusText: response.statusText,
             headers: Object.fromEntries([...response.headers.entries()]),
-            timestamp: new Date().toISOString(),
-            fetchPhase: 'response_validation'
-          };
+            timestamp: new Date().toISOString()
+          });
           
-          // Try to get response text for more context
-          let responseText = null;
-          try {
-            // Clone the response to avoid consuming it
-            const clonedResponse = response.clone();
-            responseText = await clonedResponse.text();
-            diagnosticInfo.responseText = responseText.substring(0, 500); // Limit size
-          } catch (textError) {
-            diagnosticInfo.responseTextError = textError.message;
+          if (!response.ok) {
+            // Collect as much diagnostic info as possible
+            const diagnosticInfo = {
+              url: COINDESK_API_URL,
+              status: response.status,
+              statusText: response.statusText,
+              headers: Object.fromEntries([...response.headers.entries()]),
+              timestamp: new Date().toISOString(),
+              fetchPhase: 'response_validation'
+            };
+            
+            // Try to get response text for more context
+            let responseText = null;
+            try {
+              // Clone the response to avoid consuming it
+              const clonedResponse = response.clone();
+              responseText = await clonedResponse.text();
+              diagnosticInfo.responseText = responseText.substring(0, 500); // Limit size
+            } catch (textError) {
+              diagnosticInfo.responseTextError = textError.message;
+            }
+            
+            const error = createError(
+              `API responded with status: ${response.status} - ${response.statusText}`,
+              ErrorTypes.API,
+              diagnosticInfo
+            );
+            
+            throw error;
+          }
+        } catch (fetchError) {
+          // Clear the timeout if it's an abort error
+          clearTimeout(timeoutId);
+          
+          // Rethrow with better context
+          if (fetchError.name === 'AbortError') {
+            throw createError(
+              'Bitcoin price API request timed out',
+              ErrorTypes.TIMEOUT,
+              { 
+                url: COINDESK_API_URL,
+                timeout: PRICE_FETCH_TIMEOUT,
+                fetchPhase: 'request_timeout'
+              }
+            );
           }
           
-          const error = createError(
-            `API responded with status: ${response.status} - ${response.statusText}`,
-            ErrorTypes.API,
-            diagnosticInfo
+          // For other fetch errors, add context and rethrow
+          throw createError(
+            fetchError.message || 'Fetch operation failed',
+            ErrorTypes.NETWORK,
+            {
+              originalError: fetchError.toString(),
+              url: COINDESK_API_URL,
+              fetchPhase: 'fetch_execution'
+            }
           );
-          
-          throw error;
         }
         
         try {
@@ -230,17 +263,22 @@ async function fetchFromAlternativeApis() {
     });
     
     try {
-      const response = await withTimeout(
-        fetch(apiUrl, {
+      // Use AbortController for more reliable timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), PRICE_FETCH_TIMEOUT);
+      
+      try {
+        const response = await fetch(apiUrl, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
             'Cache-Control': 'no-cache'
-          }
-        }),
-        PRICE_FETCH_TIMEOUT,
-        `Alternative API request to ${apiUrl} timed out`
-      );
+          },
+          signal: controller.signal
+        });
+        
+        // Clear the timeout since fetch completed
+        clearTimeout(timeoutId);
       
       // Log response status
       console.debug('Bitcoin Price Tag: Fetch lifecycle - Alternative API response received', {
@@ -315,20 +353,42 @@ async function fetchFromAlternativeApis() {
         });
       }
     } catch (error) {
-      // Add diagnostic info to the error
-      error.details = {
-        ...error.details,
-        url: apiUrl,
-        fetchPhase: 'alternative_api',
-        timestamp: new Date().toISOString()
-      };
+      // Clear any remaining timeout
+      if (typeof timeoutId !== 'undefined') {
+        clearTimeout(timeoutId);
+      }
+      
+      // Create a properly structured error object
+      let enhancedError;
+      
+      if (error.name === 'AbortError') {
+        enhancedError = createError(
+          `Alternative API request to ${apiUrl} timed out`,
+          ErrorTypes.TIMEOUT,
+          { 
+            url: apiUrl,
+            timeout: PRICE_FETCH_TIMEOUT,
+            fetchPhase: 'alternative_api_timeout'
+          }
+        );
+      } else {
+        enhancedError = createError(
+          error.message || `Alternative API request to ${apiUrl} failed`,
+          error.type || ErrorTypes.NETWORK,
+          {
+            url: apiUrl,
+            fetchPhase: 'alternative_api',
+            timestamp: new Date().toISOString(),
+            originalError: error.toString()
+          }
+        );
+      }
       
       // Log and continue to next API
-      logError(error, {
+      logError(enhancedError, {
         severity: ErrorSeverity.WARNING,
         context: 'alternative_api',
-        url: apiUrl,
-        fetchPhase: error.details?.fetchPhase || 'unknown'
+        url: apiUrl
       });
       
       console.debug('Bitcoin Price Tag: Fetch lifecycle - Continuing to next alternative API after failure');

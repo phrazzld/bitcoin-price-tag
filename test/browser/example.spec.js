@@ -18,27 +18,25 @@ test('Simple browser compatibility test', async ({ page, browserName }) => {
       </body>
     </html>
   `);
-  
+
   // Log which browser we're testing
   console.log(`Running test in ${browserName}`);
-  
+
   // Create a simple check for browser support
-  const browserInfo = await page.evaluate(() => {
-    return {
-      userAgent: navigator.userAgent,
-      features: {
-        promiseSupport: typeof Promise !== 'undefined',
-        fetchSupport: typeof fetch !== 'undefined',
-        mutationObserver: typeof MutationObserver !== 'undefined'
-      }
-    };
-  });
-  
+  const browserInfo = await page.evaluate(() => ({
+    userAgent: navigator.userAgent,
+    features: {
+      promiseSupport: typeof Promise !== 'undefined',
+      fetchSupport: typeof fetch !== 'undefined',
+      mutationObserver: typeof MutationObserver !== 'undefined',
+    },
+  }));
+
   // All modern browsers should support these features
   expect(browserInfo.features.promiseSupport).toBeTruthy();
   expect(browserInfo.features.fetchSupport).toBeTruthy();
   expect(browserInfo.features.mutationObserver).toBeTruthy();
-  
+
   // Simple test for accessing a DOM element
   const priceElement = await page.locator('#price').textContent();
   expect(priceElement).toBe('$100');

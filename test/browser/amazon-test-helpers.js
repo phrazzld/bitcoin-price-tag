@@ -2,9 +2,10 @@
  * Amazon-specific test helpers for browser compatibility tests
  */
 
-import { expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
+
+import { expect } from '@playwright/test';
 
 /**
  * Load an Amazon fixture HTML file
@@ -33,11 +34,11 @@ export async function enableDiagnosticMode(page) {
       configureLogging({
         diagnosticMode: true,
         verbose: true,
-        minLevel: 'debug'
+        minLevel: 'debug',
       });
       return true;
     }
-    
+
     console.warn('Bitcoin Price Tag: Could not enable diagnostic mode');
     return false;
   });
@@ -61,19 +62,17 @@ export async function setupAmazonTestEnvironment(page) {
               callback({
                 btcPrice: 50000,
                 satPrice: 0.0005,
-                timestamp: Date.now()
+                timestamp: Date.now(),
               });
             }, 100);
           }
         },
         onMessage: {
           addListener: () => {},
-          removeListener: () => {}
+          removeListener: () => {},
         },
         lastError: null,
-        getURL: (path) => {
-          return 'chrome-extension://mock-extension-id/' + path;
-        }
+        getURL: (path) => 'chrome-extension://mock-extension-id/' + path,
       },
       storage: {
         local: {
@@ -82,51 +81,47 @@ export async function setupAmazonTestEnvironment(page) {
           },
           set: (data, callback) => {
             if (callback) callback();
-          }
-        }
-      }
+          },
+        },
+      },
     };
-    
+
     // Create mock bridge for testing error handling and logging
     window.bitcoinPriceTagBridge = {
       // Core messaging
       sendMessageToBackground: (message, callback) => {
         chrome.runtime.sendMessage(message, callback);
       },
-      checkBridgeHealth: () => {
-        return { available: true, lastCheck: Date.now() };
-      },
-      
+      checkBridgeHealth: () => ({ available: true, lastCheck: Date.now() }),
+
       // Error handling utilities
       errorHandling: {
         enableDiagnosticMode: () => {
           console.debug('Bitcoin Price Tag: Enabling diagnostic mode');
-          
+
           // Mock implementation
           window._diagnosticModeEnabled = true;
-          
+
           // Expose to global scope for test visibility
           window.enableDiagnosticMode = () => {
             window._diagnosticModeEnabled = true;
           };
-        }
+        },
       },
-      
+
       // Price data utilities
       priceDataInfo: {
-        freshness: 'fresh'
+        freshness: 'fresh',
       },
-      
+
       // Fallback data when needed
-      getFallbackPriceData: () => {
-        return {
-          btcPrice: 50000,
-          satPrice: 0.0005,
-          timestamp: Date.now(),
-          source: 'fallback'
-        };
-      },
-      
+      getFallbackPriceData: () => ({
+        btcPrice: 50000,
+        satPrice: 0.0005,
+        timestamp: Date.now(),
+        source: 'fallback',
+      }),
+
       // Conversion utilities for callback handlers
       conversionUtils: {
         valueFriendly: (value, satPrice) => {
@@ -135,15 +130,15 @@ export async function setupAmazonTestEnvironment(page) {
           } else {
             return `${Math.round(value / 0.0005).toLocaleString()} sats`;
           }
-        }
+        },
       },
-      
+
       // Manifest info
       manifestInfo: {
         version: '2.0.0',
         manifestVersion: 3,
-        name: 'Bitcoin Price Tag'
-      }
+        name: 'Bitcoin Price Tag',
+      },
     };
   });
 }
@@ -155,15 +150,15 @@ export async function setupAmazonTestEnvironment(page) {
  */
 export async function captureConsoleMessages(page) {
   const logs = [];
-  
+
   page.on('console', (message) => {
     logs.push({
       type: message.type(),
       text: message.text(),
-      location: message.location()
+      location: message.location(),
     });
   });
-  
+
   return logs;
 }
 
@@ -177,7 +172,7 @@ export async function verifyAmazonPriceConversion(page) {
     // Find Amazon price elements
     const originalPrices = document.querySelectorAll('.a-price');
     const convertedElements = document.querySelectorAll('.btc-price-converted-amazon');
-    
+
     // Check if any conversions happened
     return {
       originalPriceCount: originalPrices.length,
@@ -186,10 +181,11 @@ export async function verifyAmazonPriceConversion(page) {
       hasBtc: document.body.textContent.includes('BTC'),
       hasSats: document.body.textContent.includes('sats'),
       // Check for any error indicators in the body text
-      hasErrors: document.body.textContent.includes('Error') || 
-                document.body.textContent.includes('error') ||
-                document.body.textContent.includes('failed') ||
-                document.body.textContent.includes('Failed')
+      hasErrors:
+        document.body.textContent.includes('Error') ||
+        document.body.textContent.includes('error') ||
+        document.body.textContent.includes('failed') ||
+        document.body.textContent.includes('Failed'),
     };
   });
 }
@@ -202,25 +198,26 @@ export async function verifyAmazonPriceConversion(page) {
  */
 export async function checkPageHealthStatus(page, logs) {
   // Check for critical errors in logs
-  const criticalErrors = logs.filter(log => 
-    log.type === 'error' && 
-    !log.text.includes('restricted iframe') && // Expected error
-    !log.text.includes('sandbox') // Expected error
+  const criticalErrors = logs.filter(
+    (log) =>
+      log.type === 'error' &&
+      !log.text.includes('restricted iframe') && // Expected error
+      !log.text.includes('sandbox'), // Expected error
   );
-  
+
   // Check page is still responsive
-  const isResponsive = await page.evaluate(() => {
-    return {
+  const isResponsive = await page
+    .evaluate(() => ({
       documentAvailable: typeof document !== 'undefined',
       bodyAvailable: document.body !== null,
-      title: document.title
-    };
-  }).catch(() => false);
-  
+      title: document.title,
+    }))
+    .catch(() => false);
+
   return {
     isAlive: !!isResponsive,
     hasCriticalErrors: criticalErrors.length > 0,
     criticalErrorCount: criticalErrors.length,
-    pageDetails: isResponsive
+    pageDetails: isResponsive,
   };
 }

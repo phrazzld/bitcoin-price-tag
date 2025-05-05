@@ -21,27 +21,24 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { 
+      use: {
         browserName: 'chromium',
         // Chrome-specific configurations
         launchOptions: {
-          args: [
-            '--disable-extensions-except=.',
-            '--load-extension=.'
-          ]
-        }
+          args: ['--disable-extensions-except=.', '--load-extension=.'],
+        },
       },
     },
     {
       name: 'firefox',
-      use: { 
+      use: {
         browserName: 'firefox',
         // Firefox-specific configurations
       },
     },
     {
       name: 'webkit',
-      use: { 
+      use: {
         browserName: 'webkit',
         // WebKit-specific configurations
       },

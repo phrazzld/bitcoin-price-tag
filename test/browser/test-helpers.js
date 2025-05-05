@@ -43,11 +43,15 @@ export function createCurrencyPage(currencyTexts) {
       <body>
         <h1>Currency Test Page</h1>
         <div id="price-container">
-          ${currencyTexts.map(text => `
+          ${currencyTexts
+            .map(
+              (text) => `
             <div class="price-item" data-testid="price-element">
               ${text}
             </div>
-          `).join('')}
+          `,
+            )
+            .join('')}
         </div>
       </body>
     </html>
@@ -62,10 +66,10 @@ export function createCurrencyPage(currencyTexts) {
 export async function waitForCurrencyConversion(page) {
   // Wait for any Bitcoin or satoshi annotations to appear
   try {
-    await page.waitForFunction(() => {
-      return document.body.textContent.includes('BTC') || 
-             document.body.textContent.includes('sats');
-    }, { timeout: 5000 });
+    await page.waitForFunction(
+      () => document.body.textContent.includes('BTC') || document.body.textContent.includes('sats'),
+      { timeout: 5000 },
+    );
   } catch (error) {
     // If timeout occurs, the conversion might have failed
     console.error('Currency conversion may have failed:', error);
@@ -79,14 +83,10 @@ export async function waitForCurrencyConversion(page) {
  */
 export async function verifyCurrencyConversion(page) {
   // Check if the page contains Bitcoin or satoshi annotations
-  const hasBtc = await page.evaluate(() => {
-    return document.body.textContent.includes('BTC');
-  });
-  
-  const hasSats = await page.evaluate(() => {
-    return document.body.textContent.includes('sats');
-  });
-  
+  const hasBtc = await page.evaluate(() => document.body.textContent.includes('BTC'));
+
+  const hasSats = await page.evaluate(() => document.body.textContent.includes('sats'));
+
   return hasBtc || hasSats;
 }
 

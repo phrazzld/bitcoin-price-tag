@@ -71,8 +71,22 @@ function getConcludingMatchPattern() {
  * @param {number} satPrice - Satoshi price
  * @returns {boolean} Whether any conversions were made
  */
+/**
+ * Safely check if a value is a text node
+ * Works even in environments where Node is not defined
+ * @param {any} value - The value to check
+ * @returns {boolean} True if the value is a text node
+ */
+function isTextNode(value) {
+  if (!value) return false;
+  // Use direct property checking rather than instanceof
+  return typeof value.nodeType === 'number' && value.nodeType === 3 && 
+         typeof value.nodeValue === 'string';
+}
+
 export function convertPriceText(textNode, btcPrice, satPrice) {
-  if (!textNode || !textNode.nodeValue || textNode.nodeValue.trim() === '') {
+  // Use safer type checking that doesn't rely on Node global
+  if (!isTextNode(textNode) || !textNode.nodeValue || textNode.nodeValue.trim() === '') {
     return false;
   }
   
@@ -1178,8 +1192,20 @@ function cleanupCurrencySymbol(symbol) {
  * @param {Element} node - DOM element to check
  * @returns {boolean} Whether the node is visible
  */
+/**
+ * Safely check if a value is an element node
+ * Works even in environments where Node is not defined
+ * @param {any} value - The value to check
+ * @returns {boolean} True if the value is an element node
+ */
+function isElementNode(value) {
+  if (!value) return false;
+  // Use direct property checking rather than instanceof
+  return typeof value.nodeType === 'number' && value.nodeType === 1;
+}
+
 export function isNodeVisible(node) {
-  if (!node || node.nodeType !== 1) return true; // Text nodes are considered visible
+  if (!node || !isElementNode(node)) return true; // Text nodes are considered visible
   
   try {
     const style = window.getComputedStyle(node);

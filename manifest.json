@@ -25,10 +25,7 @@
 
   "host_permissions": ["*://*/*"],
 
-  "permissions": [
-    "storage",
-    "alarms"
-  ],
+  "permissions": ["storage", "alarms"],
 
   "content_scripts": [
     {
@@ -40,7 +37,19 @@
 
   "web_accessible_resources": [
     {
-      "resources": ["bootstrap-module.js", "content-module.js", "conversion.js", "browser-detect.js", "error-handling.js", "cache-manager.js", "debounce.js", "dom-scanner.js"],
+      "resources": [
+        "bootstrap-module.js",
+        "content-module.js",
+        "conversion.js",
+        "browser-detect.js",
+        "error-handling.js",
+        "callback-utils.js",
+        "cache-manager.js",
+        "debounce.js",
+        "dom-scanner.js",
+        "context-provider.js",
+        "minified-fallback.js"
+      ],
       "matches": ["<all_urls>"]
     }
   ],

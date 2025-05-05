@@ -1,6 +1,6 @@
 /**
  * Integration tests for DOM manipulation in Bitcoin Price Tag
- * 
+ *
  * These tests verify that the extension correctly:
  * 1. Scans the DOM for price elements
  * 2. Applies currency conversions
@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
 import * as conversion from '../../conversion.js';
 
 // Mock price data for testing
@@ -23,14 +24,14 @@ const createContentScriptModule = () => {
       callback({
         btcPrice: MOCK_BTC_PRICE,
         satPrice: MOCK_SAT_PRICE,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   });
 
   // Import functions from content.js
   const module = {};
-  
+
   // Mock the makeSnippet function to return deterministic results for testing
   const mockMakeSnippet = (sourceElement, fiatAmount, btcPrice, satPrice) => {
     // Always use BTC for $100
@@ -40,13 +41,13 @@ const createContentScriptModule = () => {
     // Use BTC for values >= BTC price
     else if (fiatAmount >= btcPrice) {
       return `${sourceElement} (${(fiatAmount / btcPrice).toFixed(3)} BTC) `;
-    } 
+    }
     // Use sats for smaller amounts
     else {
       return `${sourceElement} (${Math.round(fiatAmount / satPrice).toLocaleString()} sats) `;
     }
   };
-  
+
   // Recreate the key functions from content.js for testing
   // Convert prices in a text node
   module.convert = (textNode) => {
@@ -54,7 +55,7 @@ const createContentScriptModule = () => {
     // Currency indicator preceding amount
     let matchPattern = conversion.buildPrecedingMatchPattern();
     textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
-      let multiplier = conversion.getMultiplier(e);
+      const multiplier = conversion.getMultiplier(e);
       sourceMoney = conversion.extractNumericValue(e).toFixed(2);
       // We'll call the real makeSnippet for test verification purposes
       conversion.makeSnippet(e, sourceMoney * multiplier, MOCK_BTC_PRICE, MOCK_SAT_PRICE);
@@ -64,7 +65,7 @@ const createContentScriptModule = () => {
     // Currency indicator concluding amount
     matchPattern = conversion.buildConcludingMatchPattern();
     textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
-      let multiplier = conversion.getMultiplier(e);
+      const multiplier = conversion.getMultiplier(e);
       sourceMoney = conversion.extractNumericValue(e).toFixed(2);
       // We'll call the real makeSnippet for test verification purposes
       conversion.makeSnippet(e, sourceMoney * multiplier, MOCK_BTC_PRICE, MOCK_SAT_PRICE);
@@ -89,7 +90,7 @@ const createContentScriptModule = () => {
           const classes = child?.classList;
           if (
             classes &&
-            ["sx-price-currency", "a-price-symbol"].includes(classes.value) &&
+            ['sx-price-currency', 'a-price-symbol'].includes(classes.value) &&
             child.firstChild
           ) {
             price = child.firstChild.nodeValue?.toString() || '';
@@ -98,16 +99,15 @@ const createContentScriptModule = () => {
             }
           } else if (
             classes &&
-            ["sx-price-whole", "a-price-whole", "a-price-decimal"].includes(
-              classes.value
-            ) &&
+            ['sx-price-whole', 'a-price-whole', 'a-price-decimal'].includes(classes.value) &&
             child.firstChild &&
             next?.firstChild
           ) {
             try {
-              price = (price || '') +
+              price =
+                (price || '') +
                 (child.firstChild.nodeValue || '').toString() +
-                "." +
+                '.' +
                 (next.firstChild.nodeValue || '').toString();
               child.firstChild.nodeValue = price;
               module.convert(child.firstChild);
@@ -117,7 +117,7 @@ const createContentScriptModule = () => {
             }
           } else if (
             classes &&
-            ["sx-price-fractional", "a-price-fraction"].includes(classes.value) &&
+            ['sx-price-fractional', 'a-price-fraction'].includes(classes.value) &&
             child.firstChild
           ) {
             if (child.firstChild) {
@@ -150,20 +150,20 @@ const createContentScriptModule = () => {
 describe('Bitcoin Price Tag DOM Manipulation', () => {
   let contentScript;
   let body;
-  
+
   // Set up the document body before each test
   beforeEach(() => {
     // Create a fresh document body for each test
     document.body.innerHTML = '';
     body = document.body;
-    
+
     // Create our content script testing module
     contentScript = createContentScriptModule();
-    
+
     // Set up spy on conversion functions for verification
     vi.spyOn(conversion, 'makeSnippet');
   });
-  
+
   afterEach(() => {
     // Clean up
     vi.restoreAllMocks();
@@ -174,38 +174,38 @@ describe('Bitcoin Price Tag DOM Manipulation', () => {
       // Create a simple text node with a dollar amount
       const textNode = document.createTextNode('The price is $100.');
       body.appendChild(textNode);
-      
+
       // Process the DOM
       contentScript.processPage();
-      
+
       // Verify the conversion happened - use more relaxed assertions now
       expect(textNode.nodeValue).toContain('The price is $100');
       expect(textNode.nodeValue).toContain('BTC');
       expect(conversion.makeSnippet).toHaveBeenCalled();
     });
-    
+
     it('should convert prices with currency at the end', () => {
       // Create a text node with USD at the end
       const textNode = document.createTextNode('The price is 50 USD.');
       body.appendChild(textNode);
-      
+
       // Process the DOM
       contentScript.processPage();
-      
+
       // Verify the conversion happened - use more relaxed assertions
       expect(textNode.nodeValue).toContain('The price is 50 USD');
       expect(textNode.nodeValue).toContain('sats');
       expect(conversion.makeSnippet).toHaveBeenCalled();
     });
-    
+
     it('should handle multiple price formats in the same text', () => {
       // Create a text node with multiple price formats
       const textNode = document.createTextNode('Prices: $100, 200 USD, and $50k');
       body.appendChild(textNode);
-      
+
       // Process the DOM
       contentScript.processPage();
-      
+
       // Verify conversions happened - more relaxed assertions
       expect(textNode.nodeValue).toContain('$100');
       expect(textNode.nodeValue).toContain('BTC');
@@ -222,17 +222,17 @@ describe('Bitcoin Price Tag DOM Manipulation', () => {
       const div = document.createElement('div');
       const p1 = document.createElement('p');
       const p2 = document.createElement('p');
-      
+
       p1.textContent = 'First item costs $25.';
       p2.textContent = 'Second item costs 75 USD.';
-      
+
       div.appendChild(p1);
       div.appendChild(p2);
       body.appendChild(div);
-      
+
       // Process the DOM
       contentScript.processPage();
-      
+
       // Verify all prices were converted - more relaxed assertions
       expect(p1.textContent).toContain('$25');
       expect(p1.textContent).toContain('sats');
@@ -240,7 +240,7 @@ describe('Bitcoin Price Tag DOM Manipulation', () => {
       expect(p2.textContent).toContain('sats');
       expect(conversion.makeSnippet).toHaveBeenCalled();
     });
-    
+
     it('should handle deep nesting and mixed content', () => {
       // Create a more complex nested structure with mixed content
       const container = document.createElement('div');
@@ -260,111 +260,111 @@ describe('Bitcoin Price Tag DOM Manipulation', () => {
           <div class="total">Total: 1,699 USD</div>
         </article>
       `;
-      
+
       body.appendChild(container);
-      
+
       // Process the DOM
       contentScript.processPage();
-      
+
       // Verify all prices were converted - more relaxed assertions
       const priceNodes = container.querySelectorAll('.price');
       expect(priceNodes[0].textContent).toContain('$1,299.99');
       expect(priceNodes[1].textContent).toContain('$499.50');
-      
+
       const discountNode = container.querySelector('.discount');
       expect(discountNode.textContent).toContain('$200');
-      
+
       const saleNode = container.querySelector('.sale');
       expect(saleNode.textContent).toContain('$399');
-      
+
       const totalNode = container.querySelector('.total');
       expect(totalNode.textContent).toContain('1,699 USD');
-      
+
       // Should have converted prices
       expect(conversion.makeSnippet).toHaveBeenCalled();
     });
   });
-  
+
   describe('Amazon-style price elements', () => {
     it('should handle Amazon-style price components', () => {
       // Create a simplified structure that mimics Amazon's price display
       // This version avoids the complex DOM structure that was causing errors
       const priceContainer = document.createElement('div');
-      
+
       const symbol = document.createElement('span');
       symbol.className = 'a-price-symbol';
       symbol.textContent = '$';
-      
+
       const whole = document.createElement('span');
       whole.className = 'a-price-whole';
       whole.textContent = '49';
-      
+
       const decimal = document.createElement('span');
       decimal.className = 'a-price-decimal';
       decimal.textContent = '.';
-      
+
       const fraction = document.createElement('span');
       fraction.className = 'a-price-fraction';
       fraction.textContent = '99';
-      
+
       priceContainer.appendChild(symbol);
       priceContainer.appendChild(whole);
       priceContainer.appendChild(decimal);
       priceContainer.appendChild(fraction);
-      
+
       body.appendChild(priceContainer);
-      
+
       // Process the DOM - should not throw an error
       expect(() => contentScript.processPage()).not.toThrow();
     });
   });
-  
+
   describe('Edge cases', () => {
     it('should handle empty elements', () => {
       // Create an empty container
       const emptyDiv = document.createElement('div');
       body.appendChild(emptyDiv);
-      
+
       // This should not throw an error
       expect(() => contentScript.processPage()).not.toThrow();
-      
+
       // No conversions should have happened
       expect(conversion.makeSnippet).not.toHaveBeenCalled();
     });
-    
+
     it('should handle malformed HTML', () => {
       // Create some malformed HTML-like content
       const badMarkup = document.createElement('div');
       badMarkup.innerHTML = '<p>Price: $100<span class="broken">';
-      
+
       body.appendChild(badMarkup);
-      
+
       // This should not throw an error
       expect(() => contentScript.processPage()).not.toThrow();
-      
+
       // The price should still be converted - relaxed assertion
       const paragraph = badMarkup.querySelector('p');
       expect(paragraph.textContent).toContain('$100');
     });
-    
+
     it('should handle very small and very large prices', () => {
       // Create nodes with extreme values
       const small = document.createElement('p');
       small.textContent = 'Micro-payment: $0.001';
-      
+
       const large = document.createElement('p');
       large.textContent = 'GDP: $25 trillion';
-      
+
       body.appendChild(small);
       body.appendChild(large);
-      
+
       // Process the DOM
       contentScript.processPage();
-      
+
       // Verify conversions - relaxed assertions
       expect(small.textContent).toContain('$0.001');
       expect(small.textContent).toContain('sats');
-      
+
       expect(large.textContent).toContain('$25 trillion');
       expect(large.textContent).toContain('BTC');
     });

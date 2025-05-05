@@ -1,6 +1,92 @@
 // Non-module content script that loads the real content module via an external file
 // and provides a messaging bridge between page context and extension context
 (async function() {
+  /**
+   * Helper function to diagnose module loading issues
+   * @param {string} url - The URL that failed to load
+   * @param {Object} contextState - The context state object
+   * @returns {Promise<Object>} Diagnosis results
+   */
+  async function diagnoseModuleLoadingIssue(url, contextState) {
+    const diagnosis = {
+      url,
+      timestamp: new Date().toISOString(),
+      possibleIssues: [],
+      contextInfo: contextState || {},
+      recommendedAction: null
+    };
+    
+    try {
+      // Try to fetch the resource directly to see if it's accessible
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        diagnosis.resourceAccessible = response.ok;
+        diagnosis.resourceStatus = response.status;
+        
+        if (!response.ok) {
+          diagnosis.possibleIssues.push('resource_not_accessible');
+          diagnosis.recommendedAction = 'check_web_accessible_resources';
+        }
+      } catch (fetchError) {
+        diagnosis.resourceAccessible = false;
+        diagnosis.fetchError = fetchError.message;
+        diagnosis.possibleIssues.push('resource_fetch_error');
+      }
+      
+      // Check for CSP issues
+      const cspMeta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+      if (cspMeta) {
+        const cspContent = cspMeta.getAttribute('content');
+        diagnosis.hasCsp = true;
+        diagnosis.cspContent = cspContent;
+        
+        // Look for script-src restrictions
+        if (cspContent && cspContent.includes('script-src') && 
+            (!cspContent.includes(new URL(url).origin) && 
+             !cspContent.includes('*'))) {
+          diagnosis.possibleIssues.push('csp_restriction');
+          diagnosis.recommendedAction = 'modify_csp_or_use_alternative_approach';
+        }
+      }
+      
+      // Check for sandbox restrictions in iframes
+      if (window !== window.top) {
+        diagnosis.isIframe = true;
+        
+        try {
+          if (window.frameElement && window.frameElement.hasAttribute('sandbox')) {
+            const sandbox = window.frameElement.getAttribute('sandbox');
+            diagnosis.isSandboxed = true;
+            diagnosis.sandboxAttributes = sandbox;
+            
+            if (!sandbox.includes('allow-scripts')) {
+              diagnosis.possibleIssues.push('sandbox_scripts_blocked');
+              diagnosis.recommendedAction = 'cannot_load_in_sandbox';
+            }
+          }
+        } catch (frameError) {
+          diagnosis.crossOriginFrame = true;
+          diagnosis.possibleIssues.push('cross_origin_isolation');
+        }
+      }
+      
+      // If no specific issues were found but loading still failed, add a generic issue
+      if (diagnosis.possibleIssues.length === 0) {
+        diagnosis.possibleIssues.push('unknown_module_loading_issue');
+        diagnosis.recommendedAction = 'use_fallback_non_module_approach';
+      }
+      
+      return diagnosis;
+    } catch (error) {
+      return {
+        url,
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        possibleIssues: ['diagnosis_error'],
+        recommendedAction: 'use_fallback_non_module_approach'
+      };
+    }
+  }
   try {
     // Import conversion utilities to expose via bridge
     // Using an IIFE to scope the imports
@@ -810,6 +896,27 @@
         return; // Exit early in restricted Amazon frames 
       }
       
+      // Define Node if it's not already defined to prevent reference errors
+      if (typeof Node === 'undefined') {
+        try {
+          // Create a basic Node definition - just enough for type checking
+          window.Node = {
+            ELEMENT_NODE: 1,
+            ATTRIBUTE_NODE: 2,
+            TEXT_NODE: 3,
+            CDATA_SECTION_NODE: 4,
+            PROCESSING_INSTRUCTION_NODE: 7,
+            COMMENT_NODE: 8,
+            DOCUMENT_NODE: 9,
+            DOCUMENT_TYPE_NODE: 10,
+            DOCUMENT_FRAGMENT_NODE: 11
+          };
+          console.debug('Bitcoin Price Tag: Added Node polyfill for restricted environments');
+        } catch (polyfillError) {
+          console.warn('Bitcoin Price Tag: Unable to add Node polyfill', polyfillError.message);
+        }
+      }
+      
       // Check if there's any risk of CSP issues or other restrictions
       const hasPotentialCSPIssues = contextState.isRestricted && 
                                   (contextState.restrictionReason === 'csp_restrictions' || 
@@ -827,21 +934,51 @@
           moduleScript.type = 'module';
           moduleScript.src = bootstrapUrl;
           
-          // Add error handling for the script
+          // Add comprehensive error handling for the script
           moduleScript.onerror = (event) => {
+            // Log detailed information about the error
             console.warn('Bitcoin Price Tag: Failed to load bootstrap module', {
               url: bootstrapUrl,
-              error: event.type || 'unknown_error'
+              error: event.type || 'unknown_error',
+              errorDetails: event instanceof ErrorEvent ? event.message : 'no details available',
+              timestamp: new Date().toISOString()
             });
             
-            // Try to load via fallback method if initial load fails
+            // Try to diagnose the issue
+            diagnoseModuleLoadingIssue(bootstrapUrl, contextState).then(diagnosis => {
+              console.debug('Bitcoin Price Tag: Module loading diagnosis', diagnosis);
+              
+              // Try to load via fallback method if initial load fails and not in restricted context
+              if (!contextState.isRestricted) {
+                console.debug('Bitcoin Price Tag: Attempting fallback module loading');
+                loadFallbackModule();
+              }
+            });
+          };
+          
+          // Add load event handling for better diagnostics
+          moduleScript.onload = () => {
+            console.debug('Bitcoin Price Tag: Bootstrap module loaded successfully', {
+              url: bootstrapUrl,
+              timestamp: new Date().toISOString()
+            });
+          };
+          
+          // Append to document to execute it - try documentElement if head isn't available
+          try {
+            (document.head || document.documentElement).appendChild(moduleScript);
+            console.debug('Bitcoin Price Tag: Appended bootstrap module script to DOM');
+          } catch (appendError) {
+            console.error('Bitcoin Price Tag: Failed to append bootstrap module script', {
+              error: appendError.message,
+              url: bootstrapUrl
+            });
+            
+            // If appending fails, try the fallback
             if (!contextState.isRestricted) {
               loadFallbackModule();
             }
-          };
-          
-          // Append to document to execute it
-          (document.head || document.documentElement).appendChild(moduleScript);
+          }
           
           console.debug('Bitcoin Price Tag loader executed in standard mode');
         } catch (runtimeError) {
@@ -862,8 +999,13 @@
         console.warn(`Bitcoin Price Tag: Skipping module loading in restricted context - ${contextState.restrictionReason}`);
       }
       
-      // Function to load fallback module for limited functionality environments
+      /**
+       * Function to load fallback module for limited functionality environments
+       * Enhanced with better error handling and diagnostic logging
+       */
       function loadFallbackModule() {
+        console.debug('Bitcoin Price Tag: Attempting to load fallback module');
+        
         try {
           // First check if we're in a context where script injection might fail
           const isIframe = window !== window.top;
@@ -889,86 +1031,121 @@
             return;
           }
           
-          // Simple inline module for environments with limited extension API access
-          const fallbackScript = document.createElement('script');
-          fallbackScript.textContent = `
-            // Bitcoin Price Tag fallback module
-            console.debug('Bitcoin Price Tag: Running fallback module with limited functionality');
-            
-            // Use a very minimal implementation with no DOM manipulation
-            const minimalBitcoinTagger = {
-              btcPrice: 50000,
-              satPrice: 0.0005,
-              
-              init: function() {
-                try {
-                  // Very basic initialization that doesn't rely on extension APIs
-                  if (typeof window.bitcoinPriceTagBridge !== 'undefined' && 
-                      typeof window.bitcoinPriceTagBridge.getFallbackPriceData === 'function') {
-                    try {
-                      // Use bridge data if available, but safely check it first
-                      const fallbackData = window.bitcoinPriceTagBridge.getFallbackPriceData();
-                      if (fallbackData && typeof fallbackData === 'object' && fallbackData.btcPrice) {
-                        this.btcPrice = fallbackData.btcPrice;
-                        this.satPrice = fallbackData.satPrice || 0.0005;
-                      }
-                    } catch (dataError) {
-                      console.debug('Bitcoin Price Tag: Error getting fallback data:', dataError.message);
-                    }
-                  }
-                  
-                  // Special case for iframes - don't process if not main frame
-                  if (window !== window.top) {
-                    console.debug('Bitcoin Price Tag: Skipping price processing in iframe');
-                    return;
-                  }
-                  
-                  // Check for potential CSP or other restrictions before attempting DOM operations
-                  const hasCSPMeta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
-                  if (hasCSPMeta) {
-                    const cspContent = hasCSPMeta.getAttribute('content') || '';
-                    const hasScriptRestrictions = cspContent.includes('script-src') && 
-                                                (!cspContent.includes('unsafe-inline') || 
-                                                 !cspContent.includes('unsafe-eval'));
-                    
-                    if (hasScriptRestrictions) {
-                      console.debug('Bitcoin Price Tag: CSP restrictions detected, skipping DOM operations');
-                      return;
-                    }
-                  }
-                  
-                  // No obvious restrictions detected, try very limited processing
-                  this.limitedProcessing();
-                } catch (initError) {
-                  console.debug('Bitcoin Price Tag: Fallback initialization error:', initError.message);
-                }
-              },
-              
-              // Very limited processing that does minimal DOM operations
-              limitedProcessing: function() {
-                console.debug('Bitcoin Price Tag: Fallback mode active - price processing limited');
-                // No DOM manipulation in fallback mode to avoid potential issues
-              }
-            };
-            
-            // Initialize the fallback module with careful error handling
-            try {
-              minimalBitcoinTagger.init();
-            } catch (e) {
-              console.debug('Bitcoin Price Tag: Fallback module execution error:', e.message);
+          // Check for CSP restrictions that might block script injection
+          const cspMeta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+          if (cspMeta) {
+            const cspContent = cspMeta.getAttribute('content') || '';
+            if (cspContent.includes('script-src') && !cspContent.includes('unsafe-inline')) {
+              console.warn('Bitcoin Price Tag: CSP blocks inline scripts, trying non-inline approach');
+              return tryNonInlineScriptInsertion();
             }
-          `;
+          }
           
-          // Extra safety - wrap script injection in try-catch
+          // Try to create the fallback script element
+          let fallbackScript;
           try {
-            // Append to document to execute it
+            fallbackScript = document.createElement('script');
+          } catch (createElementError) {
+            console.error('Bitcoin Price Tag: Failed to create script element', {
+              error: createElementError.message,
+              context: 'fallback_module'
+            });
+            return;
+          }
+          
+          // Instead of using inline script content which violates CSP,
+          // use an external script reference - this is more CSP-friendly
+          try {
+            // Get URL to our dedicated minified fallback module
+            const fallbackUrl = chrome.runtime.getURL('minified-fallback.js');
+            fallbackScript.src = fallbackUrl;
+            fallbackScript.async = true;
+            console.debug('Bitcoin Price Tag: Using CSP-friendly minimal fallback:', fallbackUrl);
+          } catch (urlError) {
+            console.error('Bitcoin Price Tag: Failed to get fallback script URL', {
+              error: urlError.message
+            });
+            return false;
+          }
+          
+          // Add error handling for the script element
+          fallbackScript.onerror = (event) => {
+            console.error('Bitcoin Price Tag: Fallback script load error', {
+              error: event instanceof ErrorEvent ? event.message : 'unknown script error',
+              type: event.type
+            });
+          };
+          
+          // Try to inject the fallback script
+          try {
             (document.head || document.documentElement).appendChild(fallbackScript);
-          } catch (injectionError) {
-            console.warn('Bitcoin Price Tag: Script injection failed:', injectionError.message);
+            console.debug('Bitcoin Price Tag: Fallback script injected successfully');
+            return true;
+          } catch (appendError) {
+            console.error('Bitcoin Price Tag: Failed to append fallback script', {
+              error: appendError.message
+            });
+            return false;
           }
         } catch (fallbackError) {
-          console.warn('Bitcoin Price Tag: Failed to load fallback module', fallbackError.message);
+          console.error('Bitcoin Price Tag: Critical error in fallback module function', {
+            error: fallbackError.message,
+            stack: fallbackError.stack ? fallbackError.stack.split('\n')[0] : 'no stack available'
+          });
+          return false;
         }
+      }
+      
+      /**
+       * Alternative approach using external script for CSP-restricted environments
+       */
+      function tryNonInlineScriptInsertion() {
+        try {
+          // Use our dedicated minimal fallback script file that's CSP-friendly
+          let scriptUrl;
+          try {
+            scriptUrl = chrome.runtime.getURL('minified-fallback.js');
+            
+            // Create the script element
+            const scriptEl = document.createElement('script');
+            scriptEl.src = scriptUrl;
+            scriptEl.async = true;
+            
+            // Add error handling
+            scriptEl.onerror = (event) => {
+              console.error('Bitcoin Price Tag: Non-inline script load error', {
+                error: event instanceof ErrorEvent ? event.message : 'unknown error',
+                url: scriptUrl
+              });
+            };
+            
+            // Add load event for diagnostic purposes
+            scriptEl.onload = () => {
+              console.debug('Bitcoin Price Tag: Minified fallback loaded successfully', {
+                url: scriptUrl,
+                timestamp: new Date().toISOString()
+              });
+            };
+            
+            // Inject it
+            (document.head || document.documentElement).appendChild(scriptEl);
+            console.debug('Bitcoin Price Tag: CSP-friendly fallback approach used');
+            return true;
+          } catch (runtimeError) {
+            console.error('Bitcoin Price Tag: Failed to get fallback script URL', {
+              error: runtimeError.message
+            });
+            return false;
+          }
+        } catch (error) {
+          console.error('Bitcoin Price Tag: Non-inline script insertion failed', {
+            error: error.message
+          });
+          return false;
+        }
+      }
+          
+          // Note: The original fallback module implementation has been refactored and moved above.
       }
       
       // Listen for messages from the page context that need to access extension APIs

@@ -1,6 +1,6 @@
 /**
  * Context Provider for Bitcoin Price Tag
- * 
+ *
  * This module provides standardized context information for error logging and debugging.
  * It centralizes context gathering to ensure consistent information is available across
  * all modules, especially for error reporting and diagnostic logging.
@@ -22,9 +22,7 @@ const correlationId = generateCorrelationId();
  * @returns {string} A unique correlation ID
  */
 function generateCorrelationId() {
-  return 'btc-' + 
-    Date.now().toString(36) + '-' + 
-    Math.random().toString(36).substring(2, 9);
+  return 'btc-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 9);
 }
 
 /**
@@ -54,9 +52,7 @@ function isAmazonUrl(url) {
   try {
     const urlObj = new URL(url);
     const domain = urlObj.hostname.toLowerCase();
-    return domain.includes('amazon.') || 
-           domain.endsWith('amazon') || 
-           domain.includes('.amazon');
+    return domain.includes('amazon.') || domain.endsWith('amazon') || domain.includes('.amazon');
   } catch (e) {
     // If URL parsing fails, check string directly
     return url.toLowerCase().includes('amazon.');
@@ -71,16 +67,16 @@ function detectAmazonPageType() {
   if (!isAmazonUrl(window.location.href)) {
     return null;
   }
-  
+
   // Try to detect based on URL pattern first
   const path = window.location.pathname.toLowerCase();
-  
+
   if (path.includes('/dp/') || path.includes('/gp/product/')) {
     return 'product';
-  } else if (path.includes('/s') && (
-    path.includes('keywords=') || 
-    window.location.search.includes('keywords=')
-  )) {
+  } else if (
+    path.includes('/s') &&
+    (path.includes('keywords=') || window.location.search.includes('keywords='))
+  ) {
     return 'search';
   } else if (path.includes('/cart') || path.includes('/gp/cart')) {
     return 'cart';
@@ -91,7 +87,7 @@ function detectAmazonPageType() {
   } else if (path.includes('/wishlist')) {
     return 'wishlist';
   }
-  
+
   // Fallback to DOM structure detection
   try {
     if (document.querySelector('#dp, #productDetails, #centerCol, #ppd')) {
@@ -104,7 +100,7 @@ function detectAmazonPageType() {
   } catch (e) {
     // Ignore DOM detection errors
   }
-  
+
   return 'other';
 }
 
@@ -117,44 +113,44 @@ function detectIframeStructure() {
     isIframe: window !== window.top,
     depth: 0,
     iframeChain: [],
-    crossOrigin: false
+    crossOrigin: false,
   };
-  
+
   if (!result.isIframe) {
     return result;
   }
-  
+
   // Determine iframe depth
   let current = window;
   let depth = 0;
   let crossOrigin = false;
-  
+
   while (current !== current.top) {
     depth++;
-    
+
     // Try to access parent's location - will throw if cross-origin
     try {
       const parentLocation = current.parent.location.href;
       result.iframeChain.push({
         depth,
         crossOrigin: false,
-        url: parentLocation
+        url: parentLocation,
       });
     } catch (e) {
       crossOrigin = true;
       result.iframeChain.push({
         depth,
         crossOrigin: true,
-        url: null
+        url: null,
       });
     }
-    
+
     current = current.parent;
   }
-  
+
   result.depth = depth;
   result.crossOrigin = crossOrigin;
-  
+
   return result;
 }
 
@@ -167,10 +163,10 @@ function getSafeLocationInfo() {
     if (!window || !window.location) {
       return {
         available: false,
-        reason: 'window_or_location_undefined'
+        reason: 'window_or_location_undefined',
       };
     }
-    
+
     return {
       available: true,
       href: window.location.href,
@@ -180,13 +176,13 @@ function getSafeLocationInfo() {
       hash: window.location.hash,
       host: window.location.host,
       hostname: window.location.hostname,
-      protocol: window.location.protocol
+      protocol: window.location.protocol,
     };
   } catch (e) {
     return {
       available: false,
       reason: 'location_access_error',
-      error: e.message
+      error: e.message,
     };
   }
 }
@@ -201,21 +197,21 @@ function checkExtensionApi() {
     apis: {
       runtime: false,
       storage: false,
-      tabs: false
+      tabs: false,
     },
-    details: {}
+    details: {},
   };
-  
+
   if (typeof chrome === 'undefined') {
     result.details.reason = 'chrome_undefined';
     return result;
   }
-  
+
   // Check basic API existence
   result.apis.runtime = typeof chrome.runtime !== 'undefined';
   result.apis.storage = typeof chrome.storage !== 'undefined';
   result.apis.tabs = typeof chrome.tabs !== 'undefined';
-  
+
   // Try to actively use the runtime API
   if (result.apis.runtime) {
     try {
@@ -227,7 +223,7 @@ function checkExtensionApi() {
       result.available = false;
     }
   }
-  
+
   return result;
 }
 
@@ -240,9 +236,9 @@ export function getPageContext() {
   if (_cachedPageContext) {
     return _cachedPageContext;
   }
-  
+
   const locationInfo = getSafeLocationInfo();
-  
+
   const pageContext = {
     url: locationInfo.available ? locationInfo.href : 'unavailable',
     origin: locationInfo.available ? locationInfo.origin : 'unavailable',
@@ -253,12 +249,12 @@ export function getPageContext() {
     amazonPageType: detectAmazonPageType(),
     iframe: detectIframeStructure(),
     timestamp: new Date().toISOString(),
-    correlationId
+    correlationId,
   };
-  
+
   // Cache the result
   _cachedPageContext = pageContext;
-  
+
   return pageContext;
 }
 
@@ -271,10 +267,10 @@ export function getBrowserContext() {
   if (_cachedBrowserContext) {
     return _cachedBrowserContext;
   }
-  
+
   const browser = detectBrowser();
   const features = checkFeatureSupport();
-  
+
   const browserContext = {
     name: browser.name,
     version: browser.version,
@@ -286,17 +282,17 @@ export function getBrowserContext() {
       fetchSupport: features.fetchSupport,
       promiseSupport: features.promiseSupport,
       storageAPI: features.storageAPI,
-      runtimeAPI: features.runtimeAPI
+      runtimeAPI: features.runtimeAPI,
     },
     online: typeof navigator !== 'undefined' ? navigator.onLine : 'unknown',
     cookiesEnabled: typeof navigator !== 'undefined' ? navigator.cookieEnabled : 'unknown',
     timestamp: new Date().toISOString(),
-    correlationId
+    correlationId,
   };
-  
+
   // Cache the result
   _cachedBrowserContext = browserContext;
-  
+
   return browserContext;
 }
 
@@ -309,23 +305,23 @@ export function getExtensionContext() {
   if (_cachedExtensionContext) {
     return _cachedExtensionContext;
   }
-  
+
   const extensionApi = checkExtensionApi();
-  
+
   const extensionContext = {
     apiAvailable: extensionApi.available,
     extensionId: extensionApi.details.extensionId || 'unavailable',
     apis: extensionApi.apis,
-    bridgeAvailable: typeof window !== 'undefined' && 
-                   typeof window.bitcoinPriceTagBridge !== 'undefined',
+    bridgeAvailable:
+      typeof window !== 'undefined' && typeof window.bitcoinPriceTagBridge !== 'undefined',
     manifest: getBridgeManifestInfo(),
     timestamp: new Date().toISOString(),
-    correlationId
+    correlationId,
   };
-  
+
   // Cache the result
   _cachedExtensionContext = extensionContext;
-  
+
   return extensionContext;
 }
 
@@ -334,26 +330,28 @@ export function getExtensionContext() {
  * @returns {Object} Manifest information
  */
 function getBridgeManifestInfo() {
-  if (typeof window === 'undefined' || 
-      typeof window.bitcoinPriceTagBridge === 'undefined' ||
-      typeof window.bitcoinPriceTagBridge.manifestInfo === 'undefined') {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.bitcoinPriceTagBridge === 'undefined' ||
+    typeof window.bitcoinPriceTagBridge.manifestInfo === 'undefined'
+  ) {
     return {
-      available: false
+      available: false,
     };
   }
-  
+
   try {
     const manifestInfo = window.bitcoinPriceTagBridge.manifestInfo;
     return {
       available: true,
       version: manifestInfo.version || 'unknown',
       manifestVersion: manifestInfo.manifestVersion || 'unknown',
-      name: manifestInfo.name || 'unknown'
+      name: manifestInfo.name || 'unknown',
     };
   } catch (e) {
     return {
       available: false,
-      error: e.message
+      error: e.message,
     };
   }
 }
@@ -370,7 +368,7 @@ export function getFullContext(additionalContext = {}) {
     extension: getExtensionContext(),
     timestamp: new Date().toISOString(),
     correlationId,
-    ...additionalContext
+    ...additionalContext,
   };
 }
 
@@ -383,7 +381,7 @@ export function getFullContext(additionalContext = {}) {
 export function getLightContext(additionalContext = {}) {
   const pageContext = getPageContext();
   const extensionContext = getExtensionContext();
-  
+
   return {
     url: pageContext.url,
     isAmazon: pageContext.isAmazon,
@@ -393,7 +391,7 @@ export function getLightContext(additionalContext = {}) {
     apiAvailable: extensionContext.apiAvailable,
     timestamp: new Date().toISOString(),
     correlationId,
-    ...additionalContext
+    ...additionalContext,
   };
 }
 
@@ -405,12 +403,12 @@ export function getLightContext(additionalContext = {}) {
  */
 export function getPerformanceContext(startTime, details = {}) {
   const endTime = Date.now();
-  
+
   return {
     duration: endTime - startTime,
     startTime: new Date(startTime).toISOString(),
     endTime: new Date(endTime).toISOString(),
-    ...details
+    ...details,
   };
 }
 
@@ -424,7 +422,7 @@ export function enrichErrorContext(baseContext = {}) {
     ...getLightContext(),
     ...baseContext,
     timestamp: new Date().toISOString(),
-    correlationId
+    correlationId,
   };
 }
 
@@ -441,9 +439,9 @@ export function createEventContext(eventName, eventCategory, details = {}) {
       name: eventName,
       category: eventCategory,
       timestamp: new Date().toISOString(),
-      ...details
+      ...details,
     },
-    ...getLightContext()
+    ...getLightContext(),
   };
 }
 
@@ -460,9 +458,9 @@ export function createDecisionContext(decision, reason, details = {}) {
       outcome: decision,
       reason: reason,
       timestamp: new Date().toISOString(),
-      ...details
+      ...details,
     },
-    ...getLightContext()
+    ...getLightContext(),
   };
 }
 
@@ -473,10 +471,10 @@ export function createDecisionContext(decision, reason, details = {}) {
 export function assessContextRisk() {
   const pageContext = getPageContext();
   const extensionContext = getExtensionContext();
-  
+
   const risks = [];
   let riskLevel = 'none';
-  
+
   // Check for iframe issues
   if (pageContext.iframe.isIframe) {
     if (pageContext.iframe.crossOrigin) {
@@ -490,23 +488,23 @@ export function assessContextRisk() {
       riskLevel = riskLevel === 'high' || riskLevel === 'medium' ? riskLevel : 'low';
     }
   }
-  
+
   // Check for API issues
   if (!extensionContext.apiAvailable) {
     risks.push('extension_api_unavailable');
     riskLevel = 'high';
   }
-  
+
   // Check for bridge issues
   if (!extensionContext.bridgeAvailable && pageContext.iframe.isIframe) {
     risks.push('bridge_unavailable_in_iframe');
     riskLevel = 'high';
   }
-  
+
   // Check for Amazon-specific issues
   if (pageContext.isAmazon) {
     risks.push('amazon_page');
-    
+
     if (pageContext.amazonPageType === 'product' && pageContext.iframe.isIframe) {
       risks.push('amazon_product_in_iframe');
       riskLevel = 'high';
@@ -515,7 +513,7 @@ export function assessContextRisk() {
       riskLevel = riskLevel === 'high' ? 'high' : 'medium';
     }
   }
-  
+
   return {
     risks,
     riskLevel,
@@ -526,8 +524,8 @@ export function assessContextRisk() {
       isAmazon: pageContext.isAmazon,
       amazonPageType: pageContext.amazonPageType,
       apiAvailable: extensionContext.apiAvailable,
-      bridgeAvailable: extensionContext.bridgeAvailable
-    }
+      bridgeAvailable: extensionContext.bridgeAvailable,
+    },
   };
 }
 
@@ -541,22 +539,22 @@ export function assessContextRisk() {
  */
 export function addTiming(context, label, startTime = null) {
   const now = Date.now();
-  const start = startTime || (context._timing?.start || now);
-  
+  const start = startTime || context._timing?.start || now;
+
   // Create timing object if it doesn't exist
   if (!context._timing) {
-    context._timing = { 
+    context._timing = {
       start,
-      points: []
+      points: [],
     };
   }
-  
+
   // Add this timing point
   context._timing.points.push({
     label,
     timestamp: now,
-    elapsed: now - start
+    elapsed: now - start,
   });
-  
+
   return context;
 }

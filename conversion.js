@@ -5,10 +5,10 @@
  */
 
 // Constants for price conversion
-export const currencySection = "(\\$|USD)";
-export const thousandsSection = "(\\d|\\,)*";
-export const decimalSection = "(\\.\\d+)?";
-export const illions = "\\s?((t|b|m{1,2}|k)(r?illion|n)?(\\W|$))?";
+export const currencySection = '(\\$|USD)';
+export const thousandsSection = '(\\d|\\,)*';
+export const decimalSection = '(\\.\\d+)?';
+export const illions = '\\s?((t|b|m{1,2}|k)(r?illion|n)?(\\W|$))?';
 
 export const ONE_TRILLION = 1000000000000;
 export const ONE_BILLION = 1000000000;
@@ -22,8 +22,8 @@ export const ONE_THOUSAND = 1000;
  */
 export function buildPrecedingMatchPattern() {
   return new RegExp(
-    currencySection + "\\x20?\\d" + thousandsSection + decimalSection + illions,
-    "gi"
+    currencySection + '\\x20?\\d' + thousandsSection + decimalSection + illions,
+    'gi',
   );
 }
 
@@ -34,13 +34,8 @@ export function buildPrecedingMatchPattern() {
  */
 export function buildConcludingMatchPattern() {
   return new RegExp(
-    "\\d" +
-      thousandsSection +
-      decimalSection +
-      illions +
-      "\\x20?" +
-      currencySection,
-    "gi"
+    '\\d' + thousandsSection + decimalSection + illions + '\\x20?' + currencySection,
+    'gi',
   );
 }
 
@@ -50,7 +45,7 @@ export function buildConcludingMatchPattern() {
  * @returns {number} The extracted numeric value
  */
 export function extractNumericValue(currencyString) {
-  return parseFloat(currencyString.replace(/[^\d.]/g, ""));
+  return parseFloat(currencyString.replace(/[^\d.]/g, ''));
 }
 
 /**
@@ -110,7 +105,7 @@ export function getMultiplier(text) {
  */
 export function valueInSats(fiatAmount, satPrice) {
   if (!satPrice || satPrice <= 0) {
-    throw new Error("Invalid satoshi price");
+    throw new Error('Invalid satoshi price');
   }
 
   return parseFloat((fiatAmount / satPrice).toFixed(0)).toLocaleString();
@@ -124,7 +119,7 @@ export function valueInSats(fiatAmount, satPrice) {
  */
 export function valueInBtc(fiatAmount, btcPrice) {
   if (!btcPrice || btcPrice <= 0) {
-    throw new Error("Invalid bitcoin price");
+    throw new Error('Invalid bitcoin price');
   }
 
   const value = (fiatAmount / btcPrice).toFixed(4);
@@ -166,15 +161,15 @@ export function round(x, y) {
  */
 export function valueFriendly(fiatAmount, satPrice) {
   if (!satPrice || satPrice <= 0) {
-    throw new Error("Invalid satoshi price");
+    throw new Error('Invalid satoshi price');
   }
 
-  let sats = Math.floor(fiatAmount / satPrice);
-  let m = String(sats).length;
+  const sats = Math.floor(fiatAmount / satPrice);
+  const m = String(sats).length;
   let si = friendlySuffixes.findIndex(([l]) => l >= m);
   si = si < 0 ? friendlySuffixes.length : si;
-  let [l, d, suffix] = friendlySuffixes[si - 1];
-  let roundDigits = Math.max(0, 3 - (m - d));
+  const [l, d, suffix] = friendlySuffixes[si - 1];
+  const roundDigits = Math.max(0, 3 - (m - d));
   return round(sats / 10 ** d, roundDigits).toLocaleString() + suffix;
 }
 
@@ -188,11 +183,11 @@ export function valueFriendly(fiatAmount, satPrice) {
  */
 export function makeSnippet(sourceElement, fiatAmount, btcPrice, satPrice) {
   if (!btcPrice || btcPrice <= 0) {
-    throw new Error("Invalid bitcoin price");
+    throw new Error('Invalid bitcoin price');
   }
 
   if (!satPrice || satPrice <= 0) {
-    throw new Error("Invalid satoshi price");
+    throw new Error('Invalid satoshi price');
   }
 
   // Use the friendly formatter that automatically selects the appropriate uni
@@ -206,7 +201,7 @@ export function makeSnippet(sourceElement, fiatAmount, btcPrice, satPrice) {
  */
 export function calculateSatPrice(btcPrice) {
   if (!btcPrice || btcPrice <= 0) {
-    throw new Error("Invalid bitcoin price");
+    throw new Error('Invalid bitcoin price');
   }
 
   return btcPrice / 100000000;

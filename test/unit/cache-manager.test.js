@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import {
   CACHE_KEYS,
   CACHE_FRESHNESS,
@@ -11,7 +12,7 @@ import {
   calculateCacheTTL,
   calculatePriceVolatility,
   shouldRefreshCache,
-  isOffline
+  isOffline,
 } from '../../cache-manager.js';
 
 describe('Cache Manager Utilities', () => {
@@ -20,28 +21,28 @@ describe('Cache Manager Utilities', () => {
       // Mock current time
       const now = Date.now();
       const fourMinutesAgo = now - 4 * 60 * 1000;
-      
+
       expect(determineCacheFreshness(fourMinutesAgo)).toBe(CACHE_FRESHNESS.FRESH);
     });
 
     it('should return STALE for older cache entries', () => {
       const now = Date.now();
       const thirtyMinutesAgo = now - 30 * 60 * 1000;
-      
+
       expect(determineCacheFreshness(thirtyMinutesAgo)).toBe(CACHE_FRESHNESS.STALE);
     });
 
     it('should return VERY_STALE for very old cache entries', () => {
       const now = Date.now();
       const twelveHoursAgo = now - 12 * 60 * 60 * 1000;
-      
+
       expect(determineCacheFreshness(twelveHoursAgo)).toBe(CACHE_FRESHNESS.VERY_STALE);
     });
 
     it('should return EXPIRED for expired cache entries', () => {
       const now = Date.now();
       const twosDaysAgo = now - 2 * 24 * 60 * 60 * 1000;
-      
+
       expect(determineCacheFreshness(twosDaysAgo)).toBe(CACHE_FRESHNESS.EXPIRED);
     });
 
@@ -54,7 +55,7 @@ describe('Cache Manager Utilities', () => {
   describe('shouldRefreshCache', () => {
     it('should indicate immediate refresh for null cache', () => {
       const result = shouldRefreshCache(null);
-      
+
       expect(result.shouldRefresh).toBe(true);
       expect(result.immediately).toBe(true);
       expect(result.reason).toBe('no_cache');
@@ -64,11 +65,11 @@ describe('Cache Manager Utilities', () => {
       const now = Date.now();
       const freshCache = {
         timestamp: now - 1 * 60 * 1000,
-        freshness: CACHE_FRESHNESS.FRESH
+        freshness: CACHE_FRESHNESS.FRESH,
       };
-      
+
       const result = shouldRefreshCache(freshCache);
-      
+
       expect(result.shouldRefresh).toBe(false);
       expect(result.immediately).toBe(false);
       expect(result.reason).toBe('cache_fresh');
@@ -78,11 +79,11 @@ describe('Cache Manager Utilities', () => {
       const now = Date.now();
       const staleCache = {
         timestamp: now - 30 * 60 * 1000,
-        freshness: CACHE_FRESHNESS.STALE
+        freshness: CACHE_FRESHNESS.STALE,
       };
-      
+
       const result = shouldRefreshCache(staleCache);
-      
+
       expect(result.shouldRefresh).toBe(true);
       expect(result.immediately).toBe(false);
       expect(result.reason).toBe('cache_stale');
@@ -92,11 +93,11 @@ describe('Cache Manager Utilities', () => {
       const now = Date.now();
       const veryStaleCache = {
         timestamp: now - 12 * 60 * 60 * 1000,
-        freshness: CACHE_FRESHNESS.VERY_STALE
+        freshness: CACHE_FRESHNESS.VERY_STALE,
       };
-      
+
       const result = shouldRefreshCache(veryStaleCache);
-      
+
       expect(result.shouldRefresh).toBe(true);
       expect(result.immediately).toBe(true);
       expect(result.reason).toBe('cache_very_stale');
@@ -106,11 +107,11 @@ describe('Cache Manager Utilities', () => {
       const now = Date.now();
       const expiredCache = {
         timestamp: now - 2 * 24 * 60 * 60 * 1000,
-        freshness: CACHE_FRESHNESS.EXPIRED
+        freshness: CACHE_FRESHNESS.EXPIRED,
       };
-      
+
       const result = shouldRefreshCache(expiredCache);
-      
+
       expect(result.shouldRefresh).toBe(true);
       expect(result.immediately).toBe(true);
       expect(result.reason).toBe('cache_expired');
@@ -119,11 +120,11 @@ describe('Cache Manager Utilities', () => {
     it('should calculate freshness if not provided', () => {
       const now = Date.now();
       const freshCache = {
-        timestamp: now - 1 * 60 * 1000 // Fresh, but no freshness property
+        timestamp: now - 1 * 60 * 1000, // Fresh, but no freshness property
       };
-      
+
       const result = shouldRefreshCache(freshCache);
-      
+
       expect(result.shouldRefresh).toBe(false);
       expect(result.immediately).toBe(false);
     });
@@ -160,15 +161,15 @@ describe('Cache Manager Utilities', () => {
     it('should calculate volatility based on price changes', () => {
       const oldData = {
         btcPrice: 50000,
-        timestamp: Date.now() - 60 * 60 * 1000 // 1 hour ago
+        timestamp: Date.now() - 60 * 60 * 1000, // 1 hour ago
       };
-      
+
       // 5% price change in 1 hour (normalized to 0-1 scale) = 0.5 volatility
       const newData = {
         btcPrice: 52500, // 5% increase
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      
+
       const volatility = calculatePriceVolatility(newData, oldData);
       expect(volatility).toBeCloseTo(0.5, 1);
     });
@@ -176,15 +177,15 @@ describe('Cache Manager Utilities', () => {
     it('should handle large price changes', () => {
       const oldData = {
         btcPrice: 50000,
-        timestamp: Date.now() - 60 * 60 * 1000 // 1 hour ago
+        timestamp: Date.now() - 60 * 60 * 1000, // 1 hour ago
       };
-      
+
       // 20% price change in 1 hour should cap at 1.0 volatility
       const newData = {
         btcPrice: 60000, // 20% increase
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      
+
       const volatility = calculatePriceVolatility(newData, oldData);
       expect(volatility).toBe(1);
     });
@@ -192,15 +193,15 @@ describe('Cache Manager Utilities', () => {
     it('should adjust for time difference', () => {
       const oldData = {
         btcPrice: 50000,
-        timestamp: Date.now() - 2 * 60 * 60 * 1000 // 2 hours ago
+        timestamp: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
       };
-      
+
       // 10% price change over 2 hours = 0.5 volatility
       const newData = {
         btcPrice: 55000, // 10% increase
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      
+
       const volatility = calculatePriceVolatility(newData, oldData);
       expect(volatility).toBeCloseTo(0.5, 1);
     });
@@ -214,14 +215,14 @@ describe('Cache Manager Utilities', () => {
     it('should handle very small time differences', () => {
       const oldData = {
         btcPrice: 50000,
-        timestamp: Date.now() - 100 // Just 100ms ago
+        timestamp: Date.now() - 100, // Just 100ms ago
       };
-      
+
       const newData = {
         btcPrice: 50100, // Slight change
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      
+
       // Should not divide by zero or tiny numbers
       const volatility = calculatePriceVolatility(newData, oldData);
       expect(volatility).toBe(0);
@@ -244,21 +245,21 @@ describe('Cache Manager Utilities', () => {
     it('should detect offline status', () => {
       // Mock navigator.onLine = false
       global.navigator = { onLine: false };
-      
+
       expect(isOffline()).toBe(true);
     });
 
     it('should detect online status', () => {
       // Mock navigator.onLine = true
       global.navigator = { onLine: true };
-      
+
       expect(isOffline()).toBe(false);
     });
 
     it('should handle missing navigator', () => {
       // Remove navigator to simulate environments where it's not available
       global.navigator = undefined;
-      
+
       expect(isOffline()).toBe(false);
     });
   });

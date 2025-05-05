@@ -3,6 +3,7 @@
  */
 import { expect, describe, it, vi, beforeEach, afterEach } from 'vitest';
 import { JSDOM } from 'jsdom';
+
 import { walkDomTree, scanDomForPrices } from '../../dom-scanner.js';
 
 // Create a test environment
@@ -33,19 +34,21 @@ function createTestEnvironment() {
     unobserve() {}
     disconnect() {}
   };
-  global.MutationObserver = dom.window.MutationObserver || class { 
-    constructor() {}
-    observe() {}
-    disconnect() {}
-  };
-  
+  global.MutationObserver =
+    dom.window.MutationObserver ||
+    class {
+      constructor() {}
+      observe() {}
+      disconnect() {}
+    };
+
   // Mock window.getComputedStyle
   global.window.getComputedStyle = (element) => ({
     display: 'block',
     visibility: 'visible',
-    opacity: '1'
+    opacity: '1',
   });
-  
+
   // Add Element.prototype.classList if missing
   if (!global.Element.prototype.classList) {
     class ClassList {
@@ -53,18 +56,18 @@ function createTestEnvironment() {
         this.element = element;
         this._classes = element.className ? element.className.split(/\s+/) : [];
       }
-      
+
       contains(cls) {
         return this._classes.includes(cls);
       }
-      
+
       add(cls) {
         if (!this.contains(cls)) {
           this._classes.push(cls);
           this.element.className = this._classes.join(' ');
         }
       }
-      
+
       remove(cls) {
         const index = this._classes.indexOf(cls);
         if (index !== -1) {
@@ -72,19 +75,19 @@ function createTestEnvironment() {
           this.element.className = this._classes.join(' ');
         }
       }
-      
+
       get value() {
         return this._classes.join(' ');
       }
     }
-    
+
     Object.defineProperty(global.Element.prototype, 'classList', {
       get() {
         if (!this._classList) {
           this._classList = new ClassList(this);
         }
         return this._classList;
-      }
+      },
     });
   }
 
@@ -96,7 +99,7 @@ function generateTestContent(elementCount, priceCount) {
   // Generate a mix of regular elements and elements with prices
   let html = '';
   const priceInterval = Math.max(1, Math.floor(elementCount / (priceCount || 1)));
-  
+
   for (let i = 1; i <= elementCount; i++) {
     if (i % priceInterval === 0) {
       // Add price elements in various formats
@@ -156,7 +159,7 @@ function generateTestContent(elementCount, priceCount) {
       }
     }
   }
-  
+
   return html;
 }
 
@@ -169,42 +172,42 @@ function measurePerformance(fn, iterations = 1) {
   const end = performance.now();
   return {
     totalTime: end - start,
-    averageTime: (end - start) / iterations
+    averageTime: (end - start) / iterations,
   };
 }
 
 describe('DOM Scanning Performance', () => {
   let env;
-  
+
   beforeEach(() => {
     env = createTestEnvironment();
-    
+
     // Mock required functions from conversion.js
     global.buildPrecedingMatchPattern = () => /\$\s?\d[\d,]*(\.\d+)?/gi;
     global.buildConcludingMatchPattern = () => /\d[\d,]*(\.\d+)?\s?USD/gi;
-    global.makeSnippet = (sourceElement, fiatAmount, btcPrice, satPrice) => 
+    global.makeSnippet = (sourceElement, fiatAmount, btcPrice, satPrice) =>
       `${sourceElement} (${fiatAmount / btcPrice} BTC)`;
     global.getMultiplier = () => 1;
     global.extractNumericValue = (str) => parseFloat(str.replace(/[^\d.]/g, ''));
-    
+
     // Mock globals needed for content.js
     global.btcPrice = 50000;
     global.satPrice = 0.0005;
   });
-  
+
   afterEach(() => {
     // Clean up
     global.document = undefined;
     global.window = undefined;
   });
-  
+
   // Original walk implementation for benchmark comparison
   function originalWalk(node) {
     let child, next;
-    
+
     // Safety check
     if (!node) return;
-    
+
     switch (node.nodeType) {
       case 1: // Element
       case 9: // Document
@@ -214,18 +217,18 @@ describe('DOM Scanning Performance', () => {
         if (tagName === 'script' || tagName === 'style' || tagName === 'noscript') {
           return;
         }
-        
+
         child = node.firstChild;
         while (child) {
           next = child.nextSibling;
-          
+
           // Skip special case handling for Amazon prices in test
-          
+
           originalWalk(child);
           child = next;
         }
         break;
-      
+
       case 3: // Text node
         // Only process non-empty text nodes
         if (node.nodeValue && node.nodeValue.trim() !== '') {
@@ -236,92 +239,92 @@ describe('DOM Scanning Performance', () => {
             const amount = extractNumericValue(match);
             return makeSnippet(match, amount, btcPrice, satPrice);
           });
-          
+
           const concludingPattern = buildConcludingMatchPattern();
           nodeValue = nodeValue.replace(concludingPattern, (match) => {
             const amount = extractNumericValue(match);
             return makeSnippet(match, amount, btcPrice, satPrice);
           });
-          
+
           node.nodeValue = nodeValue;
         }
         break;
     }
   }
-  
+
   it('measures performance of original algorithm on small DOM', () => {
     const testContainer = env.document.getElementById('test-container');
     testContainer.innerHTML = generateTestContent(100, 20);
-    
+
     const { averageTime } = measurePerformance(() => {
       originalWalk(env.document.body);
     }, 10);
-    
+
     console.log(`Original algorithm (small DOM - 100 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
-  
+
   it('measures performance of original algorithm on medium DOM', () => {
     const testContainer = env.document.getElementById('test-container');
     testContainer.innerHTML = generateTestContent(1000, 200);
-    
+
     const { averageTime } = measurePerformance(() => {
       originalWalk(env.document.body);
     }, 5);
-    
+
     console.log(`Original algorithm (medium DOM - 1000 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
-  
+
   it('measures performance of original algorithm on large DOM', () => {
     const testContainer = env.document.getElementById('test-container');
     testContainer.innerHTML = generateTestContent(5000, 1000);
-    
+
     const { averageTime } = measurePerformance(() => {
       originalWalk(env.document.body);
     }, 3);
-    
+
     console.log(`Original algorithm (large DOM - 5000 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
-  
+
   // Test the optimized algorithm
   it('measures performance of optimized algorithm on small DOM', () => {
     const testContainer = env.document.getElementById('test-container');
     testContainer.innerHTML = generateTestContent(100, 20);
-    
+
     const { averageTime } = measurePerformance(() => {
       scanDomForPrices(env.document.body, 50000, 0.0005);
     }, 10);
-    
+
     console.log(`Optimized algorithm (small DOM - 100 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
-  
+
   it('measures performance of optimized algorithm on medium DOM', () => {
     const testContainer = env.document.getElementById('test-container');
     testContainer.innerHTML = generateTestContent(1000, 200);
-    
+
     const { averageTime } = measurePerformance(() => {
       scanDomForPrices(env.document.body, 50000, 0.0005);
     }, 5);
-    
+
     console.log(`Optimized algorithm (medium DOM - 1000 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
-  
+
   it('measures performance of optimized algorithm on large DOM', () => {
     const testContainer = env.document.getElementById('test-container');
     testContainer.innerHTML = generateTestContent(5000, 1000);
-    
+
     const { averageTime } = measurePerformance(() => {
       scanDomForPrices(env.document.body, 50000, 0.0005);
     }, 3);
-    
+
     console.log(`Optimized algorithm (large DOM - 5000 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
-  
+
   it('compares original vs optimized on real-world-like DOM', () => {
     // Create a more realistic DOM structure with nested elements and various price formats
     const testContainer = env.document.getElementById('test-container');
@@ -340,18 +343,23 @@ describe('DOM Scanning Performance', () => {
           <h1>Welcome to our store</h1>
         </div>
         <div class="product-grid">
-          ${Array.from({ length: 30 }, (_, i) => `
+          ${Array.from(
+            { length: 30 },
+            (_, i) => `
             <div class="product-card">
               <img src="product-${i}.jpg" alt="Product ${i}">
               <h3>Product ${i}</h3>
               <div class="product-price">$${(19.99 + i * 10).toFixed(2)}</div>
               <button>Add to Cart</button>
             </div>
-          `).join('')}
+          `,
+          ).join('')}
         </div>
         <div class="featured-products">
           <h2>Featured Products</h2>
-          ${Array.from({ length: 5 }, (_, i) => `
+          ${Array.from(
+            { length: 5 },
+            (_, i) => `
             <div class="featured-product">
               <div class="product-info">
                 <h3>Featured Product ${i}</h3>
@@ -363,7 +371,8 @@ describe('DOM Scanning Performance', () => {
                 <button>Buy Now</button>
               </div>
             </div>
-          `).join('')}
+          `,
+          ).join('')}
         </div>
         <div class="checkout-summary">
           <h2>Cart Summary</h2>
@@ -390,12 +399,12 @@ describe('DOM Scanning Performance', () => {
         <div class="copyright">...</div>
       </footer>
     `;
-    
+
     // Measure original algorithm
     const originalPerf = measurePerformance(() => {
       originalWalk(env.document.body);
     }, 10);
-    
+
     // Reset the test container
     testContainer.innerHTML = `
       <header>
@@ -412,18 +421,23 @@ describe('DOM Scanning Performance', () => {
           <h1>Welcome to our store</h1>
         </div>
         <div class="product-grid">
-          ${Array.from({ length: 30 }, (_, i) => `
+          ${Array.from(
+            { length: 30 },
+            (_, i) => `
             <div class="product-card">
               <img src="product-${i}.jpg" alt="Product ${i}">
               <h3>Product ${i}</h3>
               <div class="product-price">$${(19.99 + i * 10).toFixed(2)}</div>
               <button>Add to Cart</button>
             </div>
-          `).join('')}
+          `,
+          ).join('')}
         </div>
         <div class="featured-products">
           <h2>Featured Products</h2>
-          ${Array.from({ length: 5 }, (_, i) => `
+          ${Array.from(
+            { length: 5 },
+            (_, i) => `
             <div class="featured-product">
               <div class="product-info">
                 <h3>Featured Product ${i}</h3>
@@ -435,7 +449,8 @@ describe('DOM Scanning Performance', () => {
                 <button>Buy Now</button>
               </div>
             </div>
-          `).join('')}
+          `,
+          ).join('')}
         </div>
         <div class="checkout-summary">
           <h2>Cart Summary</h2>
@@ -462,19 +477,19 @@ describe('DOM Scanning Performance', () => {
         <div class="copyright">...</div>
       </footer>
     `;
-    
+
     // Measure optimized algorithm
     const optimizedPerf = measurePerformance(() => {
       scanDomForPrices(env.document.body, 50000, 0.0005);
     }, 10);
-    
+
     console.log(`
     Real-world comparison:
     - Original algorithm: ${originalPerf.averageTime.toFixed(2)}ms
     - Optimized algorithm: ${optimizedPerf.averageTime.toFixed(2)}ms
-    - Performance improvement: ${((originalPerf.averageTime - optimizedPerf.averageTime) / originalPerf.averageTime * 100).toFixed(2)}%
+    - Performance improvement: ${(((originalPerf.averageTime - optimizedPerf.averageTime) / originalPerf.averageTime) * 100).toFixed(2)}%
     `);
-    
+
     expect(optimizedPerf.averageTime).toBeLessThan(originalPerf.averageTime);
   });
 });

@@ -1,13 +1,15 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Amazon.com: Page with Iframes</title>
   </head>
   <body>
     <h1>Page with Amazon iframe</h1>
-    
+
     <!-- Regular iframe -->
-    <iframe id="regular-iframe" srcdoc="
+    <iframe
+      id="regular-iframe"
+      srcdoc="
       <html>
         <head><title>Normal Frame</title></head>
         <body>
@@ -15,10 +17,16 @@
           <div>Price: $99.99</div>
         </body>
       </html>
-    " width="400" height="200"></iframe>
-    
+    "
+      width="400"
+      height="200"
+    ></iframe>
+
     <!-- Sandboxed iframe to simulate restriction -->
-    <iframe id="restricted-iframe" sandbox="allow-scripts" srcdoc="
+    <iframe
+      id="restricted-iframe"
+      sandbox="allow-scripts"
+      srcdoc="
       <html>
         <head><title>Restricted Frame</title></head>
         <body>
@@ -30,8 +38,11 @@
           </div>
         </body>
       </html>
-    " width="400" height="200"></iframe>
-    
+    "
+      width="400"
+      height="200"
+    ></iframe>
+
     <!-- Cross-origin iframe placeholder -->
     <div>
       <h3>Cross-origin iframe would be here</h3>

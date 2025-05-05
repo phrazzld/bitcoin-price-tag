@@ -3,6 +3,7 @@
 ## Content Security Policy
 
 1. **Stricter Default CSP in Manifest V3**:
+
    - Manifest V3 uses a much stricter default Content Security Policy than V2
    - `unsafe-eval` and `unsafe-inline` are no longer allowed by default
    - The CSP directive in our manifest correctly follows V3 requirements: `"extension_pages": "script-src 'self'; object-src 'self'"`
@@ -14,10 +15,12 @@
 ## Content Scripts
 
 1. **Execution Environment**:
+
    - Content scripts execute in an "isolated world" - they share the DOM but not JavaScript context with page scripts
    - Our approach using `document.createElement('script')` to inject scripts into the page context is a standard pattern
 
 2. **Module Loading**:
+
    - Content scripts cannot directly use ES modules in all scenarios
    - Our two-tier approach (non-module content script injecting a module script) follows best practices
 
@@ -28,6 +31,7 @@
 ## Web Accessible Resources
 
 1. **Resource Access**:
+
    - In Manifest V3, web_accessible_resources requires explicitly defined `matches` patterns
    - Our manifest correctly includes all required JS files and uses `"matches": ["<all_urls>"]`
 
@@ -38,10 +42,12 @@
 ## Best Practices Confirmed in Our Implementation
 
 1. **External Scripts Instead of Inline**:
+
    - Using bootstrap-module.js as an external file instead of inline content aligns with CSP requirements
    - This avoids the need for unsafe-inline directives
 
 2. **Proper Resource Declaration**:
+
    - All scripts that need to be accessible are properly declared in web_accessible_resources
 
 3. **Clean Separation of Concerns**:
@@ -52,10 +58,12 @@
 ## Potential Improvements to Consider
 
 1. **Scripting API**:
+
    - For more complex scenarios, the chrome.scripting API could be considered as an alternative
    - Would require adding the "scripting" permission
 
 2. **Error Handling**:
+
    - Current error handling improvements align well with debugging needs
    - Consider adding more specific error messages related to resource loading failures
 

@@ -17,6 +17,7 @@ This project's tasks have been split into multiple focused files for easier impl
 Each TODO file represents a logical group of tasks that can be implemented as a separate pull request. The numbered filenames indicate the recommended order of implementation.
 
 This approach offers several benefits:
+
 - Focused changes that are easier to review
 - Reduced deployment risk
 - Ability to work incrementally
