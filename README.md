@@ -25,6 +25,23 @@ Fork of the original extension published [here](https://chrome.google.com/websto
 pnpm install
 ```
 
+### Code Quality
+
+The project uses ESLint, Prettier, and Git hooks to ensure code quality.
+
+```bash
+# Run linter
+pnpm lint
+
+# Fix linting issues
+pnpm lint:fix
+
+# Format code with Prettier
+pnpm format
+```
+
+See [Git Hooks documentation](docs/GIT-HOOKS.md) for details on the pre-commit, commit-msg, and pre-push hooks.
+
 ### Testing
 
 The project uses Vitest for testing.
