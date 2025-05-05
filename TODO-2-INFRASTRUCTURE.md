@@ -8,9 +8,9 @@ This file covers development infrastructure tasks including CI setup, git hooks,
 
    - [x] Set up ESLint with strict rules
    - [x] Configure Prettier for consistent formatting
-   - [ ] Implement file length enforcement
-     - [ ] Configure warning at 500 lines
-     - [ ] Configure error at 1000 lines
+   - [x] Implement file length enforcement
+     - [x] Configure warning at 500 lines
+     - [x] Configure error at 1000 lines
    - [ ] Enforce pnpm as package manager
      - [ ] Add pnpm-lock.yaml
      - [ ] Configure .npmrc
