@@ -1,5 +1,9 @@
 # Bitcoin Price Tag
 
+[![CI](https://github.com/username/bitcoin-price-tag/actions/workflows/ci.yml/badge.svg)](https://github.com/username/bitcoin-price-tag/actions/workflows/ci.yml)
+[![Browser Tests](https://github.com/username/bitcoin-price-tag/actions/workflows/browser-tests.yml/badge.svg)](https://github.com/username/bitcoin-price-tag/actions/workflows/browser-tests.yml)
+[![codecov](https://codecov.io/gh/username/bitcoin-price-tag/branch/master/graph/badge.svg)](https://codecov.io/gh/username/bitcoin-price-tag)
+
 Chrome extension to automatically annotate fiat prices online with their equivalents in bitcoin.
 
 <img width="269" alt="Screen Shot 2021-10-05 at 5 10 13 PM" src="https://user-images.githubusercontent.com/3598502/138306555-d368d939-02a6-4365-8036-22e7e305fcde.png">
@@ -56,6 +60,17 @@ pnpm test:watch
 # Run tests with coverage
 pnpm test:coverage
 ```
+
+### CI/CD
+
+The project uses GitHub Actions for continuous integration. The CI pipeline includes:
+
+- Code linting and formatting checks
+- Unit tests with code coverage reporting
+- Browser tests for Chrome, Firefox, and WebKit
+- Automated dependency updates via Dependabot
+
+CI checks run automatically on pull requests and pushes to the main branch. See the [workflows directory](.github/workflows) for details on the CI setup.
 
 ## License
 

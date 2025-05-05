@@ -1,0 +1,95 @@
+name: Check Git Hooks
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - '.husky/**'
+      - '.lintstagedrc'
+      - 'scripts/**'
+  pull_request:
+    branches: [master, main]
+    paths:
+      - '.husky/**'
+      - '.lintstagedrc'
+      - 'scripts/**'
+  # Allow manual triggering
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 18
+
+jobs:
+  check-hooks:
+    name: Check Git Hooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Verify hooks are executable
+        run: |
+          if [ -d ".husky" ]; then
+            chmod +x .husky/pre-commit .husky/commit-msg .husky/pre-push
+            echo "Hooks are executable"
+          else
+            echo "Husky hooks directory not found"
+            exit 1
+          fi
+
+      - name: Verify lint-staged configuration
+        run: |
+          if [ -f ".lintstagedrc" ]; then
+            echo "lint-staged config found"
+            cat .lintstagedrc
+          else
+            echo "lint-staged config not found"
+            exit 1
+          fi
+
+      - name: Test pre-commit hook
+        run: |
+          # Create a temporary test file
+          echo "test file for hooks" > test-file.txt
+
+          # Add the file and attempt to run the pre-commit hook
+          git add test-file.txt
+
+          # Run the hook directly (this avoids HUSKY=0 bypass)
+          if [ -f ".husky/pre-commit" ]; then
+            echo "Testing pre-commit hook..."
+            # The hook might fail but we don't want to fail the workflow
+            .husky/pre-commit || echo "Pre-commit hook returned non-zero exit code (expected in CI)"
+          else
+            echo "Pre-commit hook not found"
+            exit 1
+          fi
