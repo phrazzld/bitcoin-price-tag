@@ -9,10 +9,11 @@ This project uses Git hooks to enforce code quality and standards. The hooks are
 The pre-commit hook runs automatically when you attempt to commit changes. It performs the following checks:
 
 1. **Formatting**: Runs Prettier on staged files to ensure consistent formatting
-2. **Sensitive Data Detection**: Scans files for potential sensitive data like API keys and passwords (excludes lock files and binary files)
-3. **Image Size Check**: Ensures images don't exceed the maximum allowed size (5MB)
+2. **Limited ESLint Checking**: Runs ESLint with reduced strictness to catch critical errors
+3. **Sensitive Data Detection**: Scans files for potential sensitive data like API keys and passwords (excludes lock files and binary files)
+4. **Image Size Check**: Ensures images don't exceed the maximum allowed size (5MB)
 
-**Note**: ESLint checking has been temporarily excluded from pre-commit hooks until existing codebase linting issues are resolved. This will be re-enabled in a future update (see TODO-2-INFRASTRUCTURE.md).
+**Note**: ESLint is configured in a limited mode for pre-commit hooks that only enforces critical rules (like undefined variables). Full ESLint enforcement with all warnings will be enabled after the existing codebase linting issues are resolved (see TODO-2-INFRASTRUCTURE.md).
 
 ### Commit Message
 

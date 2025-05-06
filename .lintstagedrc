@@ -1,5 +1,9 @@
 {
-  "*.js": ["prettier --write", "node scripts/check-sensitive-data.js"],
+  "*.js": [
+    "prettier --write", 
+    "pnpm lint:safe --quiet", 
+    "node scripts/check-sensitive-data.js"
+  ],
   "*.{json,md,yml,yaml}": ["prettier --write", "node scripts/check-sensitive-data.js"],
   "*.{png,jpg,jpeg,gif,webp}": ["node scripts/check-image-size.js"]
 }

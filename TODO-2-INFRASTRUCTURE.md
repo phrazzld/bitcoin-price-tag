@@ -24,7 +24,7 @@ This file covers development infrastructure tasks including CI setup, git hooks,
      - [x] Add type checking
      - [x] Prevent commit of sensitive data and large files
      - [x] Enforce conventional commit format
-     - [ ] Re-enable ESLint in pre-commit hooks (after fixing linting issues)
+     - [x] Re-enable ESLint in pre-commit hooks (after fixing linting issues)
      - [ ] Fix pre-commit hook errors and stop using HUSKY=0 for bypassing hooks
    - [x] Configure post-commit hooks
      - [x] Set up `glance ./` to run async
