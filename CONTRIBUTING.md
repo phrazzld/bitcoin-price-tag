@@ -17,16 +17,19 @@ Thank you for considering contributing to Bitcoin Price Tag! This document outli
 ### Setting Up the Development Environment
 
 1. Ensure you have the required prerequisites:
+
    - Node.js >= 18
    - pnpm >= 8 (npm and yarn are not supported)
 
 2. Clone the repository:
+
    ```bash
    git clone https://github.com/username/bitcoin-price-tag.git
    cd bitcoin-price-tag
    ```
 
 3. Install dependencies:
+
    ```bash
    pnpm install
    ```
@@ -39,14 +42,17 @@ Thank you for considering contributing to Bitcoin Price Tag! This document outli
 ### Development Cycle
 
 1. **Create or select an issue**
+
    - For new features or bug fixes, create an issue describing the change
    - For existing issues, assign yourself to the issue
 
 2. **Create a feature branch**
+
    - Branch off from `master` (or `main`) branch
    - Follow the branch naming convention (see [Branch and PR Conventions](#branch-and-pull-request-conventions))
 
 3. **Develop and test locally**
+
    - Make your changes
    - Write or update tests
    - Run tests with `pnpm test`
@@ -54,15 +60,18 @@ Thank you for considering contributing to Bitcoin Price Tag! This document outli
    - Format code with `pnpm format`
 
 4. **Commit your changes**
+
    - Follow the [Commit Message Format](#commit-message-format)
    - Pre-commit hooks will automatically check for issues
 
 5. **Push your branch and create a pull request**
+
    - Push to your feature branch
    - Create a PR against the `master` (or `main`) branch
    - Fill out the PR template thoroughly
 
 6. **Code review process**
+
    - Address feedback from reviewers
    - Make necessary changes
    - Ensure CI checks pass
@@ -74,18 +83,20 @@ Thank you for considering contributing to Bitcoin Price Tag! This document outli
 ### Local Testing
 
 1. **Unit and integration tests**
+
    ```bash
    # Run tests once
    pnpm test
-   
+
    # Run tests in watch mode (during development)
    pnpm test:watch
-   
+
    # Run tests with coverage report
    pnpm test:coverage
    ```
 
 2. **Manual testing in browsers**
+
    - Load the extension in Chrome for development:
      1. Go to `chrome://extensions/`
      2. Enable "Developer mode"
@@ -93,13 +104,14 @@ Thank you for considering contributing to Bitcoin Price Tag! This document outli
    - Test on other browsers if applicable (Firefox, Edge)
 
 3. **Running linters and formatters**
+
    ```bash
    # Check code with ESLint
    pnpm lint
-   
+
    # Fix linting issues automatically (where possible)
    pnpm lint:fix
-   
+
    # Format code with Prettier
    pnpm format
    ```
@@ -172,12 +184,15 @@ BREAKING CHANGE: removed deprecated browserAction API
 ### Branch Naming Conventions
 
 Branches should follow this naming pattern:
+
 ```
 <type>/<description>
 ```
 
 Where:
+
 - `<type>` is one of:
+
   - `feature` - for new features
   - `bugfix` - for bug fixes
   - `hotfix` - for critical fixes to production
@@ -189,6 +204,7 @@ Where:
 - `<description>` is a brief, hyphenated description of the change
 
 Examples:
+
 ```
 feature/add-euro-support
 bugfix/fix-price-detection
@@ -205,20 +221,24 @@ refactor/simplify-dom-scanning
 ### Pull Request Guidelines
 
 1. **PR Title Format**: Use the same format as commit messages
+
    - Example: `feat(pricing): add support for euro currency`
 
 2. **PR Description**:
+
    - Fill out the PR template completely
    - Link to related issues using GitHub's keywords (e.g., "Fixes #123")
    - Include screenshots for UI changes
    - List testing procedures you followed
 
 3. **PR Size Guidelines**:
+
    - PRs should be focused and not include unrelated changes
    - Large changes should be broken down into smaller, more manageable PRs
    - Aim for PRs that can be reviewed in 30 minutes or less
 
 4. **PR Reviews**:
+
    - At least one approval is required before merging
    - Address all comments and feedback
    - Re-request review after addressing feedback
@@ -234,6 +254,7 @@ refactor/simplify-dom-scanning
 All code must follow the standards defined in [docs/CODING-STANDARDS.md](docs/CODING-STANDARDS.md). Key points include:
 
 1. **Formatting**:
+
    - 2-space indentation
    - Single quotes for strings
    - 100 character line length limit
@@ -241,11 +262,13 @@ All code must follow the standards defined in [docs/CODING-STANDARDS.md](docs/CO
    - Trailing commas in multiline structures
 
 2. **Naming Conventions**:
+
    - Use camelCase for variables, functions, and method names
    - Use PascalCase for class names
    - Use UPPER_CASE for constants
 
 3. **Function Guidelines**:
+
    - Functions should be concise and focused
    - Maximum 50 lines per function (excluding comments and blank lines)
    - Maximum 4 parameters per function
@@ -259,17 +282,20 @@ All code must follow the standards defined in [docs/CODING-STANDARDS.md](docs/CO
 ### Testing Requirements
 
 1. **Test Coverage**:
+
    - All new code must have tests
    - Aim for at least 80% coverage for new features
    - Bug fixes should include a test that would have caught the bug
 
 2. **Test Structure**:
+
    - Use descriptive test names
    - Structure tests with proper describe/it blocks
    - Each test should have clear expectations
    - Tests should be isolated and not depend on each other
 
 3. **Types of Tests**:
+
    - **Unit Tests**: Test individual functions and components
    - **Integration Tests**: Test interactions between modules
    - **Browser Tests**: Test functionality in actual browser environments
@@ -284,11 +310,13 @@ All code must follow the standards defined in [docs/CODING-STANDARDS.md](docs/CO
 The project uses Git hooks to enforce quality standards. See [docs/GIT-HOOKS.md](docs/GIT-HOOKS.md) for details.
 
 1. **Pre-commit Hook**:
+
    - Runs Prettier on staged files
    - Checks for sensitive data
    - Verifies image sizes
 
 2. **Commit Message Hook**:
+
    - Validates commit message format
 
 3. **Pre-push Hook**:
@@ -319,11 +347,13 @@ When commits are pushed to the main branch, the version is automatically updated
 ### Common Issues
 
 1. **Git Hook Failures**:
+
    - Ensure you have latest dependencies with `pnpm install`
    - Check the error message for specific issues
    - For pre-commit hook issues related to ESLint, note that ESLint is temporarily disabled in hooks (see .husky/pre-commit)
 
 2. **Test Failures**:
+
    - Check browser console for errors during browser tests
    - Ensure you're testing in the correct browser version
    - Review test logs for specific failure reasons
@@ -335,6 +365,7 @@ When commits are pushed to the main branch, the version is automatically updated
 ### Getting Help
 
 If you encounter issues not covered here:
+
 1. Check the project issues on GitHub to see if it's a known problem
 2. Ask for help in the project's discussion forums or chat
 3. Create a new issue with detailed information about your problem

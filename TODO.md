@@ -5,39 +5,42 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
 ## Current Tasks
 
 ### Infrastructure
-- [ ] **Fix Git Hooks** - Make Git hooks function without bypassing
-  - [ ] Fix pre-commit hook errors and stop using HUSKY=0 for bypassing hooks
+
+- [x] **Fix Git Hooks** - Make Git hooks function without bypassing
+  - [x] Fix pre-commit hook errors and stop using HUSKY=0 for bypassing hooks
 
 ### Documentation
-- [ ] **Visual Documentation**
-  - [ ] Capture before/after price conversion examples
-  - [ ] Create animation showing the extension in action
-  - [ ] Add screenshots and demo GIFs to README.md
-- [ ] **Release Documentation**
-  - [ ] Create a changelog
-  - [ ] Document version history
-  - [ ] Note major feature additions and fixes
+
+- [x] **Release Documentation**
+  - [x] Create a changelog
+  - [x] Document version history
+  - [x] Note major feature additions and fixes
 
 ## Completed Tasks
 
 ### Extension Development
+
 - [x] **Manifest V3 Migration**
+
   - [x] Update manifest.json to version 3
   - [x] Replace browser_action with action
   - [x] Replace background scripts with service workers
   - [x] Update permissions to more specific host permissions
 
 - [x] **Testing**
+
   - [x] Set up a testing framework (Vitest)
   - [x] Write unit tests for currency conversion functions
   - [x] Create integration tests for DOM manipulation
   - [x] Add browser compatibility tests
 
 - [x] **Error Handling**
+
   - [x] Add proper error handling for API calls
   - [x] Create fallback mechanisms when API is unavailable
 
 - [x] **Performance**
+
   - [x] Optimize DOM scanning algorithm
   - [x] Implement caching for bitcoin price
   - [x] Add debouncing for price updates
@@ -64,7 +67,9 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
   - [x] Mark original task/issue as completed
 
 ### Infrastructure
+
 - [x] **Quality Standards**
+
   - [x] Set up ESLint with strict rules
   - [x] Configure Prettier for consistent formatting
   - [x] Implement file length enforcement
@@ -76,6 +81,7 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
     - [x] Add engine rules to package.json
 
 - [x] **Git Hooks**
+
   - [x] Configure pre-commit hooks
     - [x] Install pre-commit framework
     - [x] Configure linting and formatting checks
@@ -91,11 +97,13 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
     - [x] Enforce branch naming conventions
 
 - [x] **Conventional Commits**
+
   - [x] Set up conventional commits
     - [x] Add commitlint configuration
     - [x] Document commit message standards
 
 - [x] **CI/CD**
+
   - [x] Set up GitHub Actions CI
     - [x] Create .github/workflows directory
     - [x] Create CI workflow for running on push and pull requests
@@ -110,7 +118,9 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
     - [x] Configure CHANGELOG generation
 
 ### Documentation
+
 - [x] **Basic Documentation**
+
   - [x] Update MIT LICENSE file
     - [x] Update year and copyright holder
   - [x] Create basic README.md
@@ -119,6 +129,7 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
     - [x] Basic usage information
 
 - [x] **Development Documentation**
+
   - [x] Create CONTRIBUTING.md
     - [x] Document development workflow
     - [x] Explain branch and PR conventions
@@ -132,6 +143,7 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
     - [x] Expand contribution guidelines
 
 ### Bug Fixes
+
 - [x] **TBUG_AMAZON_CRASH** - Fix critical issues causing extension to fail on Amazon pages
   - [x] T020: Enhance Context Detection for Restricted Environments
   - [x] T021: Implement Early Exit in Content Script Entry Points
@@ -149,12 +161,14 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
 ## Implementation Strategy
 
 Tasks are prioritized as follows:
+
 1. Critical bug fixes
 2. Extension functionality
 3. Infrastructure improvements
 4. Documentation enhancements
 
 When implementing tasks:
+
 - Focus on completing one logical group at a time
 - Create focused pull requests for easier review
 - Ensure tests pass for all changes

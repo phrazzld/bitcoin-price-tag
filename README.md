@@ -7,6 +7,7 @@
 **Bitcoin Price Tag** is a browser extension that automatically converts fiat currency prices on websites to their Bitcoin equivalent. Instead of seeing prices in dollars, euros, or other government currencies, you'll instantly see how much that item costs in bitcoin (BTC).
 
 This extension helps:
+
 - Visualize the value of products in a hard, sound money
 - Think in bitcoin terms rather than inflationary currencies
 - Understand comparative pricing across sites without currency conversion
@@ -59,7 +60,7 @@ The extension implements a sophisticated caching system to ensure data availabil
 - **In-memory cache**: Fastest access for the current browsing session
 - **Chrome storage cache**: Persists between browser restarts
 - **LocalStorage backup**: Fallback for non-Chrome browsers
-- **Cache freshness levels**: 
+- **Cache freshness levels**:
   - Fresh (< 5 min): Use directly
   - Stale (5 min - 1 hour): Use but refresh in background
   - Very stale (1 hour - 24 hours): Use but refresh immediately
@@ -141,10 +142,10 @@ const priceRegex = buildPrecedingMatchPattern(); // e.g. $100, $5.5k
 const matches = document.body.innerText.match(priceRegex);
 
 // 2. Extract numeric value from a matched price string
-const numericValue = extractNumericValue("$1,299.99"); // Returns 1299.99
+const numericValue = extractNumericValue('$1,299.99'); // Returns 1299.99
 
 // 3. Detect multiplier for abbreviated values
-const multiplier = getMultiplier("$5k"); // Returns 1000 for 'k'
+const multiplier = getMultiplier('$5k'); // Returns 1000 for 'k'
 
 // 4. Calculate the actual value
 const actualValue = numericValue * multiplier; // 5000 for "$5k"
@@ -156,7 +157,7 @@ const btcValue = valueInBtc(actualValue, 60000); // Returns "0.0833"
 const satsValue = valueInSats(actualValue, 0.0006); // Returns "8,333,333"
 
 // 7. Create the display string
-const displayValue = makeSnippet("$5k", actualValue, 60000, 0.0006); // Returns "$5k (8,333k sats) "
+const displayValue = makeSnippet('$5k', actualValue, 60000, 0.0006); // Returns "$5k (8,333k sats) "
 ```
 
 ### Example: Smart Unit Selection
@@ -223,17 +224,20 @@ This is a fork of the original extension published [here](https://chrome.google.
 ### Development Environment Setup
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/username/bitcoin-price-tag.git
    cd bitcoin-price-tag
    ```
 
 2. Install dependencies:
+
    ```bash
    pnpm install
    ```
 
 3. Load the extension in Chrome for development:
+
    ```bash
    # No build step required for development
    # 1. Open Chrome and navigate to chrome://extensions/
@@ -264,6 +268,7 @@ The extension is organized into the following key files and modules:
 ### Development Workflow
 
 1. **Local Development**:
+
    ```bash
    # Make changes to code files
    # Reload extension in Chrome extensions page
@@ -271,13 +276,14 @@ The extension is organized into the following key files and modules:
    ```
 
 2. **Building for Production**:
+
    ```bash
    # Verify tests pass
    pnpm test
 
    # Verify linting
    pnpm lint
-   
+
    # Package extension (creates a zip file for store submission)
    # Note: Manual packaging is required - see browser store documentation for packaging requirements
    ```
@@ -310,12 +316,14 @@ See [Git Hooks documentation](docs/GIT-HOOKS.md) for details on the pre-commit, 
 ### Debugging Tips
 
 1. **Extension Debugging**:
+
    - Use `console.debug()` statements in your code
    - Open Chrome DevTools for the extension by:
      - Right-click extension icon → Inspect popup
      - Or visit chrome://extensions, click "background page" for background script
 
 2. **Content Script Debugging**:
+
    - Open DevTools on any page where the extension is running
    - Check the Console tab for logs
    - Examine the Elements tab to see how price conversions are injected
@@ -350,13 +358,16 @@ We welcome contributions to Bitcoin Price Tag! Please see our [CONTRIBUTING.md](
 ### Getting Started with Contributions
 
 1. **Find an issue to work on**:
+
    - Check the [GitHub Issues](https://github.com/username/bitcoin-price-tag/issues) for open tasks
    - Look for issues tagged with "good first issue" or "help wanted"
 
 2. **Set up your development environment**:
+
    - Follow the [Development Environment Setup](#development-environment-setup) guide
 
 3. **Create a branch following our naming conventions**:
+
    ```bash
    git checkout -b feature/your-feature-name
    # or
@@ -364,6 +375,7 @@ We welcome contributions to Bitcoin Price Tag! Please see our [CONTRIBUTING.md](
    ```
 
 4. **Make your changes and follow quality guidelines**:
+
    - Ensure all tests pass
    - Follow the code style guidelines
    - Add tests for new functionality

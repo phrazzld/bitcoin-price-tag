@@ -6,7 +6,7 @@ import {
   categorizeError,
   createError, 
   withTimeout, 
-  withRetry 
+  withRetry, 
 } from '/error-handling.js';
 import {
   CACHE_KEYS,
@@ -18,12 +18,12 @@ import {
   calculatePriceVolatility,
   calculateCacheTTL,
   determineCacheFreshness,
-  isOffline
+  isOffline,
 } from '/cache-manager.js';
 import {
   debounce,
   throttle,
-  coalesce
+  coalesce,
 } from '/debounce.js';
 
 // Constants - using new cache manager constants
@@ -35,7 +35,7 @@ const MAX_CACHE_AGE = CACHE_TTL.VERY_STALE; // 24 hours maximum cache age
 const COINDESK_API_URL = 'https://api.coindesk.com/v1/bpi/currentprice/USD.json';
 const ALTERNATIVE_API_URLS = [
   'https://blockchain.info/ticker', // Alternative API 1
-  'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd' // Alternative API 2
+  'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd', // Alternative API 2
 ];
 
 /**
@@ -53,7 +53,7 @@ async function fetchBitcoinPrice() {
       console.debug('Bitcoin Price Tag: Fetch lifecycle - Starting request', {
         url: COINDESK_API_URL, 
         timestamp: new Date().toISOString(),
-        timeout: PRICE_FETCH_TIMEOUT
+        timeout: PRICE_FETCH_TIMEOUT,
       });
       
       try {
@@ -67,9 +67,9 @@ async function fetchBitcoinPrice() {
             method: 'GET',
             headers: {
               'Accept': 'application/json',
-              'Cache-Control': 'no-cache'
+              'Cache-Control': 'no-cache',
             },
-            signal: controller.signal
+            signal: controller.signal,
           });
           
           // Clear the timeout since fetch completed
@@ -81,7 +81,7 @@ async function fetchBitcoinPrice() {
             status: response.status,
             statusText: response.statusText,
             headers: Object.fromEntries([...response.headers.entries()]),
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           });
           
           if (!response.ok) {
@@ -92,7 +92,7 @@ async function fetchBitcoinPrice() {
               statusText: response.statusText,
               headers: Object.fromEntries([...response.headers.entries()]),
               timestamp: new Date().toISOString(),
-              fetchPhase: 'response_validation'
+              fetchPhase: 'response_validation',
             };
             
             // Try to get response text for more context
@@ -109,7 +109,7 @@ async function fetchBitcoinPrice() {
             const error = createError(
               `API responded with status: ${response.status} - ${response.statusText}`,
               ErrorTypes.API,
-              diagnosticInfo
+              diagnosticInfo,
             );
             
             throw error;
@@ -126,8 +126,8 @@ async function fetchBitcoinPrice() {
               { 
                 url: COINDESK_API_URL,
                 timeout: PRICE_FETCH_TIMEOUT,
-                fetchPhase: 'request_timeout'
-              }
+                fetchPhase: 'request_timeout',
+              },
             );
           }
           
@@ -138,8 +138,8 @@ async function fetchBitcoinPrice() {
             {
               originalError: fetchError.toString(),
               url: COINDESK_API_URL,
-              fetchPhase: 'fetch_execution'
-            }
+              fetchPhase: 'fetch_execution',
+            },
           );
         }
         
@@ -155,8 +155,8 @@ async function fetchBitcoinPrice() {
               { 
                 data: JSON.stringify(data).substring(0, 500), // Limit size
                 url: COINDESK_API_URL,
-                fetchPhase: 'data_validation'
-              }
+                fetchPhase: 'data_validation',
+              },
             );
           }
           
@@ -170,8 +170,8 @@ async function fetchBitcoinPrice() {
               ErrorTypes.PARSING,
               { 
                 receivedValue: data.bpi.USD.rate,
-                fetchPhase: 'value_validation'
-              }
+                fetchPhase: 'value_validation',
+              },
             );
           }
           
@@ -182,7 +182,7 @@ async function fetchBitcoinPrice() {
             btcPrice,
             satPrice,
             source: 'coindesk',
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           });
           
           // Create price data object with success info
@@ -191,14 +191,14 @@ async function fetchBitcoinPrice() {
             satPrice,
             timestamp: Date.now(),
             source: 'coindesk',
-            success: true
+            success: true,
           };
         } catch (error) {
           // Handle JSON parsing errors
           console.error('Bitcoin Price Tag: Fetch lifecycle - Error parsing response', {
             message: error.message,
             phase: 'json_parsing',
-            url: COINDESK_API_URL
+            url: COINDESK_API_URL,
           });
           
           if (error.type !== ErrorTypes.PARSING) {
@@ -209,7 +209,7 @@ async function fetchBitcoinPrice() {
           error.details = {
             ...error.details,
             fetchPhase: 'response_parsing',
-            url: COINDESK_API_URL
+            url: COINDESK_API_URL,
           };
           
           throw error;
@@ -224,7 +224,7 @@ async function fetchBitcoinPrice() {
           message: error.message,
           type: error.type || categorizeError(error),
           url: COINDESK_API_URL,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         
         throw error;
@@ -237,13 +237,13 @@ async function fetchBitcoinPrice() {
         // Log retry attempt
         console.debug('Bitcoin Price Tag: Fetch lifecycle - Evaluating retry decision', {
           errorType: error.type,
-          shouldRetry: error.type !== ErrorTypes.PARSING
+          shouldRetry: error.type !== ErrorTypes.PARSING,
         });
         
         // Don't retry parsing errors
         return error.type !== ErrorTypes.PARSING;
-      }
-    }
+      },
+    },
   );
 }
 
@@ -257,9 +257,9 @@ async function fetchFromAlternativeApis() {
   
   // Try alternative APIs in sequence
   for (const apiUrl of ALTERNATIVE_API_URLS) {
-    console.debug(`Bitcoin Price Tag: Fetch lifecycle - Trying alternative API`, {
+    console.debug('Bitcoin Price Tag: Fetch lifecycle - Trying alternative API', {
       url: apiUrl,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
     
     try {
@@ -272,20 +272,25 @@ async function fetchFromAlternativeApis() {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
-            'Cache-Control': 'no-cache'
+            'Cache-Control': 'no-cache',
           },
-          signal: controller.signal
+          signal: controller.signal,
         });
         
         // Clear the timeout since fetch completed
         clearTimeout(timeoutId);
+      } catch (fetchError) {
+        // Clear timeout and re-throw to the outer catch block
+        clearTimeout(timeoutId);
+        throw fetchError;
+      }
       
       // Log response status
       console.debug('Bitcoin Price Tag: Fetch lifecycle - Alternative API response received', {
         url: apiUrl,
         status: response.status,
         statusText: response.statusText,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       
       if (!response.ok) {
@@ -295,7 +300,7 @@ async function fetchFromAlternativeApis() {
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries([...response.headers.entries()]),
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         continue;
       }
@@ -319,7 +324,7 @@ async function fetchFromAlternativeApis() {
         url: apiUrl,
         source,
         btcPrice,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       
       if (btcPrice && !isNaN(btcPrice) && btcPrice > 0) {
@@ -331,7 +336,7 @@ async function fetchFromAlternativeApis() {
           source,
           btcPrice,
           satPrice,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         
         return {
@@ -340,7 +345,7 @@ async function fetchFromAlternativeApis() {
           timestamp: Date.now(),
           source,
           success: true,
-          alternativeApi: true
+          alternativeApi: true,
         };
       } else {
         // Log invalid price data
@@ -349,7 +354,7 @@ async function fetchFromAlternativeApis() {
           source,
           rawData: JSON.stringify(data).substring(0, 500),
           extractedPrice: btcPrice,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
     } catch (error) {
@@ -368,8 +373,8 @@ async function fetchFromAlternativeApis() {
           { 
             url: apiUrl,
             timeout: PRICE_FETCH_TIMEOUT,
-            fetchPhase: 'alternative_api_timeout'
-          }
+            fetchPhase: 'alternative_api_timeout',
+          },
         );
       } else {
         enhancedError = createError(
@@ -379,8 +384,8 @@ async function fetchFromAlternativeApis() {
             url: apiUrl,
             fetchPhase: 'alternative_api',
             timestamp: new Date().toISOString(),
-            originalError: error.toString()
-          }
+            originalError: error.toString(),
+          },
         );
       }
       
@@ -388,7 +393,7 @@ async function fetchFromAlternativeApis() {
       logError(enhancedError, {
         severity: ErrorSeverity.WARNING,
         context: 'alternative_api',
-        url: apiUrl
+        url: apiUrl,
       });
       
       console.debug('Bitcoin Price Tag: Fetch lifecycle - Continuing to next alternative API after failure');
@@ -404,8 +409,8 @@ async function fetchFromAlternativeApis() {
     { 
       apiUrls: ALTERNATIVE_API_URLS,
       fetchPhase: 'all_alternative_apis',
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   );
 }
 
@@ -423,7 +428,7 @@ async function getCachedPriceData() {
       return {
         ...cachedData,
         cached: true,
-        cacheAge: Date.now() - cachedData.timestamp
+        cacheAge: Date.now() - cachedData.timestamp,
       };
     }
     
@@ -431,7 +436,7 @@ async function getCachedPriceData() {
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.WARNING,
-      context: 'cache_retrieval'
+      context: 'cache_retrieval',
     });
     return null;
   }
@@ -447,7 +452,7 @@ async function storeErrorInfo(error) {
       message: error.message,
       type: error.type || 'unknown',
       timestamp: Date.now(),
-      details: error.details || {}
+      details: error.details || {},
     };
     
     await chrome.storage.local.set({ [PRICE_ERROR_KEY]: errorInfo });
@@ -455,7 +460,7 @@ async function storeErrorInfo(error) {
     // Just log, don't throw
     logError(storageError, {
       severity: ErrorSeverity.WARNING,
-      context: 'error_storage'
+      context: 'error_storage',
     });
   }
 }
@@ -479,7 +484,7 @@ async function _rawFetchAndStoreBitcoinPrice() {
     fetchFailed = true;
     logError(primaryError, {
       severity: ErrorSeverity.ERROR,
-      context: 'primary_api_fetch'
+      context: 'primary_api_fetch',
     });
     
     try {
@@ -488,12 +493,12 @@ async function _rawFetchAndStoreBitcoinPrice() {
       
       // Log that we used a fallback
       console.warn('Using alternative API for Bitcoin price data', {
-        source: priceData.source
+        source: priceData.source,
       });
     } catch (alternativeError) {
       logError(alternativeError, {
         severity: ErrorSeverity.ERROR,
-        context: 'alternative_api_fetch'
+        context: 'alternative_api_fetch',
       });
       
       // Store the error info for tracking
@@ -507,7 +512,7 @@ async function _rawFetchAndStoreBitcoinPrice() {
         throw createError(
           'Failed to get Bitcoin price data from all sources and no cache available',
           ErrorTypes.API,
-          { primaryError, alternativeError }
+          { primaryError, alternativeError },
         );
       }
     }
@@ -530,19 +535,19 @@ async function _rawFetchAndStoreBitcoinPrice() {
         calculatedTTL: ttl,
         oldPrice: existingData.btcPrice,
         newPrice: priceData.btcPrice,
-        percentChange: ((priceData.btcPrice - existingData.btcPrice) / existingData.btcPrice * 100).toFixed(2) + '%'
+        percentChange: ((priceData.btcPrice - existingData.btcPrice) / existingData.btcPrice * 100).toFixed(2) + '%',
       });
     }
   } catch (storageError) {
     logError(storageError, {
       severity: ErrorSeverity.WARNING,
-      context: 'price_storage'
+      context: 'price_storage',
     });
   }
   
   return {
     ...priceData,
-    fetchFailed: fetchFailed
+    fetchFailed: fetchFailed,
   };
 }
 
@@ -565,7 +570,7 @@ const fetchTracker = {
     // Exponential backoff capped at 5 minutes
     this.backoffTime = Math.min(
       this.backoffTime * 2,
-      5 * 60 * 1000
+      5 * 60 * 1000,
     );
   },
   
@@ -579,7 +584,7 @@ const fetchTracker = {
   getBackoffDelay() {
     const timeSinceLastFailure = Date.now() - this.lastFailure;
     return Math.max(0, this.backoffTime - timeSinceLastFailure);
-  }
+  },
 };
 
 /**
@@ -595,7 +600,7 @@ const priceRequestQueue = {
     this.pendingRequests.set(requestId, {
       id: requestId,
       priority,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
     
     this.processNextRequest();
@@ -647,7 +652,7 @@ const priceRequestQueue = {
         }
         return a.timestamp - b.timestamp;
       })[0];
-  }
+  },
 };
 
 /**
@@ -678,9 +683,7 @@ const throttledFetchPrice = throttle(() => {
  * Coalesced request handler for concurrent tab requests
  * This ensures that multiple tabs requesting at the same time only trigger one fetch
  */
-const coalescedFetchPrice = coalesce(() => {
-  return debouncedFetchPrice();
-}, () => 'price', 50);
+const coalescedFetchPrice = coalesce(() => debouncedFetchPrice(), () => 'price', 50);
 
 /**
  * Main function to fetch and store Bitcoin price with debouncing and coalescing
@@ -697,7 +700,7 @@ async function fetchAndStoreBitcoinPrice(highPriority = false) {
         return {
           ...cachedData,
           fromCache: true,
-          offlineMode: true
+          offlineMode: true,
         };
       }
       throw createError('Device is offline and no cached data available', ErrorTypes.NETWORK);
@@ -712,7 +715,7 @@ async function fetchAndStoreBitcoinPrice(highPriority = false) {
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.ERROR,
-      context: 'debounced_fetch'
+      context: 'debounced_fetch',
     });
     
     // Fall back to cache if fetch fails
@@ -721,7 +724,7 @@ async function fetchAndStoreBitcoinPrice(highPriority = false) {
       return {
         ...cachedData,
         fromCache: true,
-        fetchFailed: true
+        fetchFailed: true,
       };
     }
     
@@ -741,7 +744,7 @@ async function initialize() {
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.ERROR,
-      context: 'initialization'
+      context: 'initialization',
     });
     console.error('Failed to initialize Bitcoin Price Tag');
   }
@@ -757,7 +760,7 @@ function setupPeriodicUpdates() {
   try {
     // Set up alarm for periodic price updates
     chrome.alarms.create('updateBitcoinPrice', {
-      periodInMinutes: PRICE_FETCH_INTERVAL / (60 * 1000)
+      periodInMinutes: PRICE_FETCH_INTERVAL / (60 * 1000),
     });
     
     // Handle alarm events
@@ -769,17 +772,17 @@ function setupPeriodicUpdates() {
           if (error instanceof Error) {
             logError(error, {
               severity: ErrorSeverity.ERROR,
-              context: 'alarm_triggered_update'
+              context: 'alarm_triggered_update',
             });
           } else {
             // If error is not an Error object, create one
             logError(createError(
               `Non-error object rejected in alarm update: ${String(error)}`,
               ErrorTypes.UNKNOWN,
-              { originalValue: error }
+              { originalValue: error },
             ), {
               severity: ErrorSeverity.ERROR,
-              context: 'alarm_triggered_update'
+              context: 'alarm_triggered_update',
             });
           }
         });
@@ -788,7 +791,7 @@ function setupPeriodicUpdates() {
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.ERROR,
-      context: 'alarm_setup'
+      context: 'alarm_setup',
     });
   }
 }
@@ -823,7 +826,7 @@ async function handleGetPriceData(sendResponse) {
           offlineMode: true,
           status: 'success',
           cacheAge: Date.now() - cachedData.timestamp,
-          freshness: determineCacheFreshness(cachedData.timestamp)
+          freshness: determineCacheFreshness(cachedData.timestamp),
         });
         return;
       } else {
@@ -833,8 +836,8 @@ async function handleGetPriceData(sendResponse) {
           offlineMode: true,
           error: {
             message: 'No cached Bitcoin price data available and device is offline',
-            type: ErrorTypes.NETWORK
-          }
+            type: ErrorTypes.NETWORK,
+          },
         });
         return;
       }
@@ -846,7 +849,7 @@ async function handleGetPriceData(sendResponse) {
         ...cachedData,
         fromCache: true,
         status: 'success',
-        freshness: determineCacheFreshness(cachedData.timestamp)
+        freshness: determineCacheFreshness(cachedData.timestamp),
       });
       
       return;
@@ -861,7 +864,7 @@ async function handleGetPriceData(sendResponse) {
         fromCache: true,
         status: 'success',
         refreshing: true,
-        freshness: determineCacheFreshness(cachedData.timestamp)
+        freshness: determineCacheFreshness(cachedData.timestamp),
       });
       
       // Then trigger a background refresh without blocking
@@ -870,17 +873,17 @@ async function handleGetPriceData(sendResponse) {
         if (error instanceof Error) {
           logError(error, {
             severity: ErrorSeverity.ERROR,
-            context: 'background_refresh'
+            context: 'background_refresh',
           });
         } else {
           // If error is not an Error object, create one
           logError(createError(
             `Non-error object rejected in background refresh: ${String(error)}`,
             ErrorTypes.UNKNOWN,
-            { originalValue: error }
+            { originalValue: error },
           ), {
             severity: ErrorSeverity.ERROR,
-            context: 'background_refresh'
+            context: 'background_refresh',
           });
         }
       });
@@ -893,12 +896,12 @@ async function handleGetPriceData(sendResponse) {
     sendResponse({
       ...freshData,
       status: 'success',
-      freshness: CACHE_FRESHNESS.FRESH
+      freshness: CACHE_FRESHNESS.FRESH,
     });
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.ERROR,
-      context: 'price_data_request'
+      context: 'price_data_request',
     });
     
     // Get any cached data, regardless of age as a last resort
@@ -916,8 +919,8 @@ async function handleGetPriceData(sendResponse) {
         status: 'error',
         error: {
           message: error.message,
-          type: error.type || categorizeError(error)
-        }
+          type: error.type || categorizeError(error),
+        },
       });
     } else {
       // No data available at all
@@ -925,8 +928,8 @@ async function handleGetPriceData(sendResponse) {
         status: 'error',
         error: {
           message: 'No Bitcoin price data available',
-          type: error.type || categorizeError(error)
-        }
+          type: error.type || categorizeError(error),
+        },
       });
     }
   }
@@ -949,20 +952,20 @@ async function handleGetErrorInfo(sendResponse) {
     sendResponse({
       status: 'success',
       hasError: !!errorInfo,
-      errorInfo: errorInfo || null
+      errorInfo: errorInfo || null,
     });
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.WARNING,
-      context: 'error_info_request'
+      context: 'error_info_request',
     });
     
     sendResponse({
       status: 'error',
       error: {
         message: 'Could not retrieve error information',
-        type: categorizeError(error)
-      }
+        type: categorizeError(error),
+      },
     });
   }
 }
@@ -986,20 +989,20 @@ async function handleGetCacheStatus(sendResponse) {
     
     sendResponse({
       status: 'success',
-      cacheStatus
+      cacheStatus,
     });
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.WARNING,
-      context: 'cache_status_request'
+      context: 'cache_status_request',
     });
     
     sendResponse({
       status: 'error',
       error: {
         message: 'Failed to get cache status',
-        type: categorizeError(error)
-      }
+        type: categorizeError(error),
+      },
     });
   }
 }
@@ -1019,20 +1022,20 @@ async function handleClearCache(sendResponse) {
     
     sendResponse({
       status: 'success',
-      message: 'All caches cleared successfully'
+      message: 'All caches cleared successfully',
     });
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.ERROR,
-      context: 'clear_cache_request'
+      context: 'clear_cache_request',
     });
     
     sendResponse({
       status: 'error',
       error: {
         message: 'Failed to clear caches',
-        type: categorizeError(error)
-      }
+        type: categorizeError(error),
+      },
     });
   }
 }
@@ -1043,7 +1046,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (typeof sendResponse !== 'function') {
     console.error('Bitcoin Price Tag: Received message with invalid sendResponse callback', {
       action: message?.action || 'unknown',
-      callbackType: typeof sendResponse
+      callbackType: typeof sendResponse,
     });
     return false; // Don't expect an asynchronous response
   }
@@ -1065,29 +1068,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(data => sendResponse({ 
         status: 'success', 
         data,
-        debounced: data.debounced // Indicate if the request was debounced
+        debounced: data.debounced, // Indicate if the request was debounced
       }))
       .catch(error => {
         // Type check for the error object
         if (!(error instanceof Error)) {
-          error = createError(
+          const errorObj = createError(
             `Non-error object rejected in forced refresh: ${String(error)}`,
             ErrorTypes.UNKNOWN,
-            { originalValue: error }
+            { originalValue: error },
           );
+          return errorObj;
         }
         
         logError(error, {
           severity: ErrorSeverity.ERROR,
-          context: 'forced_refresh'
+          context: 'forced_refresh',
         });
         
         sendResponse({
           status: 'error',
           error: {
             message: error.message,
-            type: error.type || categorizeError(error)
-          }
+            type: error.type || categorizeError(error),
+          },
         });
       });
     return true; // Indicates we will respond asynchronously

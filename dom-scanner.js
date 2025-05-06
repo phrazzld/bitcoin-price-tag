@@ -703,22 +703,6 @@ function findAmazonPriceContainer(node, options = {}) {
               text.toLowerCase().includes(phrase.toLowerCase())
             )) {
               return current;
-            }$') && /\d+\.\d{2}/.test(text)) {
-              // Contains dollar sign and decimal format (e.g., 19.99)
-              return current;
-            }
-            
-            // Check for common price phrases
-            const pricePhrases = [
-              'price:', 'price is', 'costs', 'on sale for', 
-              'regular price', 'deal price', 'list price', 'sale price',
-              'buy now for', 'your price'
-            ];
-            
-            if (pricePhrases.some(phrase => 
-              text.toLowerCase().includes(phrase.toLowerCase())
-            )) {
-              return current;
             }
           } catch (contentError) {
             // Continue searching even if content is inaccessible
@@ -965,8 +949,8 @@ function extractAmazonPriceComponents(container, options = {}) {
               if (!components.fraction || components.fraction === '') {
                 components.fraction = (priceMatch[3] || '').trim();
                 components.source = components.source === 'structured' ? 'hybrid' : 'regex';
-              }$';
-                components.source = components.source === 'structured' ? 'hybrid' : 'regex';
+              }
+                // components.source = components.source === 'structured' ? 'hybrid' : 'regex';
               }
               
               if (!components.whole || components.whole === '') {

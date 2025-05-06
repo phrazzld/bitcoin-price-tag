@@ -162,8 +162,9 @@ if (contextState.isRestricted) {
       processPage: () => null
     };
     
-    // Export the empty API and exit
-    export const bitcoinPriceTagApi = emptyApi;
+    // Set the API to empty implementation and exit
+    // We'll export at top level later
+    window._emptyBitcoinPriceTagApi = emptyApi;
     // This will end execution of this module
     throw new Error(`Early exit: ${contextState.restrictionReason}`);
   }
@@ -583,7 +584,7 @@ const getBitcoinPrice = async () => {
                     console.debug('Bitcoin Price Tag: Service worker error, trying bridge fallback');
                     try {
                       // Create a promise that will be resolved with the bridge response
-                      const bridgeResponse = await new Promise((innerResolve, innerReject) => {
+                      return new Promise((innerResolve, innerReject) => {
                         window.bitcoinPriceTagBridge.sendMessageToBackground(
                           { action: 'getBitcoinPrice' },
                           (bridgeResponse) => {
@@ -1110,3 +1111,11 @@ function getOptimalDelay() {
 // Run initialization after a short delay to ensure page is fully loaded
 // Use browser-specific optimal delay
 setTimeout(init, getOptimalDelay());
+
+// Export the API (either real implementation or empty if we exited early)
+export const bitcoinPriceTagApi = window._emptyBitcoinPriceTagApi || {
+  convert,
+  walk,
+  getBitcoinPrice,
+  processPage
+};

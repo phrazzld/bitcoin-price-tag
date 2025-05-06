@@ -9,7 +9,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Configuration
-const SOURCE_DIR = '.';
+const _SOURCE_DIR = '.';
 const DOCS_DIR = 'docs';
 const API_DOC_FILE = path.join(DOCS_DIR, 'API.md');
 
@@ -52,10 +52,10 @@ FILES_TO_ANALYZE.forEach((file) => {
 });
 
 // Generate markdown documentation
-let markdown = `# Bitcoin Price Tag API\n\n`;
-markdown += `This document was automatically generated based on the codebase.\n\n`;
-markdown += `## Public API\n\n`;
-markdown += `The Bitcoin Price Tag extension exposes the following public APIs:\n\n`;
+let markdown = '# Bitcoin Price Tag API\n\n';
+markdown += 'This document was automatically generated based on the codebase.\n\n';
+markdown += '## Public API\n\n';
+markdown += 'The Bitcoin Price Tag extension exposes the following public APIs:\n\n';
 
 const fileGroups = {};
 

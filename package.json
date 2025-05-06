@@ -17,6 +17,7 @@
     "lint:format": "eslint . --ext .js --fix --rule 'prettier/prettier: error' --rule 'no-console: 0' --rule 'no-unused-vars: 0'",
     "lint:check": "eslint . --ext .js --max-warnings 0",
     "lint:safe": "eslint . --ext .js --fix --quiet --rule 'no-undef: 1'",
+    "lint:hooks": "eslint . --ext .js --quiet --rule 'no-undef: 1' --rule 'comma-dangle: 0' --rule 'max-lines-per-function: 0' --rule 'complexity: 0' --rule 'max-depth: 0'",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",

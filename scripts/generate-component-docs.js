@@ -9,7 +9,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Configuration
-const SOURCE_DIR = '.';
+const _SOURCE_DIR = '.';
 const DOCS_DIR = 'docs';
 const COMPONENTS_DOC_FILE = path.join(DOCS_DIR, 'COMPONENTS.md');
 
@@ -55,8 +55,8 @@ FILES_TO_ANALYZE.forEach((file) => {
 });
 
 // Generate markdown documentation
-let markdown = `# Bitcoin Price Tag Components\n\n`;
-markdown += `This document was automatically generated based on the codebase.\n\n`;
+let markdown = '# Bitcoin Price Tag Components\n\n';
+markdown += 'This document was automatically generated based on the codebase.\n\n';
 
 const fileGroups = {};
 
@@ -77,7 +77,7 @@ Object.keys(fileGroups).forEach((file) => {
   const functions = fileGroups[file].filter((c) => c.type === 'function');
 
   if (classes.length > 0) {
-    markdown += `### Classes\n\n`;
+    markdown += '### Classes\n\n';
     classes.forEach((c) => {
       markdown += `- \`${c.name}\`\n`;
     });
@@ -85,7 +85,7 @@ Object.keys(fileGroups).forEach((file) => {
   }
 
   if (functions.length > 0) {
-    markdown += `### Functions\n\n`;
+    markdown += '### Functions\n\n';
     functions.forEach((c) => {
       markdown += `- \`${c.name}\`\n`;
     });

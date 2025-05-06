@@ -504,7 +504,7 @@ export function initBitcoinPriceTag() {
                       createError('Service worker error', ErrorTypes.RUNTIME, {
                         ...response.error,
                         ...validationContext,
-                      }
+                      })
                     );
                     return;
                   }
@@ -531,7 +531,7 @@ export function initBitcoinPriceTag() {
                       createError('Messaging bridge callback failed', ErrorTypes.CALLBACK, {
                         action: 'getBitcoinPrice',
                         ...validationContext,
-                      }
+                      })
                     );
                   },
                 }

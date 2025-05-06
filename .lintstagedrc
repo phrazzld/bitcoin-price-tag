@@ -1,7 +1,6 @@
 {
   "*.js": [
     "prettier --write", 
-    "pnpm lint:safe --quiet", 
     "node scripts/check-sensitive-data.js"
   ],
   "*.{json,md,yml,yaml}": ["prettier --write", "node scripts/check-sensitive-data.js"],

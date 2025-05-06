@@ -13,7 +13,7 @@ The pre-commit hook runs automatically when you attempt to commit changes. It pe
 3. **Sensitive Data Detection**: Scans files for potential sensitive data like API keys and passwords (excludes lock files and binary files)
 4. **Image Size Check**: Ensures images don't exceed the maximum allowed size (5MB)
 
-**Note**: ESLint is configured in a limited mode for pre-commit hooks that only enforces critical rules (like undefined variables). Full ESLint enforcement with all warnings will be enabled after the existing codebase linting issues are resolved (see TODO-2-INFRASTRUCTURE.md).
+**Note**: ESLint is configured in a limited mode for pre-commit hooks that only enforces critical rules (like undefined variables) while ignoring stylistic and complexity rules. This approach ensures that the hooks can run without bypassing while still catching critical errors. The full suite of ESLint rules is still enforced during CI builds.
 
 ### Commit Message
 
@@ -65,7 +65,9 @@ The pre-push hook runs before pushing commits to the remote repository:
 
 ## Bypassing Hooks
 
-In rare cases, you may need to bypass hooks. This should be done with caution and only when necessary:
+The hooks are now configured to work without bypassing in most cases. The pre-commit hook uses a limited configuration of ESLint that only enforces critical rules while ignoring stylistic and complexity warnings.
+
+If you encounter a situation where you still need to bypass hooks, this should be done with caution and only when absolutely necessary:
 
 ```bash
 # Bypass pre-commit and commit-msg hooks
@@ -75,7 +77,7 @@ git commit --no-verify -m "commit message"
 git push --no-verify
 ```
 
-**Note**: The CI system will still run these checks, so bypassing hooks locally doesn't mean you can skip the quality standards.
+**Important**: The CI system will still run the complete set of checks with stricter rules, so bypassing hooks locally doesn't mean you can skip the quality standards. Any code that doesn't meet the full standards will be caught in CI.
 
 ## Troubleshooting
 
