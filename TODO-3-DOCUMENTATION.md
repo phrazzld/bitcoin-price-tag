@@ -6,8 +6,8 @@ This file covers documentation tasks for the project.
 
 1. ## Basic Documentation
 
-   - [ ] Update MIT LICENSE file
-     - [ ] Update year and copyright holder
+   - [x] Update MIT LICENSE file
+     - [x] Update year and copyright holder
    - [ ] Create basic README.md
      - [ ] Project description and purpose
      - [ ] Installation instructions
