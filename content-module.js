@@ -1,15 +1,7 @@
 // Import conversion functions
 import {
-  buildPrecedingMatchPattern,
-  buildConcludingMatchPattern,
-  extractNumericValue,
-  getMultiplier,
-  valueInSats,
-  valueInBtc,
-  makeSnippet,
   calculateSatPrice,
 } from '/conversion.js';
-
 // Import browser detection utility
 import {
   detectBrowser,
@@ -17,7 +9,6 @@ import {
   getBrowserAdaptations,
   applyPolyfills,
 } from '/browser-detect.js';
-
 // Import error handling utilities
 import {
   ErrorTypes,
@@ -28,10 +19,8 @@ import {
   withTimeout,
   logContextDetection,
 } from '/error-handling.js';
-
 // Import safe callback utilities
-import { safeCallback, safeExecute, safeChromeCallback } from '/callback-utils.js';
-
+import { safeCallback } from '/callback-utils.js';
 // Import cache manager utilities
 import {
   cachePriceData,
@@ -39,13 +28,9 @@ import {
   shouldRefreshCache,
   determineCacheFreshness,
   isOffline,
-  CACHE_KEYS,
-  CACHE_FRESHNESS,
 } from '/cache-manager.js';
-
 // Import debouncing utilities
-import { debounce, throttle, batchProcessor } from '/debounce.js';
-
+import { debounce } from '/debounce.js';
 // Import optimized DOM scanning utilities
 import {
   convertPriceText,
@@ -364,7 +349,7 @@ export function initBitcoinPriceTag() {
         {
           browserName: browserInfo.name,
           bridgeValidation,
-        }
+        },
       );
       logError(error, {
         severity: ErrorSeverity.ERROR,
@@ -441,7 +426,7 @@ export function initBitcoinPriceTag() {
                   {
                     bridgeHealth: currentHealth,
                     checkTime: new Date().toISOString(),
-                  }
+                  },
                 );
               }
             }
@@ -475,12 +460,12 @@ export function initBitcoinPriceTag() {
                         {
                           ...response.error,
                           ...validationContext,
-                        }
+                        },
                       ),
                       {
                         severity: ErrorSeverity.WARNING,
                         context: 'background_reported_error',
-                      }
+                      },
                     );
 
                     // If we have cached data in the response, use it
@@ -491,7 +476,7 @@ export function initBitcoinPriceTag() {
                         bridgeInfo: {
                           isFullyFunctional: bridgeValidation.isFullyFunctional,
                           hadWarnings: !!bridgeValidation.fallbackReason,
-                        }
+                        },
                       };
 
                       // Also cache locally
@@ -504,7 +489,7 @@ export function initBitcoinPriceTag() {
                       createError('Service worker error', ErrorTypes.RUNTIME, {
                         ...response.error,
                         ...validationContext,
-                      })
+                      }),
                     );
                     return;
                   }
@@ -516,7 +501,7 @@ export function initBitcoinPriceTag() {
                     bridgeInfo: {
                       isFullyFunctional: bridgeValidation.isFullyFunctional,
                       hadWarnings: !!bridgeValidation.fallbackReason,
-                    }
+                    },
                   };
 
                   // Cache successfully retrieved data locally
@@ -531,10 +516,10 @@ export function initBitcoinPriceTag() {
                       createError('Messaging bridge callback failed', ErrorTypes.CALLBACK, {
                         action: 'getBitcoinPrice',
                         ...validationContext,
-                      })
+                      }),
                     );
                   },
-                }
+                },
               ),
             );
           } catch (error) {
@@ -562,7 +547,7 @@ export function initBitcoinPriceTag() {
           available: bridgeValidation.available,
           isFullyFunctional: bridgeValidation.isFullyFunctional,
           fallbackReason: bridgeValidation.fallbackReason,
-        }
+        },
       });
 
       // After bridge failure, recheck bridge health to update status
@@ -578,7 +563,7 @@ export function initBitcoinPriceTag() {
               source: 'content_module',
             });
           }
-        } catch (healthError) {
+        } catch {
           // Ignore health check errors, just for updating status
         }
       }
@@ -596,7 +581,7 @@ export function initBitcoinPriceTag() {
               error: {
                 message: error.message,
                 type: error.type || categorizeError(error),
-              }
+              },
             };
           }
         } catch (fallbackError) {
@@ -622,7 +607,7 @@ export function initBitcoinPriceTag() {
             available: bridgeValidation.available,
             isFullyFunctional: bridgeValidation.isFullyFunctional,
             fallbackReason: bridgeValidation.fallbackReason,
-          }
+          },
         };
       }
 
@@ -634,7 +619,7 @@ export function initBitcoinPriceTag() {
           available: bridgeValidation.available,
           isFullyFunctional: bridgeValidation.isFullyFunctional,
           fallbackReason: bridgeValidation.fallbackReason,
-        }
+        },
       };
     }
   };
@@ -678,7 +663,7 @@ export function initBitcoinPriceTag() {
         {
           severity: ErrorSeverity.WARNING,
           context: 'price_data_error',
-        }
+        },
       );
     }
   };
@@ -771,7 +756,7 @@ export function initBitcoinPriceTag() {
           {
             context: 'backgroundRefresh_bridge',
             silent: true, // No need to log errors for this non-critical operation
-          }
+          },
         ),
       );
     } catch (error) {
@@ -833,7 +818,7 @@ export function initBitcoinPriceTag() {
             {
               severity: ErrorSeverity.ERROR,
               context: 'unhandled_rejection',
-            }
+            },
           );
 
           // Prevent it from being reported to the console

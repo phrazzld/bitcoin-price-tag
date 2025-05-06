@@ -11,13 +11,19 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
 
 - [ ] **Resolve Linting Issues** - Fix all linting errors in the codebase
   - [x] Fix linting errors in browser-detect.js
-  - [ ] Fix linting errors in content-module.js
+  - [x] Fix linting errors in content-module.js
   - [ ] Fix linting errors in content-script.js
   - [ ] Fix linting errors in content.js
   - [ ] Fix linting errors in dom-scanner.js
   - [ ] Fix linting errors in scripts/check-image-size.js
   - [ ] Fix linting errors in scripts/check-sensitive-data.js
   - [ ] Fix linting errors in background.js and other remaining files
+
+- [ ] **Fix Test Suite** - Resolve failing tests and testing infrastructure
+  - [ ] Fix ECONNREFUSED errors in tests
+  - [ ] Fix JSDOM import in performance tests
+  - [ ] Fix Playwright configuration issues
+  - [ ] Fix undefined errors in cache integration tests
 
 ### Documentation
 
