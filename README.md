@@ -69,8 +69,19 @@ The project uses GitHub Actions for continuous integration. The CI pipeline incl
 - Unit tests with code coverage reporting
 - Browser tests for Chrome, Firefox, and WebKit
 - Automated dependency updates via Dependabot
+- Semantic versioning and automatic releases
 
 CI checks run automatically on pull requests and pushes to the main branch. See the [workflows directory](.github/workflows) for details on the CI setup.
+
+### Versioning
+
+This project follows [Semantic Versioning](https://semver.org/) with automatic versioning based on commit messages:
+
+- `fix:` commits trigger PATCH version increments (e.g., 1.0.0 → 1.0.1)
+- `feat:` commits trigger MINOR version increments (e.g., 1.0.0 → 1.1.0)
+- Commits with `BREAKING CHANGE:` in the body trigger MAJOR version increments (e.g., 1.0.0 → 2.0.0)
+
+When commits are pushed to the main branch, the version is automatically updated, a changelog is generated, and a GitHub release is created.
 
 ## License
 

@@ -50,6 +50,6 @@ This file covers development infrastructure tasks including CI setup, git hooks,
      - [x] Add badge to README.md
 
 5. ## Versioning
-   - [ ] Configure semantic versioning
-     - [ ] Set up automated versioning based on commits
-     - [ ] Configure CHANGELOG generation
+   - [x] Configure semantic versioning
+     - [x] Set up automated versioning based on commits
+     - [x] Configure CHANGELOG generation

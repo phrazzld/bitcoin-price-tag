@@ -19,6 +19,7 @@ playwright-report/
 
 # Build
 dist/
+*.zip
 
 # Logs
 *.log
