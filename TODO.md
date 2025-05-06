@@ -9,6 +9,16 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
 - [x] **Fix Git Hooks** - Make Git hooks function without bypassing
   - [x] Fix pre-commit hook errors and stop using HUSKY=0 for bypassing hooks
 
+- [ ] **Resolve Linting Issues** - Fix all linting errors in the codebase
+  - [x] Fix linting errors in browser-detect.js
+  - [ ] Fix linting errors in content-module.js
+  - [ ] Fix linting errors in content-script.js
+  - [ ] Fix linting errors in content.js
+  - [ ] Fix linting errors in dom-scanner.js
+  - [ ] Fix linting errors in scripts/check-image-size.js
+  - [ ] Fix linting errors in scripts/check-sensitive-data.js
+  - [ ] Fix linting errors in background.js and other remaining files
+
 ### Documentation
 
 - [x] **Release Documentation**

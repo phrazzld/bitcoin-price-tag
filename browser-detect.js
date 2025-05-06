@@ -9,7 +9,6 @@
 export function detectBrowser() {
   const userAgent = navigator.userAgent;
   let browserName;
-  let browserVersion;
 
   // Detect Chrome
   if (userAgent.match(/chrome|chromium|crios/i)) {
@@ -38,11 +37,11 @@ export function detectBrowser() {
 
   // Extract version (implementation varies by browser)
   const versionMatch = userAgent.match(/(chrome|firefox|safari|opr|edge|edg|msie)\/(\d+(\.\d+)?)/i);
-  browserVersion = versionMatch ? versionMatch[2] : 'unknown';
+  const _browserVersion = versionMatch ? versionMatch[2] : 'unknown';
 
   return {
     name: browserName,
-    version: browserVersion,
+    version: _browserVersion,
     userAgent: userAgent,
     isChrome: browserName === 'chrome',
     isFirefox: browserName === 'firefox',
@@ -71,9 +70,11 @@ export function checkFeatureSupport() {
     promiseSupport: typeof Promise !== 'undefined',
     asyncAwaitSupport: (function () {
       try {
-        eval('async function test() {}');
+        // Using Function constructor instead of eval for better security
+        new Function('async function test() {}');
         return true;
-      } catch (e) {
+      } catch {
+        // Ignore error
         return false;
       }
     })(),
