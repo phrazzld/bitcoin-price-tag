@@ -12,7 +12,7 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
 - [ ] **Resolve Linting Issues** - Fix all linting errors in the codebase
   - [x] Fix linting errors in browser-detect.js
   - [x] Fix linting errors in content-module.js
-  - [ ] Fix linting errors in content-script.js
+  - [x] Fix linting errors in content-script.js
   - [ ] Fix linting errors in content.js
   - [ ] Fix linting errors in dom-scanner.js
   - [ ] Fix linting errors in scripts/check-image-size.js
