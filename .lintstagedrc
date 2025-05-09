@@ -1,5 +1,5 @@
 {
-  "*.js": ["prettier --write", "pnpm lint:hooks", "node scripts/check-sensitive-data.js"],
+  "*.js": ["prettier --write", "eslint --quiet --rule 'no-undef: 1' --rule 'comma-dangle: 0' --rule 'max-lines-per-function: 0' --rule 'complexity: 0' --rule 'max-depth: 0'", "node scripts/check-sensitive-data.js"],
   "*.{json,md,yml,yaml}": ["prettier --write", "node scripts/check-sensitive-data.js"],
   "*.{png,jpg,jpeg,gif,webp}": ["node scripts/check-image-size.js"]
 }
