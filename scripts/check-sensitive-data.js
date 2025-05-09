@@ -24,15 +24,15 @@ const SENSITIVE_PATTERNS = [
   },
   {
     name: 'Generic API Key/Secret',
-    regex: /[Aa][Pp][Ii][_\-]?[Kk][Ee][Yy][_\-]?[=:]["']?[0-9a-zA-Z]{16,}/g,
+    regex: /[Aa][Pp][Ii][_-]?[Kk][Ee][Yy][_-]?[=:]["']?[0-9a-zA-Z]{16,}/g,
   },
   {
     name: 'Generic Secret',
-    regex: /[Ss][Ee][Cc][Rr][Ee][Tt][_\-]?[Kk][Ee][Yy][_\-]?[=:]["']?[0-9a-zA-Z]{16,}/g,
+    regex: /[Ss][Ee][Cc][Rr][Ee][Tt][_-]?[Kk][Ee][Yy][_-]?[=:]["']?[0-9a-zA-Z]{16,}/g,
   },
   {
     name: 'Password in Code',
-    regex: /[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd][_\-]?[=:]["'][^"']{8,}["']/g,
+    regex: /[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd][_-]?[=:]["'][^"']{8,}["']/g,
   },
 ];
 

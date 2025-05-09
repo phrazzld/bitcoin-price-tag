@@ -5,21 +5,20 @@
  * including proper handling of restricted contexts and graceful degradation.
  */
 
-import { test, expect } from '@playwright/test';
-
+import { test, expect } from './network-mock.js';
+import { /* createMockExtensionEnvironment */ } from './mock-extension.js';
 import {
   loadTestPage,
-  waitForCurrencyConversion,
+  /* waitForCurrencyConversion,
   verifyCurrencyConversion,
-  getBrowserName,
+  getBrowserName, */
 } from './test-helpers.js';
-import { createMockExtensionEnvironment } from './mock-extension.js';
 
 // Configure diagnostic mode for enhanced logging
 const ENABLE_DIAGNOSTIC_MODE = true;
 
 // Test fixtures for Amazon pages
-const AMAZON_FIXTURES = {
+const _AMAZON_FIXTURES = {
   productPage: './test/fixtures/amazon-product.html',
   searchPage: './test/fixtures/amazon-search.html',
   cartPage: './test/fixtures/amazon-cart.html',

@@ -9,13 +9,11 @@ import {
   buildConcludingMatchPattern,
   extractNumericValue,
   getMultiplier,
-  makeSnippet
+  makeSnippet,
 } from '/conversion.js';
-
 import {
-  debounce,
   throttle,
-  batchProcessor
+  batchProcessor,
 } from '/debounce.js';
 
 // Cache for processed nodes to avoid re-processing
@@ -26,7 +24,7 @@ let processedNodes = new WeakSet();
 // Elements that are unlikely to contain price text
 const SKIP_TAGS = new Set([
   'script', 'style', 'noscript', 'svg', 'canvas', 'video', 'audio', 
-  'img', 'iframe', 'meta', 'link', 'head', 'template', 'input', 'textarea'
+  'img', 'iframe', 'meta', 'link', 'head', 'template', 'input', 'textarea',
 ]);
 
 // Common price-related class names and identifiers
@@ -35,7 +33,7 @@ const PRICE_SELECTORS = [
   '*[class*="cost"]', '*[class*="amount"]', '*[id*="price"]', '*[id*="cost"]',
   '*[class*="currency"]', '*[class*="usd"]', '*[class*="total"]',
   '*[class*="dollars"]', '.a-price', '.sx-price', '*[class*="product"]',
-  '*[id*="product-price"]', 'span.money'
+  '*[id*="product-price"]', 'span.money',
 ];
 
 // Cache for regular expressions to avoid rebuilding them
@@ -83,6 +81,8 @@ function isTextNode(value) {
   return typeof value.nodeType === 'number' && value.nodeType === 3 && 
          typeof value.nodeValue === 'string';
 }
+
+
 
 export function convertPriceText(textNode, btcPrice, satPrice) {
   // Use safer type checking that doesn't rely on Node global
@@ -155,7 +155,7 @@ export function processAmazonPrice(node, next, btcPrice, satPrice, options = {})
     price: null,
     processedContainer: false,
     error: null,
-    skippedDueToRestrictions: false
+    skippedDueToRestrictions: false,
   };
   
   // Early exit if context is known to be restricted
@@ -459,13 +459,13 @@ export function processAmazonPrice(node, next, btcPrice, satPrice, options = {})
       }
       
       // Process currency symbols and price components
-      const isCurrencySymbol = ["sx-price-currency", "a-price-symbol", "a-offscreen"]
+      const isCurrencySymbol = ['sx-price-currency', 'a-price-symbol', 'a-offscreen']
         .some(c => classes.includes(c));
       
-      const isWholePart = ["sx-price-whole", "a-price-whole", "a-price-decimal"]
+      const isWholePart = ['sx-price-whole', 'a-price-whole', 'a-price-decimal']
         .some(c => classes.includes(c));
       
-      const isFractionalPart = ["sx-price-fractional", "a-price-fraction"]
+      const isFractionalPart = ['sx-price-fractional', 'a-price-fraction']
         .some(c => classes.includes(c));
       
       if (isCurrencySymbol && node.firstChild) {
@@ -551,17 +551,17 @@ function findAmazonPriceContainer(node, options = {}) {
     let current = node;
     
     // First verify we can access parentElement property
-    let canAccessDom = true;
+    let _canAccessDom = true;
     try {
       // Test DOM access - this will throw if access is restricted
-      const testAccess = node.parentElement;
-      canAccessDom = true;
+      const _testAccess = node.parentElement;
+      _canAccessDom = true;
     } catch (accessError) {
       // DOM access is restricted - we can't traverse the tree
       console.debug('Bitcoin Price Tag: Cannot access DOM tree for price container detection', {
-        error: accessError.message
+        error: accessError.message,
       });
-      canAccessDom = false;
+      _canAccessDom = false;
       throw new Error(`DOM access restricted: ${accessError.message}`);
     }
     
@@ -592,7 +592,7 @@ function findAmazonPriceContainer(node, options = {}) {
       'amazon-price',             // Generic Amazon price class
       'deal-price',               // Deal price display
       'price-large',              // Large price format 
-      'price-small'               // Small price format
+      'price-small',               // Small price format
     ];
     
     // Look up the DOM tree for a matching container
@@ -619,7 +619,7 @@ function findAmazonPriceContainer(node, options = {}) {
       try {
         // Check if this is a price container by class name
         hasPriceClass = amazonPriceContainerClasses.some(className => 
-          current.classList.contains(className)
+          current.classList.contains(className),
         );
         
         if (hasPriceClass) {
@@ -649,7 +649,7 @@ function findAmazonPriceContainer(node, options = {}) {
           } catch (querySelectorError) {
             // If querySelector fails, try alternative detection
             console.debug('Bitcoin Price Tag: querySelector error in price container detection', {
-              error: querySelectorError.message
+              error: querySelectorError.message,
             });
             
             // Attempt a more direct check by examining child elements directly
@@ -696,11 +696,11 @@ function findAmazonPriceContainer(node, options = {}) {
             const pricePhrases = [
               'price:', 'price is', 'costs', 'on sale for', 
               'regular price', 'deal price', 'list price', 'sale price',
-              'buy now for', 'your price'
+              'buy now for', 'your price',
             ];
             
             if (pricePhrases.some(phrase => 
-              text.toLowerCase().includes(phrase.toLowerCase())
+              text.toLowerCase().includes(phrase.toLowerCase()),
             )) {
               return current;
             }
@@ -710,7 +710,7 @@ function findAmazonPriceContainer(node, options = {}) {
         }
       } catch (complexDetectionError) {
         console.debug('Bitcoin Price Tag: Error in complex price structure detection', {
-          error: complexDetectionError.message
+          error: complexDetectionError.message,
         });
         // Continue searching - this approach failed but others might work
       }
@@ -739,7 +739,7 @@ function findAmazonPriceContainer(node, options = {}) {
   } catch (e) {
     // Handle any unexpected errors
     console.debug('Bitcoin Price Tag: Critical error finding Amazon price container', {
-      error: e.message
+      error: e.message,
     });
     return null;
   }
@@ -763,7 +763,7 @@ function extractAmazonPriceComponents(container, options = {}) {
     whole: '',
     fraction: '',
     error: null,
-    source: 'unknown' // Tracks how the extraction was done for debugging
+    source: 'unknown', // Tracks how the extraction was done for debugging
   };
   
   // Input validation with defensive coding
@@ -812,7 +812,7 @@ function extractAmazonPriceComponents(container, options = {}) {
           '[class*="currency"]', 
           '[class*="symbol"]',
           '.a-text-price > :first-child', // Another common pattern
-          '.p13n-sc-price > span:first-child' // Recommendation price pattern
+          '.p13n-sc-price > span:first-child', // Recommendation price pattern
         ];
         
         let symbolElement = null;
@@ -844,7 +844,7 @@ function extractAmazonPriceComponents(container, options = {}) {
           '.sx-price-whole', 
           '[class*="whole"]',
           '.a-price > .a-price-whole', // More specific Amazon selector
-          '.price-large > span:first-of-type' // Another pattern
+          '.price-large > span:first-of-type', // Another pattern
         ];
         
         let wholeElement = null;
@@ -877,7 +877,7 @@ function extractAmazonPriceComponents(container, options = {}) {
           '[class*="fraction"]',
           '.a-price > .a-price-fraction', // More specific Amazon selector
           '.price-large > sup', // Superscript fraction
-          '.price-large > span:last-of-type' // Another pattern
+          '.price-large > span:last-of-type', // Another pattern
         ];
         
         let fractionElement = null;
@@ -907,7 +907,7 @@ function extractAmazonPriceComponents(container, options = {}) {
       }
     } catch (structuredExtractionError) {
       console.debug('Bitcoin Price Tag: Error in structured price component extraction', {
-        error: structuredExtractionError.message
+        error: structuredExtractionError.message,
       });
       // Continue to other extraction methods
     }
@@ -932,7 +932,7 @@ function extractAmazonPriceComponents(container, options = {}) {
             // Group 1: Currency symbol or text before numbers ($, €, etc.)
             // Group 2: Whole part with optional commas
             // Group 3: Fraction part (if present)
-            const priceMatch = fullPriceText.match(/([^\d\.,]*)(\d[\d,]*)\.?(\d*)/);
+            const priceMatch = fullPriceText.match(/([^0-9.,]*)(\d[\d,]*)\.?(\d*)/);
             
             if (priceMatch) {
               // Only use these parts if they're not already determined by structured extraction
@@ -951,7 +951,6 @@ function extractAmazonPriceComponents(container, options = {}) {
                 components.source = components.source === 'structured' ? 'hybrid' : 'regex';
               }
                 // components.source = components.source === 'structured' ? 'hybrid' : 'regex';
-              }
               
               if (!components.whole || components.whole === '') {
                 components.whole = (priceMatch[2] || '').trim();
@@ -1023,7 +1022,7 @@ function extractAmazonPriceComponents(container, options = {}) {
         }
       } catch (textParsingError) {
         console.debug('Bitcoin Price Tag: Error in text-based price extraction', {
-          error: textParsingError.message
+          error: textParsingError.message,
         });
       }
     }
@@ -1075,7 +1074,7 @@ function extractAmazonPriceComponents(container, options = {}) {
   } catch (e) {
     // Handle any unexpected errors in the overall extraction process
     console.debug('Bitcoin Price Tag: Critical error extracting Amazon price components', {
-      error: e.message
+      error: e.message,
     });
     
     components.error = 'critical_extraction_error';
@@ -1113,17 +1112,17 @@ function cleanupCurrencySymbol(symbol) {
   }
   
   // Third attempt - check for currency words and abbreviations
-  symbol = symbol.trim().toLowerCase();
+  const normalizedSymbol = symbol.trim().toLowerCase();
   
-  if (symbol.includes('$') || symbol.includes('usd') || symbol.includes('dollar')) {
+  if (normalizedSymbol.includes('$') || normalizedSymbol.includes('usd') || normalizedSymbol.includes('dollar')) {
     return '$';
-  } else if (symbol.includes('€') || symbol.includes('eur') || symbol.includes('euro')) {
+  } else if (normalizedSymbol.includes('€') || normalizedSymbol.includes('eur') || normalizedSymbol.includes('euro')) {
     return '€';
-  } else if (symbol.includes('£') || symbol.includes('gbp') || symbol.includes('pound')) {
+  } else if (normalizedSymbol.includes('£') || normalizedSymbol.includes('gbp') || normalizedSymbol.includes('pound')) {
     return '£';
-  } else if (symbol.includes('¥') || symbol.includes('jpy') || symbol.includes('yen')) {
+  } else if (normalizedSymbol.includes('¥') || normalizedSymbol.includes('jpy') || normalizedSymbol.includes('yen')) {
     return '¥';
-  } else if (symbol.includes('₹') || symbol.includes('inr') || symbol.includes('rupee')) {
+  } else if (normalizedSymbol.includes('₹') || normalizedSymbol.includes('inr') || normalizedSymbol.includes('rupee')) {
     return '₹';
   }
   
@@ -1132,82 +1131,11 @@ function cleanupCurrencySymbol(symbol) {
 }
 
 /**
- * Helper function to clean up and normalize currency symbols
- * @param {string} symbol - The raw symbol text to clean up
- * @returns {string} A normalized currency symbol
+ * Check if an element is price-related based on its attributes and content
+ * @param {Element} element - The element to check
+ * @returns {boolean} True if the element is price-related
  */
-function cleanupCurrencySymbol(symbol) {
-  if (!symbol || symbol === '') {
-    return '$'; // Default to $ if no symbol found
-  }
-  
-  // First attempt - direct match of currency symbols
-  if (/^[$€£¥₹]$/.test(symbol)) {
-    return symbol; // Already a clean currency symbol
-  }
-  
-  // Second attempt - extract currency symbol if it's embedded in text
-  const symbolMatch = symbol.match(/[$€£¥₹]/);
-  if (symbolMatch) {
-    return symbolMatch[0];
-  }
-  
-  // Third attempt - check for currency words and abbreviations
-  symbol = symbol.trim().toLowerCase();
-  
-  if (symbol.includes('$') || symbol.includes('usd') || symbol.includes('dollar')) {
-    return '$';
-  } else if (symbol.includes('€') || symbol.includes('eur') || symbol.includes('euro')) {
-    return '€';
-  } else if (symbol.includes('£') || symbol.includes('gbp') || symbol.includes('pound')) {
-    return '£';
-  } else if (symbol.includes('¥') || symbol.includes('jpy') || symbol.includes('yen')) {
-    return '¥';
-  } else if (symbol.includes('₹') || symbol.includes('inr') || symbol.includes('rupee')) {
-    return '₹';
-  }
-  
-  // Default fallback
-  return '$';
-}
-
-/**
- * Check if node is visible
- * @param {Element} node - DOM element to check
- * @returns {boolean} Whether the node is visible
- */
-/**
- * Safely check if a value is an element node
- * Works even in environments where Node is not defined
- * @param {any} value - The value to check
- * @returns {boolean} True if the value is an element node
- */
-function isElementNode(value) {
-  if (!value) return false;
-  // Use direct property checking rather than instanceof
-  return typeof value.nodeType === 'number' && value.nodeType === 1;
-}
-
-export function isNodeVisible(node) {
-  if (!node || !isElementNode(node)) return true; // Text nodes are considered visible
-  
-  try {
-    const style = window.getComputedStyle(node);
-    return style.display !== 'none' && 
-           style.visibility !== 'hidden' && 
-           style.opacity !== '0' &&
-           node.offsetParent !== null;
-  } catch (e) {
-    return true; // If we can't determine visibility, assume it's visible
-  }
-}
-
-/**
- * Check if element is price-related based on class names and id
- * @param {Element} element - DOM element to check
- * @returns {boolean} Whether the element is price-related
- */
-export function isPriceRelated(element) {
+function isPriceRelated(element) {
   if (!element || element.nodeType !== 1) return false;
   
   try {
@@ -1279,6 +1207,25 @@ export function findPriceElements(root) {
 }
 
 /**
+ * Check if a node is visible based on its computed style
+ * @param {Element} node - The element to check
+ * @returns {boolean} Whether the element is visible
+ */
+export function isNodeVisible(node) {
+  if (!node || node.nodeType !== 1) return true; // Text nodes are considered visible
+  
+  try {
+    const style = window.getComputedStyle(node);
+    return style.display !== 'none' && 
+           style.visibility !== 'hidden' && 
+           style.opacity !== '0' &&
+           node.offsetParent !== null;
+  } catch (e) {
+    return true; // If we can't determine visibility, assume it's visible
+  }
+}
+
+/**
  * Walk the DOM tree non-recursively
  * Enhanced with context-aware skip logic, error handling, and defensive coding
  * 
@@ -1309,7 +1256,7 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
     error: null,
     skippedDueToRestrictions: false,
     operationsTerminated: false,
-    stackSizeTerminated: false
+    stackSizeTerminated: false,
   };
   
   // Early exit for null node
@@ -1394,7 +1341,7 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
       } catch (weakSetError) {
         // On WeakSet error, continue without tracking processed nodes
         console.debug('Bitcoin Price Tag: WeakSet error in walkDomTree', {
-          error: weakSetError.message
+          error: weakSetError.message,
         });
         // Don't break the operation, just continue
       }
@@ -1409,12 +1356,14 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
           case 1: // Element
           case 9: // Document
           case 11: // Document fragment
-            // Early check for safe DOM traversal
-            if (!node.tagName || !node.lastChild) continue;
-            
-            // Skip elements that are unlikely to contain prices
-            const tagName = node.tagName.toLowerCase();
-            if (SKIP_TAGS.has(tagName)) continue;
+            {
+              // Early check for safe DOM traversal
+              if (!node.tagName || !node.lastChild) continue;
+              
+              // Skip elements that are unlikely to contain prices
+              const tagName = node.tagName.toLowerCase();
+              if (SKIP_TAGS.has(tagName)) continue;
+            }
             
             // Skip invisible elements in targeted mode only (for completeness in full scan)
             if (isTargeted) {
@@ -1451,8 +1400,8 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
                       satPrice, 
                       {
                         isRestrictedContext: options.isRestrictedContext,
-                        isAmazonRestricted: options.isAmazonRestricted
-                      }
+                        isAmazonRestricted: options.isAmazonRestricted,
+                      },
                     );
                     
                     if (result.processed) {
@@ -1464,7 +1413,7 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
                           // Mark the entire container and its children as processed
                           const container = findAmazonPriceContainer(child, {
                             isRestrictedContext: options.isRestrictedContext,
-                            isAmazonRestricted: options.isAmazonRestricted
+                            isAmazonRestricted: options.isAmazonRestricted,
                           });
                           
                           if (container) {
@@ -1505,7 +1454,7 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
                   } catch (amazonProcessingError) {
                     // Continue with normal processing if Amazon price handling fails
                     console.debug('Bitcoin Price Tag: Error processing Amazon price', {
-                      error: amazonProcessingError.message
+                      error: amazonProcessingError.message,
                     });
                   }
                 }
@@ -1515,7 +1464,7 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
                   stack.push(child);
                 } catch (stackPushError) {
                   console.debug('Bitcoin Price Tag: Error pushing to stack', {
-                    error: stackPushError.message
+                    error: stackPushError.message,
                   });
                   // This is non-critical, just continue
                 }
@@ -1525,7 +1474,7 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
               }
             } catch (childTraversalError) {
               console.debug('Bitcoin Price Tag: Error traversing children', {
-                error: childTraversalError.message
+                error: childTraversalError.message,
               });
               // Continue with next stack item if child traversal fails
             }
@@ -1545,7 +1494,7 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
               }
             } catch (conversionError) {
               console.debug('Bitcoin Price Tag: Error converting price text', {
-                error: conversionError.message
+                error: conversionError.message,
               });
               // Non-critical, continue with other nodes
             }
@@ -1558,7 +1507,7 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
       } catch (nodeProcessingError) {
         console.debug('Bitcoin Price Tag: Error processing node', {
           nodeType: node.nodeType,
-          error: nodeProcessingError.message
+          error: nodeProcessingError.message,
         });
         // Continue with next node if processing fails
       }
@@ -1582,7 +1531,7 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
         nodesProcessed: stats.nodesProcessed,
         conversions: stats.totalConversions,
         duration: stats.duration + 'ms',
-        completed: stats.completedSuccessfully
+        completed: stats.completedSuccessfully,
       });
     }
     
@@ -1597,7 +1546,7 @@ export function walkDomTree(startNode, btcPrice, satPrice, isTargeted = false, o
     console.debug('Bitcoin Price Tag: Critical error in walkDomTree', {
       error: e.message,
       stack: e.stack,
-      duration: stats.duration + 'ms'
+      duration: stats.duration + 'ms',
     });
     
     return stats;
@@ -1634,7 +1583,7 @@ export function scanDomForPrices(root, btcPrice, satPrice, options = {}) {
     skippedTargetedScan: false,
     skippedCompleteScan: false,
     error: null,
-    priceElements: 0
+    priceElements: 0,
   };
   
   // Early validation of inputs
@@ -1677,7 +1626,7 @@ export function scanDomForPrices(root, btcPrice, satPrice, options = {}) {
           stats.priceElements = priceElements.length;
         } catch (findError) {
           console.debug('Bitcoin Price Tag: Error finding price elements', {
-            error: findError.message
+            error: findError.message,
           });
           // Continue with an empty array if findPriceElements fails
           priceElements = [];
@@ -1685,7 +1634,7 @@ export function scanDomForPrices(root, btcPrice, satPrice, options = {}) {
         }
         
         // Process each price element with a targeted scan
-        let targetedResults = [];
+        const targetedResults = [];
         for (const element of priceElements) {
           try {
             if (!element) continue; // Skip null elements
@@ -1694,7 +1643,7 @@ export function scanDomForPrices(root, btcPrice, satPrice, options = {}) {
             const elementOptions = {
               ...options,
               maxOperations: Math.min(options.maxOperations || 1000, 1000),
-              maxStackSize: 100 // Lower stack size for targeted scans
+              maxStackSize: 100, // Lower stack size for targeted scans
             };
             
             // Run the targeted scan (isTargeted = true)
@@ -1702,7 +1651,7 @@ export function scanDomForPrices(root, btcPrice, satPrice, options = {}) {
             targetedResults.push(elementStats);
           } catch (elementError) {
             console.debug('Bitcoin Price Tag: Error processing price element', {
-              error: elementError.message
+              error: elementError.message,
             });
             // Continue with next element if one fails
           }
@@ -1716,7 +1665,7 @@ export function scanDomForPrices(root, btcPrice, satPrice, options = {}) {
           amazonPricesConverted: targetedResults.reduce((sum, res) => sum + (res.amazonPricesConverted || 0), 0),
           regularPricesConverted: targetedResults.reduce((sum, res) => sum + (res.regularPricesConverted || 0), 0),
           operationsTerminated: targetedResults.some(res => res.operationsTerminated),
-          errors: targetedResults.filter(res => res.error).map(res => res.error)
+          errors: targetedResults.filter(res => res.error).map(res => res.error),
         };
         
         // Update total statistics
@@ -1724,7 +1673,7 @@ export function scanDomForPrices(root, btcPrice, satPrice, options = {}) {
         stats.totalConversions += stats.targetedScanStats.conversions;
       } catch (targetedScanError) {
         console.debug('Bitcoin Price Tag: Error in targeted scan phase', {
-          error: targetedScanError.message
+          error: targetedScanError.message,
         });
         stats.targetedScanStats = { error: targetedScanError.message };
       }
@@ -1745,7 +1694,7 @@ export function scanDomForPrices(root, btcPrice, satPrice, options = {}) {
         const completeOptions = {
           ...options,
           maxOperations: remainingOperations,
-          maxStackSize: 200 // Higher stack size for complete scan
+          maxStackSize: 200, // Higher stack size for complete scan
         };
         
         // Run the complete scan (isTargeted = false)
@@ -1757,7 +1706,7 @@ export function scanDomForPrices(root, btcPrice, satPrice, options = {}) {
         stats.totalConversions += completeStats.totalConversions;
       } catch (completeScanError) {
         console.debug('Bitcoin Price Tag: Error in complete scan phase', {
-          error: completeScanError.message
+          error: completeScanError.message,
         });
         stats.completeScanStats = { error: completeScanError.message };
       }
@@ -1783,7 +1732,7 @@ export function scanDomForPrices(root, btcPrice, satPrice, options = {}) {
         duration: stats.duration + 'ms',
         targeted: !stats.skippedTargetedScan,
         complete: !stats.skippedCompleteScan,
-        successful: stats.completedSuccessfully
+        successful: stats.completedSuccessfully,
       });
     }
     
@@ -1798,7 +1747,7 @@ export function scanDomForPrices(root, btcPrice, satPrice, options = {}) {
     console.debug('Bitcoin Price Tag: Critical error in scanDomForPrices', {
       error: e.message,
       stack: e.stack,
-      duration: stats.duration + 'ms'
+      duration: stats.duration + 'ms',
     });
     
     return stats;
@@ -1816,7 +1765,7 @@ export function isInRestrictedIframe() {
     reason: null,
     details: {},
     severity: 'none',  // none, low, medium, high - indicating how restrictive the environment is
-    restrictionChecks: []  // track which checks failed
+    restrictionChecks: [],  // track which checks failed
   };
   
   try {
@@ -1834,11 +1783,11 @@ export function isInRestrictedIframe() {
       'ad-iframe', 'ad_iframe', 'adframe', 'ad/frame', 
       'sandbox', 'popover', 'popup', 'modal', 'overlay',
       'embed', '/embed/', 'iframe', 'banner', 'creative',
-      'widget', 'gadget', 'promotion', 'sponsor'
+      'widget', 'gadget', 'promotion', 'sponsor',
     ];
     
     const hasRestrictedUrlIndicator = restrictedUrlIndicators.some(indicator => 
-      result.details.url.toLowerCase().includes(indicator.toLowerCase())
+      result.details.url.toLowerCase().includes(indicator.toLowerCase()),
     );
     
     if (hasRestrictedUrlIndicator) {
@@ -2067,7 +2016,7 @@ export function isInRestrictedIframe() {
       
       result.details.storage = {
         localStorage: hasLocalStorage,
-        sessionStorage: hasSessionStorage
+        sessionStorage: hasSessionStorage,
       };
       
       // If both storage types are blocked, that's a strong indicator of restrictions
@@ -2087,7 +2036,7 @@ export function isInRestrictedIframe() {
           // Try to actually use it
           if (hasExtensionAccess) {
             const extensionId = chrome.runtime.id; // This will throw in restricted contexts
-            const extensionUrl = chrome.runtime.getURL(''); // This will also throw in some cases
+            const _extensionUrl = chrome.runtime.getURL(''); // This will also throw in some cases
             result.details.extensionId = extensionId;
           }
         } catch (extensionError) {
@@ -2142,7 +2091,7 @@ export function isInRestrictedIframe() {
         reason: result.reason,
         severity: result.severity,
         checks: result.restrictionChecks,
-        details: result.details
+        details: result.details,
       });
     }
     
@@ -2154,7 +2103,7 @@ export function isInRestrictedIframe() {
       restricted: true,
       reason: 'detection_error',
       severity: 'high',
-      details: { detectionError: e.message }
+      details: { detectionError: e.message },
     };
   }
 }
@@ -2171,7 +2120,7 @@ export function isAmazonRestrictedIframe() {
     reason: null,
     details: {},
     severity: 'none',  // none, low, medium, high
-    restrictionChecks: []  // track which checks failed
+    restrictionChecks: [],  // track which checks failed
   };
   
   try {
@@ -2219,7 +2168,7 @@ export function isAmazonRestrictedIframe() {
       
       // Amazon ad system domains
       'advertising-api.amazon', 'assoc-amazon', 'associates-amazon',
-      'aax.', 'aax-us', 'amazon-adsystem', 'ad.amazon', 'ads.amazon'
+      'aax.', 'aax-us', 'amazon-adsystem', 'ad.amazon', 'ads.amazon',
     ];
     
     // Check if we're on an Amazon domain
@@ -2242,12 +2191,12 @@ export function isAmazonRestrictedIframe() {
       // Amazon advertising and widget patterns
       'advertising', 'adsystem', 'adserver', '/ads/', 
       'associates', 'affiliate', 'recommendations', '/rec/',
-      'widget', 'deals', 'promotions', '/promo/'
+      'widget', 'deals', 'promotions', '/promo/',
     ];
     
     // Check URL patterns to identify Amazon content even if not on an Amazon domain
     const hasAmazonUrlPattern = amazonUrlPatterns.some(pattern => 
-      url.includes(pattern)
+      url.includes(pattern),
     );
     result.details.hasAmazonUrlPattern = hasAmazonUrlPattern;
     
@@ -2262,7 +2211,7 @@ export function isAmazonRestrictedIframe() {
           'a-container', 'a-box', 'a-section', 'a-spacing', 
           'a-price', 'a-color-price', 'a-size-', 'a-link-', 
           'amzn-', 'aok-', 'puis-', 'apb-', 'aui-', 
-          'amazon-', 'amzn-', 'kindle-'
+          'amazon-', 'amzn-', 'kindle-',
         ];
         
         // Check if document has typical Amazon classes
@@ -2272,7 +2221,7 @@ export function isAmazonRestrictedIframe() {
           if (document.body.classList) {
             const bodyClasses = Array.from(document.body.classList);
             hasAmazonClass = amazonSpecificClasses.some(amazonClass => 
-              bodyClasses.some(bodyClass => bodyClass.includes(amazonClass))
+              bodyClasses.some(bodyClass => bodyClass.includes(amazonClass)),
             );
           }
           
@@ -2280,7 +2229,7 @@ export function isAmazonRestrictedIframe() {
           if (!hasAmazonClass) {
             const hasAmazonElements = amazonSpecificClasses.some(amazonClass => 
               !!document.querySelector(`.${amazonClass}`) || 
-              !!document.querySelector(`[class*="${amazonClass}"]`)
+              !!document.querySelector(`[class*="${amazonClass}"]`),
             );
             
             hasAmazonClass = hasAmazonElements;
@@ -2318,12 +2267,12 @@ export function isAmazonRestrictedIframe() {
         
         // UI component patterns that are often restricted
         'sandbox', 'popover', 'popup', 'modal', 'overlay', 'lightbox',
-        'drawer', 'tooltip', 'flyout', 'dropdown', 'float'
+        'drawer', 'tooltip', 'flyout', 'dropdown', 'float',
       ];
       
       // Check URL for restricted patterns
       const hasRestrictedUrlPattern = restrictedUrlPatterns.some(pattern => 
-        url.toLowerCase().includes(pattern.toLowerCase())
+        url.toLowerCase().includes(pattern.toLowerCase()),
       );
       result.details.hasRestrictedUrlPattern = hasRestrictedUrlPattern;
       
@@ -2354,7 +2303,7 @@ export function isAmazonRestrictedIframe() {
             
             // Widget and iframe related classes
             'iframe-wrapper', 'iframe-content', 'embed-content',
-            'widget-wrapper', 'widget-content', 'amazon-widget'
+            'widget-wrapper', 'widget-content', 'amazon-widget',
           ];
           
           // Check if body has any of these classes
@@ -2362,7 +2311,7 @@ export function isAmazonRestrictedIframe() {
           if (document.body.classList) {
             const bodyClasses = Array.from(document.body.classList);
             hasRestrictedBodyClass = restrictedClasses.some(restrictedClass => 
-              bodyClasses.some(bodyClass => bodyClass.includes(restrictedClass))
+              bodyClasses.some(bodyClass => bodyClass.includes(restrictedClass)),
             );
           }
           result.details.hasRestrictedBodyClass = hasRestrictedBodyClass;
@@ -2387,14 +2336,14 @@ export function isAmazonRestrictedIframe() {
             '[id*="ad-"], [class*="ad-"], [id*="ads"], [class*="ads"], ' +
             '[id*="Ad"], [class*="Ad"], [id*="banner"], [class*="banner"], ' +
             '[id*="sponsored"], [class*="sponsored"], [data-ad], ' +
-            '[data-creative], [data-ad-unit], [id*="adsystem"], [class*="adsystem"]'
+            '[data-creative], [data-ad-unit], [id*="adsystem"], [class*="adsystem"]',
           );
           
           // Check for presence of ad-specific elements common in Amazon ads
           result.details.hasAdElements = !!document.querySelector(
             '[data-aax_size], [data-aax_pubname], [data-aax_src], ' +
             'iframe[src*="amazon-adsystem"], iframe[src*="doubleclick"], ' +
-            'iframe[src*="advertising"], [data-aps-slot], [data-ad-format]'
+            'iframe[src*="advertising"], [data-aps-slot], [data-ad-format]',
           );
           
           // If any of these DOM checks indicate a restricted context, mark accordingly
@@ -2474,7 +2423,7 @@ export function isAmazonRestrictedIframe() {
         const hasProductElements = !!document.querySelector(
           '#productTitle, #title, #price, #priceblock_ourprice, #buybox, ' +
           '#addToCart, #submit.add-to-cart, #searchDropdownBox, #nav-search, ' +
-          '#twister, #variation_color, #variation_size, #prodDetails'
+          '#twister, #variation_color, #variation_size, #prodDetails',
         );
         
         result.details.hasProductElements = hasProductElements;
@@ -2501,7 +2450,7 @@ export function isAmazonRestrictedIframe() {
         result.details.generalRestrictions = {
           restricted: generalRestrictions.restricted,
           reason: generalRestrictions.reason,
-          severity: generalRestrictions.severity
+          severity: generalRestrictions.severity,
         };
         
         if (generalRestrictions.restricted) {
@@ -2553,7 +2502,7 @@ export function isAmazonRestrictedIframe() {
         reason: result.reason,
         severity: result.severity,
         checks: result.restrictionChecks,
-        details: result.details
+        details: result.details,
       });
     }
     
@@ -2566,7 +2515,7 @@ export function isAmazonRestrictedIframe() {
       restricted: true,
       reason: 'detection_error',
       severity: 'high',
-      details: { error: e.message }
+      details: { error: e.message },
     };
   }
 }
@@ -2596,7 +2545,7 @@ export function initScanning(document, btcPrice, satPrice, options = {}) {
     isAmazon: false,
     contextRestrictions: null,
     error: null,
-    weakSetReset: false
+    weakSetReset: false,
   };
   
   try {
@@ -2654,13 +2603,13 @@ export function initScanning(document, btcPrice, satPrice, options = {}) {
         generalRestrictions: {
           restricted: iframeRestrictions.restricted,
           reason: iframeRestrictions.reason,
-          severity: iframeRestrictions.severity
+          severity: iframeRestrictions.severity,
         },
         amazonRestrictions: amazonRestrictions.isAmazon ? {
           restricted: amazonRestrictions.restricted,
           reason: amazonRestrictions.reason,
-          severity: amazonRestrictions.severity
-        } : null
+          severity: amazonRestrictions.severity,
+        } : null,
       };
       
       result.endTime = Date.now();
@@ -2705,7 +2654,7 @@ export function initScanning(document, btcPrice, satPrice, options = {}) {
         isAmazonRestricted: false,  // We've already determined we're in a safe context
         skipTargetedScan: options.skipTargetedScan || false,
         skipCompleteScan: options.skipCompleteScan || false,
-        maxOperations: options.aggressiveScan ? 25000 : 15000
+        maxOperations: options.aggressiveScan ? 25000 : 15000,
       };
       
       // For medium severity contexts, we're more conservative
@@ -2732,7 +2681,7 @@ export function initScanning(document, btcPrice, satPrice, options = {}) {
         try {
           setupLazyProcessing(document, btcPrice, satPrice, {
             contextSeverity: result.contextSeverity,
-            isAmazon: amazonRestrictions.isAmazon
+            isAmazon: amazonRestrictions.isAmazon,
           });
           result.lazyLoadingSetup = true;
         } catch (observerError) {
@@ -2810,7 +2759,7 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
     observerCreated: false,
     containersObserved: 0,
     scrollHandlerAttached: false,
-    error: null
+    error: null,
   };
   
   try {
@@ -2856,7 +2805,9 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
     // Create IntersectionObserver with safety handling
     let observer = null;
     try {
-      observer = new IntersectionObserver(
+      // Check if IntersectionObserver is available in this environment
+      if (typeof window !== 'undefined' && typeof window.IntersectionObserver === 'function') {
+        observer = new window.IntersectionObserver(
         (entries) => {
           for (const entry of entries) {
             try {
@@ -2871,8 +2822,8 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
                     // Lower operations limit for lazy-loaded elements
                     maxOperations: options.contextSeverity === 'medium' ? 5000 : 
                                    options.contextSeverity === 'low' ? 8000 : 10000,
-                    maxStackSize: 100 // Smaller stack for lazy elements
-                  }
+                    maxStackSize: 100, // Smaller stack for lazy elements
+                  },
                 );
                 
                 // Unobserve it after processing
@@ -2881,13 +2832,13 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
                 } catch (unobserveError) {
                   // Non-critical if unobserve fails
                   console.debug('Bitcoin Price Tag: Error unobserving element', {
-                    error: unobserveError.message
+                    error: unobserveError.message,
                   });
                 }
               }
             } catch (entryError) {
               console.debug('Bitcoin Price Tag: Error processing intersection entry', {
-                error: entryError.message
+                error: entryError.message,
               });
               // Continue with other entries
             }
@@ -2895,14 +2846,15 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
         },
         { 
           rootMargin: `${observerMargin}px`,  // Dynamic margin based on options
-          threshold: 0.1 // Only need small visibility to start processing
-        }
+          threshold: 0.1, // Only need small visibility to start processing
+        },
       );
+      }
       
-      result.observerCreated = true;
+      result.observerCreated = !!observer;
     } catch (observerError) {
       console.debug('Bitcoin Price Tag: Error creating IntersectionObserver', {
-        error: observerError.message
+        error: observerError.message,
       });
       result.error = 'observer_creation_failed';
       // Continue with scroll handler fallback
@@ -2920,7 +2872,7 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
           // Amazon-specific containers
           '.a-container', '[class*="product"]',
           // Generic large blocks that might contain prices
-          '.page', '.body', '.main'
+          '.page', '.body', '.main',
         ];
         
         // Find all potential containers with error handling
@@ -2940,7 +2892,7 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
             } catch (bodyError) {
               // Give up on container observation
               console.debug('Bitcoin Price Tag: Cannot find any containers', {
-                error: bodyError.message
+                error: bodyError.message,
               });
             }
           }
@@ -2961,7 +2913,7 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
             }
           } catch (observeError) {
             console.debug('Bitcoin Price Tag: Error observing container', {
-              error: observeError.message
+              error: observeError.message,
             });
             // Continue with next container
           }
@@ -2970,7 +2922,7 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
         result.containersObserved = observedCount;
       } catch (containerError) {
         console.debug('Bitcoin Price Tag: Error setting up container observation', {
-          error: containerError.message
+          error: containerError.message,
         });
         // Continue with scroll handler
       }
@@ -3065,13 +3017,13 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
                         // Lower operations limit for scroll-triggered elements
                         maxOperations: options.contextSeverity === 'medium' ? 3000 : 
                                       options.contextSeverity === 'low' ? 5000 : 8000,
-                        maxStackSize: 80 // Smaller stack for scroll elements
-                      }
+                        maxStackSize: 80, // Smaller stack for scroll elements
+                      },
                     );
                   }
                 } catch (elementError) {
                   console.debug('Bitcoin Price Tag: Error processing element in scroll handler', {
-                    error: elementError.message
+                    error: elementError.message,
                   });
                   // Continue with next element
                 }
@@ -3088,7 +3040,7 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
               }
             } catch (batchError) {
               console.debug('Bitcoin Price Tag: Error processing batch in scroll handler', {
-                error: batchError.message
+                error: batchError.message,
               });
               // Stop batch processing on error
             }
@@ -3098,7 +3050,7 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
           processBatch();
         } catch (scrollHandlerError) {
           console.debug('Bitcoin Price Tag: Error in scroll handler', {
-            error: scrollHandlerError.message
+            error: scrollHandlerError.message,
           });
           // Non-critical if scroll handler fails
         }
@@ -3110,13 +3062,13 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
         result.scrollHandlerAttached = true;
       } catch (listenerError) {
         console.debug('Bitcoin Price Tag: Error attaching scroll handler', {
-          error: listenerError.message
+          error: listenerError.message,
         });
         // Non-critical if scroll handler attachment fails
       }
     } catch (handlerError) {
       console.debug('Bitcoin Price Tag: Error creating scroll handler', {
-        error: handlerError.message
+        error: handlerError.message,
       });
       // Non-critical if scroll handler creation fails
     }
@@ -3129,7 +3081,7 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
     // Handle any unexpected errors in the overall setup process
     console.debug('Bitcoin Price Tag: Critical error setting up lazy processing', {
       error: e.message,
-      stack: e.stack
+      stack: e.stack,
     });
     
     result.error = 'critical_setup_error';
@@ -3148,7 +3100,7 @@ export function setupLazyProcessing(document, btcPrice, satPrice, options = {}) 
  */
 export function setupMutationObserver(document, btcPrice, satPrice, observerConfig = {
   childList: true,
-  subtree: true
+  subtree: true,
 }) {
   // Create a batch processor for DOM nodes
   // This processes nodes in batches of up to 10 with a 100ms delay

@@ -6,7 +6,6 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 
 // Maximum allowed file size in bytes (5MB)
 const MAX_FILE_SIZE = 5 * 1024 * 1024;

@@ -1,15 +1,22 @@
 /**
  * Performance tests for DOM scanning algorithm
  */
-import { expect, describe, it, vi, beforeEach, afterEach } from 'vitest';
-import { JSDOM } from 'jsdom';
+import { expect, describe, it, /* vi, */ beforeEach, afterEach } from 'vitest';
+import { Window } from 'happy-dom';
 
-import { walkDomTree, scanDomForPrices } from '../../dom-scanner.js';
+import { /* walkDomTree, */ scanDomForPrices } from '../../dom-scanner.js';
 
 // Create a test environment
 function createTestEnvironment() {
   // Create a DOM with varying levels of complexity
-  const dom = new JSDOM(`
+  const window = new Window({
+    url: 'http://localhost',
+    width: 1024,
+    height: 768,
+  });
+
+  const document = window.document;
+  document.write(`
     <!DOCTYPE html>
     <html>
     <head>
@@ -22,10 +29,10 @@ function createTestEnvironment() {
   `);
 
   // Mock the global document and window
-  global.document = dom.window.document;
-  global.window = dom.window;
-  global.Node = dom.window.Node;
-  global.Element = dom.window.Element;
+  global.document = document;
+  global.window = window;
+  global.Node = window.Node;
+  global.Element = window.Element;
   global.IntersectionObserver = class {
     constructor(callback) {
       this.callback = callback;
@@ -35,7 +42,7 @@ function createTestEnvironment() {
     disconnect() {}
   };
   global.MutationObserver =
-    dom.window.MutationObserver ||
+    window.MutationObserver ||
     class {
       constructor() {}
       observe() {}
@@ -43,13 +50,14 @@ function createTestEnvironment() {
     };
 
   // Mock window.getComputedStyle
-  global.window.getComputedStyle = (element) => ({
+  global.window.getComputedStyle = (/* element */) => ({
     display: 'block',
     visibility: 'visible',
     opacity: '1',
   });
 
-  // Add Element.prototype.classList if missing
+  // happy-dom includes classList implementation, so we don't need to add it manually
+  // Just in case there are any missing properties, we'll keep a simplified implementation
   if (!global.Element.prototype.classList) {
     class ClassList {
       constructor(element) {
@@ -91,7 +99,7 @@ function createTestEnvironment() {
     });
   }
 
-  return { dom, document: dom.window.document };
+  return { window, document };
 }
 
 // Generate test content with varying complexity
@@ -176,6 +184,16 @@ function measurePerformance(fn, iterations = 1) {
   };
 }
 
+// Mocked utility functions for tests
+const buildPrecedingMatchPattern = () => /\$\s?\d[\d,]*(\.\d+)?/gi;
+const buildConcludingMatchPattern = () => /\d[\d,]*(\.\d+)?\s?USD/gi;
+const makeSnippet = (sourceElement, fiatAmount, btcPrice /* , satPrice */) =>
+  `${sourceElement} (${fiatAmount / btcPrice} BTC)`;
+const extractNumericValue = (str) => parseFloat(str.replace(/[^\d.]/g, ''));
+// Mock bitcoin price values
+const btcPrice = 50000;
+const satPrice = 0.0005;
+
 describe('DOM Scanning Performance', () => {
   let env;
 
@@ -183,16 +201,15 @@ describe('DOM Scanning Performance', () => {
     env = createTestEnvironment();
 
     // Mock required functions from conversion.js
-    global.buildPrecedingMatchPattern = () => /\$\s?\d[\d,]*(\.\d+)?/gi;
-    global.buildConcludingMatchPattern = () => /\d[\d,]*(\.\d+)?\s?USD/gi;
-    global.makeSnippet = (sourceElement, fiatAmount, btcPrice, satPrice) =>
-      `${sourceElement} (${fiatAmount / btcPrice} BTC)`;
+    global.buildPrecedingMatchPattern = buildPrecedingMatchPattern;
+    global.buildConcludingMatchPattern = buildConcludingMatchPattern;
+    global.makeSnippet = makeSnippet;
     global.getMultiplier = () => 1;
-    global.extractNumericValue = (str) => parseFloat(str.replace(/[^\d.]/g, ''));
+    global.extractNumericValue = extractNumericValue;
 
     // Mock globals needed for content.js
-    global.btcPrice = 50000;
-    global.satPrice = 0.0005;
+    global.btcPrice = btcPrice;
+    global.satPrice = satPrice;
   });
 
   afterEach(() => {
@@ -260,7 +277,7 @@ describe('DOM Scanning Performance', () => {
       originalWalk(env.document.body);
     }, 10);
 
-    console.log(`Original algorithm (small DOM - 100 elements): ${averageTime.toFixed(2)}ms`);
+    console.debug(`Original algorithm (small DOM - 100 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
 
@@ -272,7 +289,7 @@ describe('DOM Scanning Performance', () => {
       originalWalk(env.document.body);
     }, 5);
 
-    console.log(`Original algorithm (medium DOM - 1000 elements): ${averageTime.toFixed(2)}ms`);
+    console.debug(`Original algorithm (medium DOM - 1000 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
 
@@ -284,7 +301,7 @@ describe('DOM Scanning Performance', () => {
       originalWalk(env.document.body);
     }, 3);
 
-    console.log(`Original algorithm (large DOM - 5000 elements): ${averageTime.toFixed(2)}ms`);
+    console.debug(`Original algorithm (large DOM - 5000 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
 
@@ -297,7 +314,7 @@ describe('DOM Scanning Performance', () => {
       scanDomForPrices(env.document.body, 50000, 0.0005);
     }, 10);
 
-    console.log(`Optimized algorithm (small DOM - 100 elements): ${averageTime.toFixed(2)}ms`);
+    console.debug(`Optimized algorithm (small DOM - 100 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
 
@@ -309,7 +326,7 @@ describe('DOM Scanning Performance', () => {
       scanDomForPrices(env.document.body, 50000, 0.0005);
     }, 5);
 
-    console.log(`Optimized algorithm (medium DOM - 1000 elements): ${averageTime.toFixed(2)}ms`);
+    console.debug(`Optimized algorithm (medium DOM - 1000 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
 
@@ -321,7 +338,7 @@ describe('DOM Scanning Performance', () => {
       scanDomForPrices(env.document.body, 50000, 0.0005);
     }, 3);
 
-    console.log(`Optimized algorithm (large DOM - 5000 elements): ${averageTime.toFixed(2)}ms`);
+    console.debug(`Optimized algorithm (large DOM - 5000 elements): ${averageTime.toFixed(2)}ms`);
     expect(averageTime).toBeDefined();
   });
 
@@ -483,7 +500,7 @@ describe('DOM Scanning Performance', () => {
       scanDomForPrices(env.document.body, 50000, 0.0005);
     }, 10);
 
-    console.log(`
+    console.debug(`
     Real-world comparison:
     - Original algorithm: ${originalPerf.averageTime.toFixed(2)}ms
     - Optimized algorithm: ${optimizedPerf.averageTime.toFixed(2)}ms

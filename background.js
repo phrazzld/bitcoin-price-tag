@@ -5,7 +5,6 @@ import {
   logError, 
   categorizeError,
   createError, 
-  withTimeout, 
   withRetry, 
 } from '/error-handling.js';
 import {
@@ -27,11 +26,9 @@ import {
 } from '/debounce.js';
 
 // Constants - using new cache manager constants
-const PRICE_STORAGE_KEY = CACHE_KEYS.CHROME_STORAGE;
 const PRICE_ERROR_KEY = CACHE_KEYS.CACHE_ERROR;
 const PRICE_FETCH_INTERVAL = CACHE_TTL.FRESH; // 5 minutes in milliseconds
 const PRICE_FETCH_TIMEOUT = 10000; // 10 seconds timeout for API requests
-const MAX_CACHE_AGE = CACHE_TTL.VERY_STALE; // 24 hours maximum cache age
 const COINDESK_API_URL = 'https://api.coindesk.com/v1/bpi/currentprice/USD.json';
 const ALTERNATIVE_API_URLS = [
   'https://blockchain.info/ticker', // Alternative API 1
@@ -62,8 +59,10 @@ async function fetchBitcoinPrice() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), PRICE_FETCH_TIMEOUT);
         
+        // Declaration at the higher scope
+        let response;
         try {
-          const response = await fetch(COINDESK_API_URL, {
+          response = await fetch(COINDESK_API_URL, {
             method: 'GET',
             headers: {
               'Accept': 'application/json',
@@ -145,6 +144,14 @@ async function fetchBitcoinPrice() {
         
         try {
           console.debug('Bitcoin Price Tag: Fetch lifecycle - Parsing JSON response');
+          // Ensure response is accessible
+          if (!response) {
+            throw createError(
+              'Response object not available for parsing',
+              ErrorTypes.PARSING,
+              { fetchPhase: 'json_access' },
+            );
+          }
           const data = await response.json();
           
           // Validate data structure
@@ -262,13 +269,17 @@ async function fetchFromAlternativeApis() {
       timestamp: new Date().toISOString(),
     });
     
+    // Variable declarations outside the try block for cleanup in catch block
+    let timeoutId;
+    
     try {
       // Use AbortController for more reliable timeout handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), PRICE_FETCH_TIMEOUT);
+      timeoutId = setTimeout(() => controller.abort(), PRICE_FETCH_TIMEOUT);
       
+      let response;
       try {
-        const response = await fetch(apiUrl, {
+        response = await fetch(apiUrl, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -359,7 +370,7 @@ async function fetchFromAlternativeApis() {
       }
     } catch (error) {
       // Clear any remaining timeout
-      if (typeof timeoutId !== 'undefined') {
+      if (timeoutId) {
         clearTimeout(timeoutId);
       }
       
@@ -740,7 +751,7 @@ async function initialize() {
   try {
     // Try to get price data on startup
     await fetchAndStoreBitcoinPrice();
-    console.log('Bitcoin Price Tag initialized successfully');
+    console.debug('Bitcoin Price Tag initialized successfully');
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.ERROR,
@@ -972,6 +983,63 @@ async function handleGetErrorInfo(sendResponse) {
 
 // Initialize extension
 initialize();
+
+/**
+ * Gets the status of all caches in the system
+ * @returns {Promise<Object>} Status of all cache systems
+ */
+async function getCacheStatus() {
+  try {
+    // Get data from chrome storage
+    const chromeData = await chrome.storage.local.get([CACHE_KEYS.CHROME_STORAGE]);
+    const chromeCache = chromeData[CACHE_KEYS.CHROME_STORAGE];
+    
+    return {
+      chromeStorageCache: {
+        available: !!chromeCache,
+        timestamp: chromeCache ? chromeCache.timestamp : null,
+        age: chromeCache ? Date.now() - chromeCache.timestamp : null,
+        freshness: chromeCache ? determineCacheFreshness(chromeCache.timestamp) : 'none',
+      },
+      offlineMode: isOffline(),
+      timestamp: Date.now(),
+    };
+  } catch (error) {
+    logError(error, {
+      severity: ErrorSeverity.WARNING,
+      context: 'get_cache_status',
+    });
+    
+    return {
+      error: error.message,
+      available: false,
+      timestamp: Date.now(),
+    };
+  }
+}
+
+/**
+ * Clears all caches in the system
+ * @returns {Promise<void>}
+ */
+async function clearAllCaches() {
+  try {
+    // Clear chrome storage cache
+    await chrome.storage.local.remove([
+      CACHE_KEYS.CHROME_STORAGE,
+      CACHE_KEYS.CACHE_ERROR,
+    ]);
+    
+    console.debug('Bitcoin Price Tag: All caches cleared successfully');
+    return true;
+  } catch (error) {
+    logError(error, {
+      severity: ErrorSeverity.ERROR,
+      context: 'clear_all_caches',
+    });
+    throw error;
+  }
+}
 
 /**
  * Handle request for cache status information

@@ -7,12 +7,10 @@ import {
   valueInSats,
   valueInBtc,
   makeSnippet,
-  calculateSatPrice
+  calculateSatPrice,
 } from '/conversion.js';
-
 // Import browser detection utility
 import { detectBrowser, checkFeatureSupport, getBrowserAdaptations, applyPolyfills } from '/browser-detect.js';
-
 // Import error handling utilities
 import { 
   ErrorTypes, 
@@ -21,16 +19,14 @@ import {
   categorizeError, 
   createError, 
   withTimeout,
-  logContextDetection
+  logContextDetection,
 } from '/error-handling.js';
-
 // Import safe callback utilities
 import {
   safeCallback,
   safeExecute,
-  safeChromeCallback
+  safeChromeCallback,
 } from '/callback-utils.js';
-
 // Import cache manager utilities
 import {
   cachePriceData,
@@ -39,16 +35,14 @@ import {
   determineCacheFreshness,
   isOffline,
   CACHE_KEYS,
-  CACHE_FRESHNESS
+  CACHE_FRESHNESS,
 } from '/cache-manager.js';
-
 // Import debouncing utilities
 import {
   debounce,
   throttle,
-  batchProcessor
+  batchProcessor,
 } from '/debounce.js';
-
 // Import optimized DOM scanning utilities
 import {
   convertPriceText,
@@ -56,7 +50,7 @@ import {
   setupMutationObserver as setupOptimizedMutationObserver,
   initScanning,
   isInRestrictedIframe,
-  isAmazonRestrictedIframe
+  isAmazonRestrictedIframe,
 } from '/dom-scanner.js';
 
 // Global price variables
@@ -73,7 +67,7 @@ function checkExecutionContext() {
     isRestricted: false,
     restrictionReason: null,
     isAmazonFrame: false,
-    details: {}
+    details: {},
   };
   
   try {
@@ -135,7 +129,7 @@ function checkExecutionContext() {
       isRestricted: true,
       restrictionReason: 'detection_error',
       isAmazonFrame: false,
-      details: { error: e.message }
+      details: { error: e.message },
     };
   }
 }
@@ -159,7 +153,7 @@ if (contextState.isRestricted) {
       convert: () => null,
       walk: () => null,
       getBitcoinPrice: async () => ({ btcPrice: 50000, satPrice: 0.0005, emergency: true }),
-      processPage: () => null
+      processPage: () => null,
     };
     
     // Set the API to empty implementation and exit
@@ -182,9 +176,7 @@ if (!featureSupport.isSupported) {
 }
 
 // Legacy convert function - maintained for backward compatibility with tests
-const convert = (textNode) => {
-  return convertPriceText(textNode, btcPrice, satPrice);
-};
+const convert = (textNode) => convertPriceText(textNode, btcPrice, satPrice);
 
 // Legacy walk function - maintained for backward compatibility
 // Credit to t-j-crowder on StackOverflow for the original version
@@ -208,14 +200,14 @@ const getLocalCachedPriceData = async () => {
         ...cachedData,
         fromLocalCache: true,
         localCacheAge: Date.now() - cachedData.timestamp,
-        freshness: determineCacheFreshness(cachedData.timestamp)
+        freshness: determineCacheFreshness(cachedData.timestamp),
       };
     }
     return null;
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.WARNING,
-      context: 'local_cache_retrieval'
+      context: 'local_cache_retrieval',
     });
     return null;
   }
@@ -233,13 +225,13 @@ const storeLocalCache = async (priceData) => {
         btcPrice: priceData.btcPrice,
         satPrice: priceData.satPrice,
         timestamp: priceData.timestamp || Date.now(),
-        source: priceData.source || 'content_script'
+        source: priceData.source || 'content_script',
       });
     }
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.WARNING,
-      context: 'local_cache_storage'
+      context: 'local_cache_storage',
     });
   }
 };
@@ -257,7 +249,7 @@ const createEmergencyPriceData = () => {
     timestamp: Date.now(),
     isEmergencyFallback: true,
     source: 'emergency_fallback',
-    warning: 'Using estimated price - could not retrieve actual data'
+    warning: 'Using estimated price - could not retrieve actual data',
   };
 };
 
@@ -274,7 +266,7 @@ const validateRuntimeAPI = () => {
     runtimeAccessible: false,
     lastErrorAccessible: false,
     details: {},
-    fallbackReason: null
+    fallbackReason: null,
   };
   
   try {
@@ -331,7 +323,7 @@ const validateRuntimeAPI = () => {
     return {
       available: false,
       error: error.message,
-      fallbackReason: 'validation_error'
+      fallbackReason: 'validation_error',
     };
   }
 };
@@ -355,12 +347,12 @@ const getBitcoinPrice = async () => {
       ErrorTypes.RUNTIME,
       { 
         browserName: browserInfo.name,
-        validation: runtimeValidation
-      }
+        validation: runtimeValidation,
+      },
     );
     logError(error, {
       severity: ErrorSeverity.ERROR,
-      context: 'runtime_api_validation'
+      context: 'runtime_api_validation',
     });
     
     // Check if bridge is available as an alternative approach
@@ -381,7 +373,7 @@ const getBitcoinPrice = async () => {
                 return;
               }
               resolve(response);
-            }
+            },
           );
         });
       } catch (bridgeError) {
@@ -397,8 +389,8 @@ const getBitcoinPrice = async () => {
         ...localCache,
         apiValidation: {
           available: false,
-          reason: runtimeValidation.fallbackReason
-        }
+          reason: runtimeValidation.fallbackReason,
+        },
       };
     }
     
@@ -408,7 +400,7 @@ const getBitcoinPrice = async () => {
         btcPrice: 50000,
         satPrice: 0.0005,
         timestamp: Date.now(),
-        source: 'test_data'
+        source: 'test_data',
       };
     }
     
@@ -417,8 +409,8 @@ const getBitcoinPrice = async () => {
       ...createEmergencyPriceData(),
       apiValidation: {
         available: false,
-        reason: runtimeValidation.fallbackReason
-      }
+        reason: runtimeValidation.fallbackReason,
+      },
     };
   }
   
@@ -434,7 +426,7 @@ const getBitcoinPrice = async () => {
         throw createError(
           'Runtime API became unavailable before message send',
           ErrorTypes.RUNTIME,
-          { lastMinuteError, validation: runtimeValidation }
+          { lastMinuteError, validation: runtimeValidation },
         );
       }
     }
@@ -467,7 +459,7 @@ const getBitcoinPrice = async () => {
         if (useBridgeInstead) {
           console.debug('Bitcoin Price Tag: Using bridge instead of direct runtime', {
             reason: 'runtime_degraded',
-            bridgeHealth
+            bridgeHealth,
           });
           
           // Create a promise that will be resolved with the bridge response
@@ -487,8 +479,8 @@ const getBitcoinPrice = async () => {
                     messageMethod: 'bridge_fallback',
                     runtimeValidation: {
                       available: runtimeValidation.available,
-                      reason: runtimeValidation.fallbackReason
-                    }
+                      reason: runtimeValidation.fallbackReason,
+                    },
                   };
                   
                   // Cache the response locally if it has price data
@@ -497,11 +489,11 @@ const getBitcoinPrice = async () => {
                   }
                   
                   resolve(enhancedResponse);
-                }
+                },
               );
             }),
             12000, // Slightly longer timeout for bridge approach
-            'Bridge Bitcoin price request timed out'
+            'Bridge Bitcoin price request timed out',
           );
         }
       } catch (healthError) {
@@ -523,7 +515,7 @@ const getBitcoinPrice = async () => {
             throw createError(
               'chrome.runtime.sendMessage is not a function',
               ErrorTypes.RUNTIME,
-              { validation: runtimeValidation }
+              { validation: runtimeValidation },
             );
           }
           
@@ -537,7 +529,7 @@ const getBitcoinPrice = async () => {
                   reject(createError(
                     'No response from service worker', 
                     ErrorTypes.RUNTIME,
-                    { validation: runtimeValidation }
+                    { validation: runtimeValidation },
                   ));
                   return;
                 }
@@ -548,8 +540,8 @@ const getBitcoinPrice = async () => {
                   messageMethod: 'direct_runtime',
                   runtimeValidation: {
                     available: runtimeValidation.available,
-                    status: runtimeValidation.fallbackReason ? 'degraded' : 'healthy'
-                  }
+                    status: runtimeValidation.fallbackReason ? 'degraded' : 'healthy',
+                  },
                 };
                 
                 // If the response has an error status, handle appropriately
@@ -562,13 +554,13 @@ const getBitcoinPrice = async () => {
                       response.error ? response.error.type : ErrorTypes.UNKNOWN,
                       {
                         ...response.error,
-                        validation: runtimeValidation
-                      }
+                        validation: runtimeValidation,
+                      },
                     ),
                     {
                       severity: ErrorSeverity.WARNING,
-                      context: 'background_reported_error'
-                    }
+                      context: 'background_reported_error',
+                    },
                   );
                   
                   // If we have cached data in the response, use it
@@ -584,7 +576,7 @@ const getBitcoinPrice = async () => {
                     console.debug('Bitcoin Price Tag: Service worker error, trying bridge fallback');
                     try {
                       // Create a promise that will be resolved with the bridge response
-                      return new Promise((innerResolve, innerReject) => {
+                      new Promise((innerResolve, innerReject) => {
                         window.bitcoinPriceTagBridge.sendMessageToBackground(
                           { action: 'getBitcoinPrice' },
                           (bridgeResponse) => {
@@ -593,24 +585,28 @@ const getBitcoinPrice = async () => {
                               return;
                             }
                             innerResolve(bridgeResponse);
-                          }
+                          },
                         );
+                      }).then(bridgeResponse => {
+                        if (bridgeResponse && bridgeResponse.btcPrice) {
+                          // Also cache locally
+                          const bridgeEnhanced = {
+                            ...bridgeResponse,
+                            messageMethod: 'bridge_after_runtime_error',
+                            runtimeValidation: {
+                              available: runtimeValidation.available,
+                              status: 'error_fallback',
+                            },
+                          };
+                          storeLocalCache(bridgeEnhanced);
+                          resolve(bridgeEnhanced);
+                        }
+                      }).catch(bridgeFallbackError => {
+                        // Continue with rejection if bridge also fails
+                        console.debug('Bitcoin Price Tag: Bridge fallback also failed', 
+                                       bridgeFallbackError.message);
                       });
-                      
-                      if (bridgeResponse && bridgeResponse.btcPrice) {
-                        // Also cache locally
-                        const bridgeEnhanced = {
-                          ...bridgeResponse,
-                          messageMethod: 'bridge_after_runtime_error',
-                          runtimeValidation: {
-                            available: runtimeValidation.available,
-                            status: 'error_fallback'
-                          }
-                        };
-                        storeLocalCache(bridgeEnhanced);
-                        resolve(bridgeEnhanced);
-                        return;
-                      }
+                      return; // Exit this function to prevent further processing
                     } catch (bridgeFallbackError) {
                       // Continue with rejection if bridge also fails
                       console.debug('Bitcoin Price Tag: Bridge fallback also failed', 
@@ -618,21 +614,27 @@ const getBitcoinPrice = async () => {
                     }
                   }
                   
+                  // If we didn't return earlier, reject with service worker error
                   reject(createError(
                     'Service worker error',
                     ErrorTypes.RUNTIME,
                     {
                       ...response.error,
-                      validation: runtimeValidation
-                    }
+                      validation: runtimeValidation,
+                    },
                   ));
                   return;
                 }
                 
                 // Success case
                 // Cache successfully retrieved data locally
-                storeLocalCache(enhancedResponse);
-                resolve(enhancedResponse);
+                storeLocalCache(enhancedResponse).then(() => {
+                  resolve(enhancedResponse);
+                }).catch((cacheError) => {
+                  // Even if caching fails, we still want to resolve with the response
+                  console.debug('Bitcoin Price Tag: Cache storage failed', cacheError.message);
+                  resolve(enhancedResponse);
+                });
               },
               {
                 context: 'getBitcoinPrice',
@@ -643,12 +645,12 @@ const getBitcoinPrice = async () => {
                     ErrorTypes.CALLBACK,
                     { 
                       action: 'getBitcoinPrice',
-                      validation: runtimeValidation
-                    }
+                      validation: runtimeValidation,
+                    },
                   ));
-                }
-              }
-            )
+                },
+              },
+            ),
           );
         } catch (error) {
           // If runtime API fails, try bridge as fallback if available
@@ -669,8 +671,8 @@ const getBitcoinPrice = async () => {
                     messageMethod: 'bridge_after_runtime_exception',
                     runtimeValidation: {
                       available: false,
-                      error: error.message
-                    }
+                      error: error.message,
+                    },
                   };
                   
                   // Cache the response locally if it has price data
@@ -679,7 +681,7 @@ const getBitcoinPrice = async () => {
                   }
                   
                   resolve(enhancedResponse);
-                }
+                },
               );
               
               // Don't reject here - let the bridge handle the response
@@ -696,20 +698,20 @@ const getBitcoinPrice = async () => {
             ErrorTypes.RUNTIME,
             { 
               originalError: error,
-              validation: runtimeValidation
-            }
+              validation: runtimeValidation,
+            },
           ));
         }
       }),
       timeoutDuration,
-      'Bitcoin price request timed out'
+      'Bitcoin price request timed out',
     );
   } catch (error) {
     // Handle all errors from the service worker request
     logError(error, {
       severity: ErrorSeverity.ERROR,
       context: 'service_worker_request',
-      runtimeValidation: runtimeValidation
+      runtimeValidation: runtimeValidation,
     });
     
     // Try bridge as fallback if we didn't already try it above
@@ -731,7 +733,7 @@ const getBitcoinPrice = async () => {
                 return;
               }
               resolve(response);
-            }
+            },
           );
         });
         
@@ -742,8 +744,8 @@ const getBitcoinPrice = async () => {
             messageMethod: 'bridge_final_fallback',
             runtimeValidation: {
               available: false,
-              error: error.message
-            }
+              error: error.message,
+            },
           };
           
           // Cache the response
@@ -769,8 +771,8 @@ const getBitcoinPrice = async () => {
             warning: 'Using bridge fallback data due to errors',
             error: {
               message: error.message,
-              type: error.type || categorizeError(error)
-            }
+              type: error.type || categorizeError(error),
+            },
           };
         }
       } catch (fallbackError) {
@@ -787,12 +789,12 @@ const getBitcoinPrice = async () => {
         warning: 'Using cached data due to API error',
         error: {
           message: error.message,
-          type: error.type || categorizeError(error)
+          type: error.type || categorizeError(error),
         },
         runtimeValidation: {
           available: runtimeValidation.available,
-          reason: runtimeValidation.fallbackReason || 'runtime_error'
-        }
+          reason: runtimeValidation.fallbackReason || 'runtime_error',
+        },
       };
     }
     
@@ -801,12 +803,12 @@ const getBitcoinPrice = async () => {
       ...createEmergencyPriceData(),
       error: {
         message: error.message,
-        type: error.type || categorizeError(error)
+        type: error.type || categorizeError(error),
       },
       runtimeValidation: {
         available: runtimeValidation.available,
-        reason: runtimeValidation.fallbackReason || 'runtime_error'
-      }
+        reason: runtimeValidation.fallbackReason || 'runtime_error',
+      },
     };
   }
 };
@@ -829,7 +831,7 @@ const handlePriceDataWarnings = (priceData) => {
       source: priceData.source,
       cached: priceData.cached || priceData.fromLocalCache,
       warning: priceData.warning,
-      timestamp: priceData.timestamp ? new Date(priceData.timestamp).toISOString() : 'unknown'
+      timestamp: priceData.timestamp ? new Date(priceData.timestamp).toISOString() : 'unknown',
     });
     
     // In a real implementation, we could show a small UI indicator to the user
@@ -844,12 +846,12 @@ const handlePriceDataWarnings = (priceData) => {
       createError(
         priceData.error.message || 'Unknown error in price data',
         priceData.error.type || ErrorTypes.UNKNOWN,
-        priceData.error
+        priceData.error,
       ),
       {
         severity: ErrorSeverity.WARNING,
-        context: 'price_data_error'
-      }
+        context: 'price_data_error',
+      },
     );
   }
 };
@@ -875,7 +877,7 @@ const processPage = async (priceData) => {
       throw createError(
         'Invalid price data', 
         ErrorTypes.EXTENSION, 
-        { receivedData: priceData }
+        { receivedData: priceData },
       );
     }
     
@@ -894,13 +896,13 @@ const processPage = async (priceData) => {
     storeLocalCache(priceData).catch(cacheError => {
       logError(cacheError, {
         severity: ErrorSeverity.WARNING,
-        context: 'process_page_cache'
+        context: 'process_page_cache',
       });
     });
   } catch (error) {
     logError(error, {
       severity: ErrorSeverity.ERROR,
-      context: 'process_page'
+      context: 'process_page',
     });
     
     // Try to use emergency data as absolute last resort
@@ -934,15 +936,15 @@ const backgroundRefresh = async () => {
         },
         {
           context: 'backgroundRefresh',
-          silent: true // No need to log errors for this non-critical operation
-        }
-      )
+          silent: true, // No need to log errors for this non-critical operation
+        },
+      ),
     );
   } catch (error) {
     // Just log, don't throw - this is a non-critical operation
     logError(error, {
       severity: ErrorSeverity.INFO,
-      context: 'background_refresh'
+      context: 'background_refresh',
     });
   }
 };
@@ -989,12 +991,12 @@ const init = async () => {
           createError(
             `Unhandled rejection: ${event.reason.message}`,
             categorizeError(event.reason),
-            { originalError: event.reason }
+            { originalError: event.reason },
           ),
           {
             severity: ErrorSeverity.ERROR,
-            context: 'unhandled_rejection'
-          }
+            context: 'unhandled_rejection',
+          },
         );
         
         // Prevent it from being reported to the console
@@ -1016,7 +1018,7 @@ const init = async () => {
         await processPage({
           ...cachedData,
           offlineMode: offline,
-          fromCache: true
+          fromCache: true,
         });
         
         // If we're online and should refresh (but not immediately), do it in background
@@ -1033,7 +1035,7 @@ const init = async () => {
             // Just log, don't disrupt the user experience
             logError(backgroundError, {
               severity: ErrorSeverity.INFO,
-              context: 'background_refresh_error'
+              context: 'background_refresh_error',
             });
           }
         }
@@ -1046,7 +1048,7 @@ const init = async () => {
       // Handle errors in getting price data
       logError(priceError, {
         severity: ErrorSeverity.ERROR,
-        context: 'get_price_init'
+        context: 'get_price_init',
       });
       
       // Try to use locally cached data
@@ -1054,7 +1056,7 @@ const init = async () => {
       if (localCache) {
         await processPage({
           ...localCache,
-          warning: 'Using locally cached data due to error'
+          warning: 'Using locally cached data due to error',
         });
       } else {
         // Use emergency data as last resort
@@ -1075,7 +1077,7 @@ const init = async () => {
     // This is the outermost try-catch to ensure the extension doesn't crash the page
     logError(error, {
       severity: ErrorSeverity.CRITICAL,
-      context: 'init_critical'
+      context: 'init_critical',
     });
     console.error('Bitcoin Price Tag: Critical initialization error', error);
   }
@@ -1117,5 +1119,5 @@ export const bitcoinPriceTagApi = window._emptyBitcoinPriceTagApi || {
   convert,
   walk,
   getBitcoinPrice,
-  processPage
+  processPage,
 };
