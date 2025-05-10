@@ -35,6 +35,11 @@ export default defineConfig({
     routing: {
       timeout: 5000, // Reduce timeout for faster test failures
     },
+    
+    // Additional context options including base directory for script loading
+    contextOptions: {
+      baseURL: 'file://' + new URL('.', import.meta.url).pathname,
+    },
   },
 
   projects: [

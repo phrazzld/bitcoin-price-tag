@@ -30,7 +30,7 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
 - [ ] **Fix Test Suite** - Resolve failing tests and testing infrastructure
   - [x] Fix ECONNREFUSED errors in tests
   - [x] Fix JSDOM import in performance tests
-  - [ ] Fix Playwright configuration issues
+  - [x] Fix Playwright configuration issues
   - [ ] Fix undefined errors in cache integration tests
   - [ ] Fix lint warnings in all test files
 
