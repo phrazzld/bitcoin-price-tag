@@ -8,6 +8,8 @@
  */
 
 import { ErrorTypes, ErrorSeverity, logError, createError, logDecision } from './error-handling.js';
+// addTiming is imported for future timing enhancements
+// eslint-disable-next-line no-unused-vars
 import { getCorrelationId, getLightContext, addTiming } from './context-provider.js';
 
 /**
@@ -57,8 +59,8 @@ export function safeCallback(callback, options = {}) {
         if (enrichContext) {
           try {
             contextData = getLightContext();
-          } catch (contextError) {
-            // Ignore context gathering errors
+          } catch (/* eslint-disable-line no-unused-vars */ _contextError) {
+            // Intentionally ignoring context gathering errors
           }
         }
 
@@ -169,8 +171,8 @@ export function safeCallback(callback, options = {}) {
       if (enrichContext) {
         try {
           contextData = getLightContext();
-        } catch (contextError) {
-          // Ignore context gathering errors
+        } catch (/* eslint-disable-line no-unused-vars */ _contextError) {
+          // Intentionally ignoring context gathering errors
         }
       }
 
@@ -313,8 +315,8 @@ export function safeChromeCallback(callback, options = {}) {
       let contextData = {};
       try {
         contextData = getLightContext();
-      } catch (contextError) {
-        // Ignore context gathering errors
+      } catch (/* eslint-disable-line no-unused-vars */ _contextError) {
+        // Intentionally ignoring context gathering errors
       }
 
       // Create detailed error context

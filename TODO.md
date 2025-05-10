@@ -22,7 +22,7 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
     - [x] Fix linting errors in content-script-fixed.js
     - [x] Fix linting errors in bootstrap-module.js
     - [x] Fix linting errors in cache-manager.js
-    - [ ] Fix linting errors in callback-utils.js
+    - [x] Fix linting errors in callback-utils.js
     - [ ] Fix linting errors in test files
 
 - [ ] **Fix Test Suite** - Resolve failing tests and testing infrastructure
