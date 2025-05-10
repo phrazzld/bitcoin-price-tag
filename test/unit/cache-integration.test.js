@@ -5,7 +5,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { ErrorTypes, ErrorSeverity } from '../../error-handling.js';
+// ErrorTypes, ErrorSeverity are used in implementation but not directly in tests
+import {} from '../../error-handling.js';
 import {
   CACHE_FRESHNESS,
   getCachedPriceData,
@@ -76,9 +77,12 @@ describe('Cache Integration', () => {
       };
 
       // Setup mock for chrome.storage.local.get
-      mockChromeStorage.get.mockImplementation((keys, callback) =>
-        Promise.resolve({ btcPriceData: testData }),
-      );
+      mockChromeStorage.get.mockImplementation((keys, callback) => {
+        if (typeof callback === 'function') {
+          callback({ btcPriceData: testData });
+        }
+        return Promise.resolve({ btcPriceData: testData });
+      });
 
       // Cache the data
       await cachePriceData(testData);
@@ -115,9 +119,12 @@ describe('Cache Integration', () => {
       // Cache the fresh data in localStorage and stale in chrome.storage
       mockLocalStorage['btcPriceTagLocalCache'] = JSON.stringify(freshData);
 
-      mockChromeStorage.get.mockImplementation((keys, callback) =>
-        Promise.resolve({ btcPriceData: staleData }),
-      );
+      mockChromeStorage.get.mockImplementation((keys, callback) => {
+        if (typeof callback === 'function') {
+          callback({ btcPriceData: staleData });
+        }
+        return Promise.resolve({ btcPriceData: staleData });
+      });
 
       // Retrieve the data - should prefer the fresher one
       const cachedData = await getCachedPriceData();
@@ -148,6 +155,14 @@ describe('Cache Integration', () => {
       // Set up localStorage cache
       mockLocalStorage['btcPriceTagLocalCache'] = JSON.stringify(cachedData);
 
+      // Also setup chrome.storage mock to return empty data
+      mockChromeStorage.get.mockImplementation((keys, callback) => {
+        if (typeof callback === 'function') {
+          callback({});
+        }
+        return Promise.resolve({});
+      });
+
       // Retrieve the data
       const retrievedData = await getCachedPriceData();
 
@@ -162,7 +177,11 @@ describe('Cache Integration', () => {
   describe('Cache Fallback Behavior', () => {
     it('should fallback to localStorage when chrome.storage fails', async () => {
       // Make chrome.storage.local.get throw an error
-      mockChromeStorage.get.mockImplementation(() => {
+      mockChromeStorage.get.mockImplementation((keys, callback) => {
+        if (typeof callback === 'function') {
+          // Call the callback with an empty result before throwing
+          callback({});
+        }
         throw new Error('Chrome storage error');
       });
 
@@ -188,7 +207,11 @@ describe('Cache Integration', () => {
 
     it('should work when only memory cache is available', async () => {
       // Make chrome.storage fail
-      mockChromeStorage.get.mockImplementation(() => {
+      mockChromeStorage.get.mockImplementation((keys, callback) => {
+        if (typeof callback === 'function') {
+          // Call the callback with an empty result before throwing
+          callback({});
+        }
         throw new Error('Chrome storage error');
       });
 
@@ -197,7 +220,7 @@ describe('Cache Integration', () => {
         throw new Error('LocalStorage error');
       });
 
-      // Cache data only in memory by mocking cachePriceData
+      // Prepare memory cache data
       const memoryData = {
         btcPrice: 50000,
         satPrice: 0.0005,
@@ -205,19 +228,18 @@ describe('Cache Integration', () => {
         source: 'memoryOnly',
       };
 
-      // Directly insert into memory cache using private method (for testing)
+      // Properly seed the memory cache by calling cachePriceData
+      // This will add the data directly to the memory cache
+      // We mock localStorage and chrome.storage to fail, so only memory cache will work
       await cachePriceData(memoryData);
 
       // Retrieve the data
       const retrievedData = await getCachedPriceData();
 
-      // Should return the memory cache data
-      // Note: This test may fail depending on implementation details of cachePriceData
-      // If it directly adds to memory cache
-      if (retrievedData) {
-        expect(retrievedData.btcPrice).toBe(memoryData.btcPrice);
-        expect(retrievedData.fromMemoryCache).toBe(true);
-      }
+      // Since the other caches are throwing errors, we should get the memory cache data
+      expect(retrievedData).not.toBeNull();
+      expect(retrievedData.btcPrice).toBe(memoryData.btcPrice);
+      expect(retrievedData.fromMemoryCache).toBe(true);
     });
   });
 });
