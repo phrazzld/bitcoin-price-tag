@@ -27,7 +27,7 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
     - [x] Fix linting errors in callback-utils.js
     - [x] Fix linting errors in test files
 
-- [ ] **Fix Test Suite** - Resolve failing tests and testing infrastructure
+- [x] **Fix Test Suite** - Resolve failing tests and testing infrastructure
   - [x] Fix ECONNREFUSED errors in tests
   - [x] Fix JSDOM import in performance tests
   - [x] Fix Playwright configuration issues
