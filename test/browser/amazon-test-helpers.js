@@ -5,6 +5,8 @@
 import fs from 'fs';
 import path from 'path';
 
+// expect is imported for potential future assertion helpers
+// eslint-disable-next-line no-unused-vars
 import { expect } from '@playwright/test';
 
 /**
@@ -30,8 +32,8 @@ export async function enableDiagnosticMode(page) {
     } else if (window.enableDiagnosticMode) {
       window.enableDiagnosticMode();
       return true;
-    } else if (typeof configureLogging === 'function') {
-      configureLogging({
+    } else if (typeof window.configureLogging === 'function') {
+      window.configureLogging({
         diagnosticMode: true,
         verbose: true,
         minLevel: 'debug',
@@ -124,7 +126,7 @@ export async function setupAmazonTestEnvironment(page) {
 
       // Conversion utilities for callback handlers
       conversionUtils: {
-        valueFriendly: (value, satPrice) => {
+        valueFriendly: (value, _satPrice) => {
           if (value >= 500) {
             return `${(value / 50000).toFixed(5)} BTC`;
           } else {

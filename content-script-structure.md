@@ -3,22 +3,26 @@
 This file documents the basic structure of the content script for easier understanding and maintenance.
 
 ```javascript
-(async function() {
-  try {                                   // Outer try (line 4)
+(async function () {
+  try {
+    // Outer try (line 4)
     // Function definitions and other code
 
-    try {                                // Inner try (around line 865+)
+    try {
+      // Inner try (around line 865+)
       // Perform detailed context detection
       // More code
-      
+
       // Listen for messages...
       window.addEventListener('message', (event) => {
         // Event handler code
       });
-    } catch (loaderError) {              // Catch for inner try
+    } catch (loaderError) {
+      // Catch for inner try
       console.warn('Bitcoin Price Tag loader error:', loaderError.message);
     }
-  } catch (outerError) {                // Catch for outer try
+  } catch (outerError) {
+    // Catch for outer try
     console.error('Bitcoin Price Tag: Fatal error in initialization', outerError.message);
   }
 })();

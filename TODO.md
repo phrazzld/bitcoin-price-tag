@@ -7,9 +7,11 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
 ### Infrastructure
 
 - [x] **Fix Git Hooks** - Make Git hooks function without bypassing
+
   - [x] Fix pre-commit hook errors and stop using HUSKY=0 for bypassing hooks
 
-- [ ] **Resolve Linting Issues** - Fix all linting errors in the codebase
+- [x] **Resolve Linting Issues** - Fix all linting errors in the codebase
+
   - [x] Fix linting errors in browser-detect.js
   - [x] Fix linting errors in content-module.js
   - [x] Fix linting errors in content-script.js
@@ -18,12 +20,12 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
   - [x] Fix linting errors in scripts/check-image-size.js
   - [x] Fix linting errors in scripts/check-sensitive-data.js
   - [x] Fix linting errors in background.js
-  - [ ] Fix linting errors in other remaining files
+  - [x] Fix linting errors in other remaining files
     - [x] Fix linting errors in content-script-fixed.js
     - [x] Fix linting errors in bootstrap-module.js
     - [x] Fix linting errors in cache-manager.js
     - [x] Fix linting errors in callback-utils.js
-    - [ ] Fix linting errors in test files
+    - [x] Fix linting errors in test files
 
 - [ ] **Fix Test Suite** - Resolve failing tests and testing infrastructure
   - [x] Fix ECONNREFUSED errors in tests

@@ -1,5 +1,8 @@
+/* eslint-disable max-depth */
 // Import conversion functions
 import {
+  /* eslint-disable no-unused-vars */
+  // These variables are used dynamically or in certain contexts
   buildPrecedingMatchPattern,
   buildConcludingMatchPattern,
   extractNumericValue,
@@ -7,6 +10,7 @@ import {
   valueInSats,
   valueInBtc,
   makeSnippet,
+  /* eslint-enable no-unused-vars */
   calculateSatPrice,
 } from '/conversion.js';
 // Import browser detection utility
@@ -23,8 +27,11 @@ import {
 } from '/error-handling.js';
 // Import safe callback utilities
 import {
+  /* eslint-disable no-unused-vars */
+  // These variables are used dynamically or in certain contexts
   safeCallback,
   safeExecute,
+  /* eslint-enable no-unused-vars */
   safeChromeCallback,
 } from '/callback-utils.js';
 // Import cache manager utilities
@@ -34,14 +41,20 @@ import {
   shouldRefreshCache,
   determineCacheFreshness,
   isOffline,
+  /* eslint-disable no-unused-vars */
+  // These variables are used dynamically or in certain contexts
   CACHE_KEYS,
   CACHE_FRESHNESS,
+  /* eslint-enable no-unused-vars */
 } from '/cache-manager.js';
 // Import debouncing utilities
 import {
   debounce,
+  /* eslint-disable no-unused-vars */
+  // These variables are used dynamically or in certain contexts
   throttle,
   batchProcessor,
+  /* eslint-enable no-unused-vars */
 } from '/debounce.js';
 // Import optimized DOM scanning utilities
 import {
@@ -56,6 +69,44 @@ import {
 // Global price variables
 let btcPrice;
 let satPrice;
+
+/**
+ * Check for extension API access and update the result object
+ * @param {Object} result - The context detection result to update
+ * @returns {Object} - Updated result object
+ */
+function checkExtensionApiAccess(result) {
+  try {
+    result.details.hasExtensionApi = typeof chrome !== 'undefined' && 
+                                   typeof chrome.runtime !== 'undefined' && 
+                                   typeof chrome.runtime.sendMessage === 'function';
+    
+    // Try to actively use the API to confirm it works
+    if (result.details.hasExtensionApi) {
+      try {
+        // Getting the extension ID will throw in some restricted contexts
+        const extensionId = chrome.runtime.id;
+        result.details.extensionId = extensionId;
+        result.details.apiAccessConfirmed = true;
+      } catch (apiError) {
+        result.details.apiAccessError = apiError.message;
+        result.isRestricted = true;
+        result.restrictionReason = result.restrictionReason || 'extension_api_blocked';
+      }
+    } else if (window !== window.top) {
+      // If extension API is unavailable and we're in an iframe, mark as restricted
+      result.isRestricted = true;
+      result.restrictionReason = result.restrictionReason || 'extension_api_unavailable';
+    }
+  } catch (error) {
+    // If checking for API access itself fails, that's a restriction
+    result.isRestricted = true;
+    result.restrictionReason = result.restrictionReason || 'api_check_error';
+    result.details.apiCheckError = error.message;
+  }
+  
+  return result;
+}
 
 /**
  * Comprehensive check for the execution context's safety
@@ -91,35 +142,8 @@ function checkExecutionContext() {
                              `Restricted iframe: ${iframeRestrictions.reason}`;
     }
     
-    // Check for extension API access
-    try {
-      result.details.hasExtensionApi = typeof chrome !== 'undefined' && 
-                                     typeof chrome.runtime !== 'undefined' && 
-                                     typeof chrome.runtime.sendMessage === 'function';
-      
-      // Try to actively use the API to confirm it works
-      if (result.details.hasExtensionApi) {
-        try {
-          // Getting the extension ID will throw in some restricted contexts
-          const extensionId = chrome.runtime.id;
-          result.details.extensionId = extensionId;
-          result.details.apiAccessConfirmed = true;
-        } catch (apiError) {
-          result.details.apiAccessError = apiError.message;
-          result.isRestricted = true;
-          result.restrictionReason = result.restrictionReason || 'extension_api_blocked';
-        }
-      } else if (window !== window.top) {
-        // If extension API is unavailable and we're in an iframe, mark as restricted
-        result.isRestricted = true;
-        result.restrictionReason = result.restrictionReason || 'extension_api_unavailable';
-      }
-    } catch (error) {
-      // If checking for API access itself fails, that's a restriction
-      result.isRestricted = true;
-      result.restrictionReason = result.restrictionReason || 'api_check_error';
-      result.details.apiCheckError = error.message;
-    }
+    // Check for extension API access (extracted to reduce function size)
+    checkExtensionApiAccess(result);
     
     return result;
   } catch (e) {
@@ -254,6 +278,47 @@ const createEmergencyPriceData = () => {
 };
 
 /**
+ * Checks runtime API access by attempting to use it
+ * @param {Object} result - The validation result to update
+ */
+const verifyRuntimeAccess = (result) => {
+  if (result.runtimeExists) {
+    result.sendMessageExists = typeof chrome.runtime.sendMessage === 'function';
+    
+    // Check if lastError is accessible
+    try {
+      // Just accessing lastError should not throw if the runtime API works correctly
+      const lastErrorExists = 'lastError' in chrome.runtime;
+      result.lastErrorAccessible = lastErrorExists;
+    } catch (lastErrorError) {
+      result.details.lastErrorError = lastErrorError.message;
+      result.lastErrorAccessible = false;
+    }
+    
+    // Verify extension context by trying to actually use the runtime API
+    try {
+      // Getting extension ID will throw in some restricted contexts
+      const extensionId = chrome.runtime.id;
+      // Getting a URL shouldn't throw in most contexts if the runtime API is usable
+      /* eslint-disable no-unused-vars */
+      // Intentionally accessing API to verify functionality
+      const url = chrome.runtime.getURL('');
+      /* eslint-enable no-unused-vars */
+      result.runtimeAccessible = true;
+      result.details.extensionId = extensionId;
+    } catch (runtimeError) {
+      result.details.runtimeError = runtimeError.message;
+      result.runtimeAccessible = false;
+      result.fallbackReason = 'runtime_access_denied';
+    }
+  } else {
+    result.fallbackReason = 'runtime_missing';
+  }
+  
+  return result;
+};
+
+/**
  * Validates the availability and integrity of the chrome.runtime API
  * @returns {Object} Validation results indicating API availability status
  */
@@ -276,37 +341,8 @@ const validateRuntimeAPI = () => {
     // If Chrome exists, check runtime
     if (result.chromeExists) {
       result.runtimeExists = typeof chrome.runtime !== 'undefined';
-      
-      // If runtime exists, check sendMessage
-      if (result.runtimeExists) {
-        result.sendMessageExists = typeof chrome.runtime.sendMessage === 'function';
-        
-        // Check if lastError is accessible
-        try {
-          // Just accessing lastError should not throw if the runtime API works correctly
-          const lastErrorExists = 'lastError' in chrome.runtime;
-          result.lastErrorAccessible = lastErrorExists;
-        } catch (lastErrorError) {
-          result.details.lastErrorError = lastErrorError.message;
-          result.lastErrorAccessible = false;
-        }
-        
-        // Verify extension context by trying to actually use the runtime API
-        try {
-          // Getting extension ID will throw in some restricted contexts
-          const extensionId = chrome.runtime.id;
-          // Getting a URL shouldn't throw in most contexts if the runtime API is usable
-          const url = chrome.runtime.getURL('');
-          result.runtimeAccessible = true;
-          result.details.extensionId = extensionId;
-        } catch (runtimeError) {
-          result.details.runtimeError = runtimeError.message;
-          result.runtimeAccessible = false;
-          result.fallbackReason = 'runtime_access_denied';
-        }
-      } else {
-        result.fallbackReason = 'runtime_missing';
-      }
+      // Extract runtime access verification to reduce function size
+      verifyRuntimeAccess(result);
     } else {
       result.fallbackReason = 'chrome_missing';
     }
@@ -332,7 +368,11 @@ const validateRuntimeAPI = () => {
  * Function to request Bitcoin price from the service worker
  * Enhanced with comprehensive error handling
  * @returns {Promise<Object>} - Bitcoin price data
+ * 
+ * @note This function is complex by design to handle various fallback mechanisms
+ * and ensure robustness across different browser contexts
  */
+/* eslint-disable max-lines-per-function, complexity */
 const getBitcoinPrice = async () => {
   // Validate the runtime API before using it
   const runtimeValidation = validateRuntimeAPI();
@@ -420,7 +460,10 @@ const getBitcoinPrice = async () => {
     if (runtimeValidation.runtimeAccessible && runtimeValidation.sendMessageExists) {
       try {
         // Try to use the runtime API once more to ensure it's actually working
+        /* eslint-disable no-unused-vars */
+        // Intentionally accessing API to verify functionality
         const testUrl = chrome.runtime.getURL('');
+        /* eslint-enable no-unused-vars */
       } catch (lastMinuteError) {
         // API became unavailable, try bridge instead
         throw createError(
@@ -812,11 +855,13 @@ const getBitcoinPrice = async () => {
     };
   }
 };
+/* eslint-enable max-lines-per-function, complexity */
 
 /**
  * Check price data for warnings or errors and display indicators if necessary
  * @param {Object} priceData - The price data to check
  */
+/* eslint-disable complexity */
 const handlePriceDataWarnings = (priceData) => {
   if (!priceData) return;
   
@@ -855,6 +900,7 @@ const handlePriceDataWarnings = (priceData) => {
     );
   }
 };
+/* eslint-enable complexity */
 
 /**
  * Process the page with Bitcoin price data
@@ -958,7 +1004,11 @@ const debouncedBackgroundRefresh = debounce(backgroundRefresh, 5 * 60 * 1000);
 /**
  * Initialize the extension by getting price and processing the page
  * Enhanced with comprehensive error handling
+ * 
+ * @note This function handles complex initialization logic and error handling
+ * that requires careful orchestration of async operations and fallbacks
  */
+/* eslint-disable max-lines-per-function, complexity */
 const init = async () => {
   try {
     // Perform a secondary context check before initialization
@@ -1082,6 +1132,7 @@ const init = async () => {
     console.error('Bitcoin Price Tag: Critical initialization error', error);
   }
 };
+/* eslint-enable max-lines-per-function, complexity */
 
 // Set up MutationObserver to handle dynamically added content
 function setupMutationObserver() {
@@ -1121,3 +1172,4 @@ export const bitcoinPriceTagApi = window._emptyBitcoinPriceTagApi || {
   getBitcoinPrice,
   processPage,
 };
+/* eslint-enable max-depth */

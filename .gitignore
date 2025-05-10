@@ -28,3 +28,6 @@ pnpm-debug.log*
 
 # Backups
 *.bak
+
+# Redundant files
+content-script-structure.txt

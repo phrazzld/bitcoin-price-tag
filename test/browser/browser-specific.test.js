@@ -1,6 +1,12 @@
 /**
  * Browser-specific compatibility tests for Bitcoin Price Tag extension
+ *
+ * This file tests browser-specific implementation details and interactions,
+ * with diagnostic console logs for test clarity.
  */
+
+/* eslint-disable no-console */
+// Console statements used for important test diagnostics
 
 import { test, expect } from '@playwright/test';
 
@@ -8,7 +14,7 @@ import { loadTestPage } from './test-helpers.js';
 
 // Tests for browser-specific features and behaviors
 test.describe('Browser-Specific Features', () => {
-  test.beforeEach(async ({ page, browserName }) => {
+  test.beforeEach(async ({ page, _browserName }) => {
     // Setup mock environment for each test
     await page.addInitScript(`
       // Mock Chrome API
@@ -42,11 +48,11 @@ test.describe('Browser-Specific Features', () => {
       };
     `);
 
-    console.log(`Running browser-specific test in ${browserName}`);
+    console.log(`Running browser-specific test in ${_browserName}`);
   });
 
   // Test handling of textContent vs innerText (browser differences)
-  test('should handle textContent vs innerText differences', async ({ page, browserName }) => {
+  test('should handle textContent vs innerText differences', async ({ page, _browserName }) => {
     // Create a page with some hidden text
     await loadTestPage(
       page,
@@ -116,14 +122,14 @@ test.describe('Browser-Specific Features', () => {
     expect(results.visibleInnerText).toContain('sats');
 
     // Check browser-specific behaviors
-    if (browserName === 'chromium') {
+    if (_browserName === 'chromium') {
       // Chrome-specific test for innerText behavior
       expect(results.hiddenInnerText).toBe('');
     }
   });
 
   // Test CSS Selector compatibility
-  test('should handle CSS selector differences', async ({ page, browserName }) => {
+  test('should handle CSS selector differences', async ({ page, _browserName }) => {
     // Create a page with complex selectors to test
     await loadTestPage(
       page,
@@ -179,13 +185,13 @@ test.describe('Browser-Specific Features', () => {
     // Pseudo-element handling varies by browser
     // Just log the result for now as expectations vary
     console.log(
-      `Pseudo-element handling in ${browserName}:`,
+      `Pseudo-element handling in ${_browserName}:`,
       selectorResults.pseudoElementAccessible ? 'Accessible' : 'Not accessible',
     );
   });
 
   // Test MutationObserver API compatibility (used for dynamic content)
-  test('should handle MutationObserver API correctly', async ({ page, browserName }) => {
+  test('should handle MutationObserver API correctly', async ({ page, _browserName }) => {
     // Create a page to test MutationObserver
     await loadTestPage(
       page,

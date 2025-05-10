@@ -3,10 +3,18 @@
  *
  * These tests verify that the extension works correctly on Amazon pages,
  * including proper handling of restricted contexts and graceful degradation.
+ *
+ * This test file contains complex test scenarios for Amazon websites which require
+ * deep nesting for proper isolation of various frame and DOM contexts in testing.
+ * Console statements are used for diagnostic logging during test execution.
  */
 
+/* eslint-disable max-depth, no-console */
+// Deep nesting is necessary for Amazon iframe and restricted context testing
+// Console statements are used for important test diagnostics
+
 import { test, expect } from './network-mock.js';
-import { /* createMockExtensionEnvironment */ } from './mock-extension.js';
+import {} from /* createMockExtensionEnvironment */ './mock-extension.js';
 import {
   loadTestPage,
   /* waitForCurrencyConversion,
@@ -287,7 +295,7 @@ function createAmazonIframePage() {
  */
 async function captureConsoleLogs(page) {
   return await page.evaluate(() => {
-    const logs = [];
+    const _logs = []; // Not currently used but preserved for future diagnostic collection
     const originalConsole = {
       log: console.log,
       warn: console.warn,
@@ -297,26 +305,26 @@ async function captureConsoleLogs(page) {
 
     // Override console methods to capture logs
     console.log = function () {
-      logs.push({ type: 'log', args: Array.from(arguments).map(String) });
+      _logs.push({ type: 'log', args: Array.from(arguments).map(String) });
       originalConsole.log.apply(console, arguments);
     };
 
     console.warn = function () {
-      logs.push({ type: 'warn', args: Array.from(arguments).map(String) });
+      _logs.push({ type: 'warn', args: Array.from(arguments).map(String) });
       originalConsole.warn.apply(console, arguments);
     };
 
     console.error = function () {
-      logs.push({ type: 'error', args: Array.from(arguments).map(String) });
+      _logs.push({ type: 'error', args: Array.from(arguments).map(String) });
       originalConsole.error.apply(console, arguments);
     };
 
     console.debug = function () {
-      logs.push({ type: 'debug', args: Array.from(arguments).map(String) });
+      _logs.push({ type: 'debug', args: Array.from(arguments).map(String) });
       originalConsole.debug.apply(console, arguments);
     };
 
-    return logs;
+    return _logs;
   });
 }
 
@@ -416,7 +424,7 @@ test.describe('Bitcoin Price Tag - Amazon Page Compatibility', () => {
 
       // Expose conversion utilities for callback handlers
       window.bitcoinPriceTagBridge.conversionUtils = {
-        valueFriendly: (value, satPrice) => {
+        valueFriendly: (value, _satPrice) => {
           if (value >= 500) {
             return `${(value / 50000).toFixed(5)} BTC`;
           } else {
@@ -445,7 +453,7 @@ test.describe('Bitcoin Price Tag - Amazon Page Compatibility', () => {
     await page.addScriptTag({ path: './callback-utils.js', type: 'module' });
 
     // Capture console logs for later analysis
-    const logs = await captureConsoleLogs(page);
+    const _logs = await captureConsoleLogs(page); // Logs captured but not used in this test
 
     // Add mock DOM processor that simulates our extension's behavior
     await page.evaluate(() => {
@@ -922,7 +930,8 @@ test.describe('Bitcoin Price Tag - Amazon Page Compatibility', () => {
       const btcPrice = 50000;
       const satPrice = 0.0005;
 
-      // Simplified context detection
+      // Simplified context detection - defined for future use
+      // eslint-disable-next-line no-unused-vars
       function isRestrictedContext() {
         return false; // Main page is not restricted
       }

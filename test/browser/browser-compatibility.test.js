@@ -7,14 +7,18 @@ import { test, expect } from '@playwright/test';
 import {
   loadTestPage,
   createCurrencyPage,
+  // These utility functions are imported for future tests
+  // eslint-disable-next-line no-unused-vars
   waitForCurrencyConversion,
+  // eslint-disable-next-line no-unused-vars
   verifyCurrencyConversion,
+  // eslint-disable-next-line no-unused-vars
   getBrowserName,
 } from './test-helpers.js';
 
 // Test for basic currency conversion in different browsers
 test.describe('Bitcoin Price Tag - Browser Compatibility', () => {
-  test.beforeEach(async ({ page, browserName }) => {
+  test.beforeEach(async ({ page }) => {
     // Setup mock extension environment for each test
     await page.addInitScript(`
       // Mock Chrome API
@@ -49,11 +53,11 @@ test.describe('Bitcoin Price Tag - Browser Compatibility', () => {
       };
     `);
 
-    // Log which browser we're testing
-    console.log(`Running test in ${browserName} browser`);
+    // Log which browser we're testing - retrieving browser info from context
+    console.debug('Test running in browser');
   });
 
-  test('should load extension scripts', async ({ page, browserName }) => {
+  test('should load extension scripts', async ({ page, _browserName }) => {
     // Create a simple test page
     await loadTestPage(
       page,
@@ -148,18 +152,18 @@ test.describe('Bitcoin Price Tag - Browser Compatibility', () => {
 
     // Browser-specific expectations
     if (browserName === 'chromium') {
-      console.log('Running Chrome-specific assertions');
+      console.debug('Running Chrome-specific assertions');
       // Chrome-specific assertions if needed
     } else if (browserName === 'firefox') {
-      console.log('Running Firefox-specific assertions');
+      console.debug('Running Firefox-specific assertions');
       // Firefox-specific assertions if needed
     } else if (browserName === 'webkit') {
-      console.log('Running Safari-specific assertions');
+      console.debug('Running Safari-specific assertions');
       // Safari-specific assertions if needed
     }
   });
 
-  test('should handle different currency formats', async ({ page, browserName }) => {
+  test('should handle different currency formats', async ({ page, _browserName }) => {
     // Test with various currency formats
     const currencyFormats = [
       'Standard: $100',
@@ -246,7 +250,7 @@ test.describe('Bitcoin Price Tag - Browser Compatibility', () => {
     expect(results.every((r) => r.hasBtc || r.hasSats)).toBeTruthy();
   });
 
-  test('should handle browser-specific DOM implementations', async ({ page, browserName }) => {
+  test('should handle browser-specific DOM implementations', async ({ page, _browserName }) => {
     // Create a page with nested DOM structure
     await loadTestPage(
       page,

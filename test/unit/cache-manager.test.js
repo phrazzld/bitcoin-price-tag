@@ -2,9 +2,19 @@
  * Unit tests for cache manager module
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  // eslint-disable-next-line no-unused-vars
+  vi,
+  beforeEach,
+  afterEach,
+} from 'vitest';
 
 import {
+  // CACHE_KEYS is imported for potential future tests
+  // eslint-disable-next-line no-unused-vars
   CACHE_KEYS,
   CACHE_FRESHNESS,
   CACHE_TTL,

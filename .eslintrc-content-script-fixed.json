@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "max-lines": "off",
+    "max-lines-per-function": "off",
+    "max-depth": ["warn", 5],
+    "complexity": ["warn", 55],
+    "max-params": ["warn", 6],
+    "max-nested-callbacks": ["warn", 5],
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }]
+  }
+}
