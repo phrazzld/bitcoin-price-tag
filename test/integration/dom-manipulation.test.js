@@ -74,6 +74,45 @@ const createContentScriptModule = () => {
     });
   };
 
+  // Helper function to check if this is a currency symbol element
+  function isCurrencySymbol(classes, child) {
+    return (
+      classes && ['sx-price-currency', 'a-price-symbol'].includes(classes.value) && child.firstChild
+    );
+  }
+
+  // Helper function to check if this is a price whole component
+  function isPriceWhole(classes, child, next) {
+    return (
+      classes &&
+      ['sx-price-whole', 'a-price-whole', 'a-price-decimal'].includes(classes.value) &&
+      child.firstChild &&
+      next?.firstChild
+    );
+  }
+
+  // Helper function to check if this is a price fraction component
+  function isPriceFraction(classes, child) {
+    return (
+      classes &&
+      ['sx-price-fractional', 'a-price-fraction'].includes(classes.value) &&
+      child.firstChild
+    );
+  }
+
+  // Process a whole price component
+  function processWholePrice(child, next, priceValue) {
+    const newPrice =
+      (priceValue || '') +
+      (child.firstChild.nodeValue || '').toString() +
+      '.' +
+      (next.firstChild.nodeValue || '').toString();
+
+    child.firstChild.nodeValue = newPrice;
+    module.convert(child.firstChild);
+    return newPrice;
+  }
+
   // Walk the DOM tree and find text nodes to convert
   module.walk = (node) => {
     let child, next, price;
@@ -88,38 +127,28 @@ const createContentScriptModule = () => {
 
           // Check if child is Amazon display price
           const classes = child?.classList;
-          if (
-            classes &&
-            ['sx-price-currency', 'a-price-symbol'].includes(classes.value) &&
-            child.firstChild
-          ) {
+
+          // Handle currency symbol
+          if (isCurrencySymbol(classes, child)) {
             price = child.firstChild.nodeValue?.toString() || '';
+            // eslint-disable-next-line max-depth
             if (child.firstChild) {
               child.firstChild.nodeValue = null;
             }
-          } else if (
-            classes &&
-            ['sx-price-whole', 'a-price-whole', 'a-price-decimal'].includes(classes.value) &&
-            child.firstChild &&
-            next?.firstChild
-          ) {
+          }
+          // Handle price whole component
+          else if (isPriceWhole(classes, child, next)) {
+            // eslint-disable-next-line max-depth
             try {
-              price =
-                (price || '') +
-                (child.firstChild.nodeValue || '').toString() +
-                '.' +
-                (next.firstChild.nodeValue || '').toString();
-              child.firstChild.nodeValue = price;
-              module.convert(child.firstChild);
+              price = processWholePrice(child, next, price);
               child = next;
             } catch (e) {
               console.error('Error processing Amazon price:', e);
             }
-          } else if (
-            classes &&
-            ['sx-price-fractional', 'a-price-fraction'].includes(classes.value) &&
-            child.firstChild
-          ) {
+          }
+          // Handle price fraction component
+          else if (isPriceFraction(classes, child)) {
+            // eslint-disable-next-line max-depth
             if (child.firstChild) {
               child.firstChild.nodeValue = '';
             }

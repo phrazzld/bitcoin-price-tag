@@ -67,7 +67,8 @@ export async function injectExtensionScripts(conversionScriptUrl, contentScriptU
     // Then load content.js which depends on conversion.js
     await import(contentScriptUrl);
 
-    console.log('Extension scripts loaded successfully');
+    // Use allowed console methods only (debug instead of log)
+    console.debug('Extension scripts loaded successfully');
   } catch (error) {
     console.error('Failed to load extension scripts:', error);
   }

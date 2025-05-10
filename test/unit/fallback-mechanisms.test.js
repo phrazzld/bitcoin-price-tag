@@ -133,7 +133,7 @@ describe('Fallback Mechanisms', () => {
             };
           }
           return null;
-        } catch (error) {
+        } catch (/* eslint-disable-line no-unused-vars */ _error) {
           return null;
         }
       };

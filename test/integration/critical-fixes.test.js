@@ -1,5 +1,5 @@
 // Test script for critical fixes in Bitcoin Price Tag extension
-import { expect, describe, it, vi, beforeEach, afterEach } from 'vitest';
+import { expect, describe, it, vi } from 'vitest';
 
 describe('Critical Fixes Integration Tests', () => {
   it('Fetch lifecycle error resolution', async () => {
@@ -123,7 +123,7 @@ describe('Critical Fixes Integration Tests', () => {
           // Append to document
           document.head.appendChild(moduleScript);
           return true;
-        } catch (error) {
+        } catch (/* eslint-disable-line no-unused-vars */ _error) {
           return false;
         }
       }
@@ -198,7 +198,7 @@ describe('Critical Fixes Integration Tests', () => {
             }
           }
           return false;
-        } catch (error) {
+        } catch (/* eslint-disable-line no-unused-vars */ _error) {
           return false;
         }
       }

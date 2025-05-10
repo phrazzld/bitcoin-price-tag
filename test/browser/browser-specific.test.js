@@ -14,7 +14,6 @@ import { loadTestPage } from './test-helpers.js';
 
 // Tests for browser-specific features and behaviors
 test.describe('Browser-Specific Features', () => {
-  /* eslint-disable-next-line no-unused-vars */
   test.beforeEach(async ({ page, browserName }) => {
     // Setup mock environment for each test
     await page.addInitScript(`
@@ -53,7 +52,7 @@ test.describe('Browser-Specific Features', () => {
   });
 
   // Test handling of textContent vs innerText (browser differences)
-  /* eslint-disable-next-line no-unused-vars */
+
   test('should handle textContent vs innerText differences', async ({ page, browserName }) => {
     // Create a page with some hidden text
     await loadTestPage(
@@ -90,7 +89,7 @@ test.describe('Browser-Specific Features', () => {
         window.makeSnippet = function(value, currency) { return \`(\${value} \${currency})\`; };
         window.calculateSatPrice = function(btcPrice) { return btcPrice / 100000000; };
       `,
-      type: 'module'
+      type: 'module',
     });
 
     // Process text using both innerText and textContent to check browser differences
@@ -140,16 +139,16 @@ test.describe('Browser-Specific Features', () => {
     // Different browsers handle hidden elements differently
     // In some browsers innerText might include content of hidden elements
     console.log(`Browser: ${browserName}, hiddenInnerText: "${results.hiddenInnerText}"`);
-    
+
     if (browserName === 'chromium') {
       // Skip this specific assertion as browser behavior may vary
       // We'll log the behavior instead of asserting
-      console.log(`Note: Expected empty string for hidden content in Chromium`);
+      console.log('Note: Expected empty string for hidden content in Chromium');
     }
   });
 
   // Test CSS Selector compatibility
-  /* eslint-disable-next-line no-unused-vars */
+
   test('should handle CSS selector differences', async ({ page, browserName }) => {
     // Create a page with complex selectors to test
     await loadTestPage(
@@ -188,7 +187,7 @@ test.describe('Browser-Specific Features', () => {
         window.makeSnippet = function(value, currency) { return \`(\${value} \${currency})\`; };
         window.calculateSatPrice = function(btcPrice) { return btcPrice / 100000000; };
       `,
-      type: 'module'
+      type: 'module',
     });
     const selectorResults = await page.evaluate(() => {
       const results = {};

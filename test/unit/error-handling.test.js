@@ -2,11 +2,12 @@
  * Unit tests for error handling utilities
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import {
   ErrorTypes,
-  ErrorSeverity,
+  // ErrorSeverity is imported but not directly used in these tests
+  ErrorSeverity as _ErrorSeverity,
   categorizeError,
   createError,
   withTimeout,

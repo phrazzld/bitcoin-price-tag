@@ -32,7 +32,7 @@ This file contains all tasks for the Bitcoin Price Tag extension project, organi
   - [x] Fix JSDOM import in performance tests
   - [x] Fix Playwright configuration issues
   - [x] Fix undefined errors in cache integration tests
-  - [ ] Fix lint warnings in all test files
+  - [x] Fix lint warnings in all test files
 
 ### Documentation
 

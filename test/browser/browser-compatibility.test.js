@@ -86,12 +86,12 @@ test.describe('Bitcoin Price Tag - Browser Compatibility', () => {
         window.makeSnippet = function(value, currency) { return \`(\${value} \${currency})\`; };
         window.calculateSatPrice = function(btcPrice) { return btcPrice / 100000000; };
       `,
-      type: 'module'
+      type: 'module',
     });
 
     // Verify that mock implementation loaded successfully
     const scriptLoaded = await page.evaluate(
-      () => typeof window.buildPrecedingMatchPattern === 'function'
+      () => typeof window.buildPrecedingMatchPattern === 'function',
     );
 
     expect(scriptLoaded).toBeTruthy();
@@ -122,7 +122,7 @@ test.describe('Bitcoin Price Tag - Browser Compatibility', () => {
         window.makeSnippet = function(value, currency) { return \`(\${value} \${currency})\`; };
         window.calculateSatPrice = function(btcPrice) { return btcPrice / 100000000; };
       `,
-      type: 'module'
+      type: 'module',
     });
     await page.evaluate(() => {
       // Simple mock implementation of conversion functionality
@@ -217,7 +217,7 @@ test.describe('Bitcoin Price Tag - Browser Compatibility', () => {
         window.makeSnippet = function(value, currency) { return \`(\${value} \${currency})\`; };
         window.calculateSatPrice = function(btcPrice) { return btcPrice / 100000000; };
       `,
-      type: 'module'
+      type: 'module',
     });
     await page.evaluate(() => {
       // Simple mock implementation
@@ -325,7 +325,7 @@ test.describe('Bitcoin Price Tag - Browser Compatibility', () => {
         window.makeSnippet = function(value, currency) { return \`(\${value} \${currency})\`; };
         window.calculateSatPrice = function(btcPrice) { return btcPrice / 100000000; };
       `,
-      type: 'module'
+      type: 'module',
     });
     await page.evaluate(() => {
       // Simple mock implementation to test DOM traversal

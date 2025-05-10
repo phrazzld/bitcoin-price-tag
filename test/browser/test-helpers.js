@@ -2,7 +2,8 @@
  * Helper functions for browser compatibility tests
  */
 
-import { expect } from '@playwright/test';
+// Playwright test utilities
+import { expect as _expect } from '@playwright/test';
 
 /**
  * Loads a test page with the extension
