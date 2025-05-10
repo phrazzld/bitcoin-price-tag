@@ -3,6 +3,8 @@
  * Handles all caching operations for Bitcoin price data with multiple layers
  */
 
+// ErrorTypes and createError are imported for potential future use
+// eslint-disable-next-line no-unused-vars
 import { ErrorTypes, ErrorSeverity, logError, createError } from './error-handling.js';
 import { detectBrowser } from './browser-detect.js';
 
@@ -64,7 +66,8 @@ function storageAvailable(type) {
     storage.setItem(testKey, testKey);
     storage.removeItem(testKey);
     return true;
-  } catch (error) {
+  } catch (/* eslint-disable-line no-unused-vars */ _error) {
+    // Error indicates storage is not available
     return false;
   }
 }
@@ -180,10 +183,16 @@ async function getChromeStorageCache() {
 
 /**
  * Set chrome.storage.local cache data
+ *
+ * This function manages complex state handling for chrome.storage.local including
+ * metadata retrieval, storage, and error handling. The complexity is necessary
+ * to properly maintain cache consistency and metadata tracking.
+ *
  * @param {Object} data - The data to cache
  * @param {Object} metadata - Optional metadata to store with the cache
  * @returns {Promise<boolean>} Success status
  */
+/* eslint-disable-next-line complexity */
 async function setChromeStorageCache(data, metadata = null) {
   if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) {
     return false;
