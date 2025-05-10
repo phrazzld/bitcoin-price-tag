@@ -97,7 +97,7 @@ if (checkContextBeforeInit()) {
         try {
           console.debug('Bitcoin Price Tag: Content module imported successfully, initializing');
           module.initBitcoinPriceTag();
-          console.log('Bitcoin Price Tag module initialized successfully');
+          console.debug('Bitcoin Price Tag module initialized successfully');
         } catch (error) {
           console.error('Bitcoin Price Tag: Module initialization error:', {
             message: error.message,
