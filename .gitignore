@@ -3,6 +3,7 @@
 # Claude
 **/.claude/settings.local.json
 SCOPE-*.md
+**/glance.md
 
 # Dependencies
 node_modules/
