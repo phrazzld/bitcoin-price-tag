@@ -14,13 +14,13 @@ export default defineConfig({
   reporter: [['html'], ['list']],
   globalSetup: './test/browser/global-setup.js',
 
-  // No webServer needed since we're using mocks
-  // webServer: {
-  //   command: 'echo "No server needed, using mocks"',
-  //   url: 'http://localhost:9222', // Dummy URL that won't be used
-  //   reuseExistingServer: true,
-  //   ignoreHTTPSErrors: true,
-  // },
+  // Define a dummy webServer to prevent connection issues
+  webServer: {
+    command: 'echo "No server needed, using mocks"',
+    port: 3000,
+    reuseExistingServer: true,
+    ignoreHTTPSErrors: true,
+  },
 
   use: {
     actionTimeout: 0,

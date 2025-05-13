@@ -3,24 +3,10 @@
  * This file provides tools to intercept and mock network requests
  */
 
-import { test as base, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 // Re-export expect for the tests that import from this file
 export { expect };
-
-/**
- * Extension of the standard test fixture with network mocking capabilities
- */
-export const test = base.extend({
-  // Before each test, set up network mocking
-  page: async ({ page }, use) => {
-    // Mock API responses
-    await mockNetworkRequests(page);
-
-    // Use the enhanced page object
-    await use(page);
-  },
-});
 
 /**
  * Configure mock responses for any network requests made during tests

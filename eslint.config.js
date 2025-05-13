@@ -210,6 +210,20 @@ export default [
       'no-undef': 'warn',
     },
   },
+  // Special handling for test and temporary files
+  {
+    files: [
+      '**/test-lint-staged.js',
+      '**/test-hook-environment.js',
+      '**/capture-terminal-environment.js',
+    ],
+    rules: {
+      'no-unused-vars': 'off',
+      'no-constant-condition': 'off',
+      'max-depth': 'off',
+      'no-console': 'off',
+    },
+  },
   // Special handling for files with unused variables
   {
     files: [

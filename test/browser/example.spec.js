@@ -2,7 +2,16 @@
  * Simple browser compatibility test for Bitcoin Price Tag extension
  */
 
-import { test, expect } from './network-mock.js';
+import { test as base, expect } from '@playwright/test';
+
+import { mockNetworkRequests } from './network-mock.js';
+
+const test = base.extend({
+  page: async ({ page }, use) => {
+    await mockNetworkRequests(page);
+    await use(page);
+  },
+});
 
 test('Simple browser compatibility test', async ({ page, browserName }) => {
   // Create a simple test page

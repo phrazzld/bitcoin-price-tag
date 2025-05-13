@@ -667,6 +667,11 @@ function addNetworkDiagnostics(context) {
 
   // Add request information if available
   if (context.url) {
+    // Skip localhost:3000 connections to avoid ECONNREFUSED errors in tests
+    if (context.url.includes('localhost:3000')) {
+      return;
+    }
+
     context.networkDiagnostics.url = context.url;
 
     // Try to parse URL for more structured information

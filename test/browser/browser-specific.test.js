@@ -8,9 +8,17 @@
 /* eslint-disable no-console */
 // Console statements used for important test diagnostics
 
-import { test, expect } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
 
+import { mockNetworkRequests } from './network-mock.js';
 import { loadTestPage } from './test-helpers.js';
+
+const test = base.extend({
+  page: async ({ page }, use) => {
+    await mockNetworkRequests(page);
+    await use(page);
+  },
+});
 
 // Tests for browser-specific features and behaviors
 test.describe('Browser-Specific Features', () => {
