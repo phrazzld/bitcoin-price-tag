@@ -1,1 +1,4 @@
 .DS_Store
+**/glance.md
+
+**/.claude/settings.local.json
