@@ -41,7 +41,7 @@
         1. Verify folder structure via file system.
     - **Depends-on:** none
 
-- [ ] **T005 · Chore · P0: add .gitignore file**
+- [x] **T005 · Chore · P0: add .gitignore file**
     - **Context:** Detailed Build Steps / 1. Project Setup & TypeScript
     - **Action:**
         1. Create `.gitignore` file in the project root.
