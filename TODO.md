@@ -104,7 +104,7 @@
         1. Verify API calls work without permission errors.
     - **Depends-on:** [T007]
 
-- [ ] **T011 · Refactor · P0: update content_scripts path and configuration in manifest**
+- [x] **T011 · Refactor · P0: update content_scripts path and configuration in manifest**
     - **Context:** Detailed Build Steps / 2. Manifest V3 Conversion
     - **Action:**
         1. Update `content_scripts` in `src/manifest.json` to point `js` to `["content-script/index.js"]`.

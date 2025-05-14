@@ -20,7 +20,7 @@
 
   "content_scripts": [
     {
-      "js": ["content.js"],
+      "js": ["content-script/index.js"],
       "matches": ["*://*/*"],
       "run_at": "document_end"
     }
