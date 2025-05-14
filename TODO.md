@@ -63,7 +63,7 @@
     - **Depends-on:** [T001, T003]
 
 ## Manifest V3 Conversion
-- [ ] **T007 · Refactor · P0: copy manifest.json and update manifest_version**
+- [x] **T007 · Refactor · P0: copy manifest.json and update manifest_version**
     - **Context:** Detailed Build Steps / 2. Manifest V3 Conversion
     - **Action:**
         1. Copy existing `manifest.json` to `src/`.
