@@ -11,7 +11,7 @@
         1. Confirm `package.json` exists and has a valid structure.
     - **Depends-on:** none
 
-- [ ] **T002 · Chore · P0: install typescript and type definitions**
+- [x] **T002 · Chore · P0: install typescript and type definitions**
     - **Context:** Detailed Build Steps / 1. Project Setup & TypeScript
     - **Action:**
         1. Run `pnpm add -D typescript @types/chrome @types/node`.

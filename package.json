@@ -6,7 +6,11 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["chrome-extension", "bitcoin", "price-conversion"],
+  "keywords": [
+    "chrome-extension",
+    "bitcoin",
+    "price-conversion"
+  ],
   "author": "Phaedrus Raznikov",
   "license": "MIT",
   "packageManager": "pnpm@10.10.0",
@@ -17,5 +21,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/dylanseago/bitcoin-price-tag.git"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.322",
+    "@types/node": "^22.15.17",
+    "typescript": "^5.8.3"
   }
 }
