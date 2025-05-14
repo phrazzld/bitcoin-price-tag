@@ -84,7 +84,7 @@
         1. Verify in Chrome DevTools that the service worker loads.
     - **Depends-on:** [T007]
 
-- [ ] **T009 · Refactor · P0: update manifest permissions to minimal set**
+- [x] **T009 · Refactor · P0: update manifest permissions to minimal set**
     - **Context:** Detailed Build Steps / 2. Manifest V3 Conversion
     - **Action:**
         1. Update `permissions` array in `src/manifest.json` to `["storage", "alarms"]`.

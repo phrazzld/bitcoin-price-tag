@@ -14,7 +14,7 @@
     }
   },
 
-  "permissions": ["*://*/*"],
+  "permissions": ["storage", "alarms"],
 
   "content_scripts": [
     {
