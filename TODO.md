@@ -74,7 +74,7 @@
         1. Load the extension in Chrome and check for Manifest V3 compatibility.
     - **Depends-on:** [T004]
 
-- [ ] **T008 · Refactor · P0: update manifest background definition for service worker**
+- [x] **T008 · Refactor · P0: update manifest background definition for service worker**
     - **Context:** Detailed Build Steps / 2. Manifest V3 Conversion
     - **Action:**
         1. Replace `background` script definition with `"background": { "service_worker": "service-worker/index.js" }` in `src/manifest.json`.
