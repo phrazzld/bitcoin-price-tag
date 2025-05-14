@@ -4,7 +4,8 @@
   "description": "Chrome extension to automatically annotate fiat prices online with their equivalents in bitcoin",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
   },
   "keywords": [
     "chrome-extension",

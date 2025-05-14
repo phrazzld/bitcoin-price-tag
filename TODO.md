@@ -52,7 +52,7 @@
         1. `git status` correctly ignores `node_modules/` and `dist/` directories.
     - **Depends-on:** none
 
-- [ ] **T006 · Chore · P1: add basic typescript build script to package.json**
+- [x] **T006 · Chore · P1: add basic typescript build script to package.json**
     - **Context:** Detailed Build Steps / 1. Project Setup & TypeScript
     - **Action:**
         1. Add `"build": "tsc"` to the `scripts` section in `package.json`.
