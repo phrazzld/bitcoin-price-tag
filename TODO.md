@@ -21,7 +21,7 @@
         1. Verify installation with `pnpm list`.
     - **Depends-on:** [T001]
 
-- [ ] **T003 · Chore · P0: create and configure tsconfig.json**
+- [x] **T003 · Chore · P0: create and configure tsconfig.json**
     - **Context:** Detailed Build Steps / 1. Project Setup & TypeScript
     - **Action:**
         1. Create `tsconfig.json` with `strict: true`, `target: "ES2020"`, `module: "ESNext"`, `moduleResolution: "Bundler"`, `outDir: "./dist"`, `rootDir: "./src"`.
