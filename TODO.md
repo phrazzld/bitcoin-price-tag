@@ -94,7 +94,7 @@
         1. Check manifest.json content and test extension permissions in Chrome.
     - **Depends-on:** [T007]
 
-- [ ] **T010 · Refactor · P0: add host_permissions for coindesk api to manifest**
+- [x] **T010 · Refactor · P0: add host_permissions for coindesk api to manifest**
     - **Context:** Detailed Build Steps / 2. Manifest V3 Conversion
     - **Action:**
         1. Add `host_permissions` array in `src/manifest.json` with `["*://api.coindesk.com/*"]`.

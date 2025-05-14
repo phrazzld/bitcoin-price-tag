@@ -16,6 +16,8 @@
 
   "permissions": ["storage", "alarms"],
 
+  "host_permissions": ["*://api.coindesk.com/*"],
+
   "content_scripts": [
     {
       "js": ["content.js"],
