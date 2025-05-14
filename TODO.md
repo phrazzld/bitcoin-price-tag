@@ -31,7 +31,7 @@
         1. Run `pnpm exec tsc --noEmit` to check for configuration errors.
     - **Depends-on:** [T002]
 
-- [ ] **T004 · Chore · P0: create source directory structure**
+- [x] **T004 · Chore · P0: create source directory structure**
     - **Context:** Detailed Build Steps / 1. Project Setup & TypeScript
     - **Action:**
         1. Create directories: `src/service-worker`, `src/content-script`, `src/common`, `src/shared`.
