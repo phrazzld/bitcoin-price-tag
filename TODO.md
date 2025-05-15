@@ -116,7 +116,7 @@
     - **Depends-on:** [T007]
 
 ## Shared Types & Constants
-- [ ] **T012 · Feature · P1: define shared typescript interfaces and types**
+- [x] **T012 · Feature · P1: define shared typescript interfaces and types**
     - **Context:** Architecture Blueprint - Public Interfaces / Contracts; Detailed Build Steps - 3. Shared Types & Constants
     - **Action:**
         1. Create `src/common/types.ts`.
