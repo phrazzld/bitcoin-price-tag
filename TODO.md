@@ -140,7 +140,7 @@
     - **Depends-on:** [T004]
 
 ## Service Worker Implementation
-- [ ] **T014 · Feature · P0: implement CoinDesk API fetching logic in service-worker/api.ts**
+- [x] **T014 · Feature · P0: implement CoinDesk API fetching logic in service-worker/api.ts**
     - **Context:** Build Step 4, Service Worker Implementation
     - **Action:**
         1. Create `src/service-worker/api.ts`.
