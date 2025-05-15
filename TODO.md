@@ -128,7 +128,7 @@
         1. Import and use types in dependent modules without errors.
     - **Depends-on:** [T003, T004]
 
-- [ ] **T013 · Feature · P1: define shared constants**
+- [x] **T013 · Feature · P1: define shared constants**
     - **Context:** Architecture Blueprint - Public Interfaces / Contracts; Detailed Build Steps - 3. Shared Types & Constants
     - **Action:**
         1. Create `src/common/constants.ts`.
