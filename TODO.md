@@ -240,7 +240,7 @@
         1. Call functions on sample DOM and check mutations.
     - **Depends-on:** [T012]
 
-- [ ] **T023 · Feature · P1: implement content script entry point**
+- [x] **T023 · Feature · P1: implement content script entry point**
     - **Context:** Detailed Build Steps - 5. Content Script Implementation
     - **Action:**
         1. Create `src/content-script/index.ts`.
