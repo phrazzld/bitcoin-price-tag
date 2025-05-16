@@ -274,7 +274,7 @@
     - **Depends-on:** [T006, T007]
 
 ## Testing & Verification
-- [ ] **T026 · Test · P1: perform initial manual e2e testing and debugging**
+- [x] **T026 · Test · P1: perform initial manual e2e testing and debugging**
     - **Context:** Detailed Build Steps - 7. Initial Testing & Debugging
     - **Action:**
         1. Load unpacked extension from `dist/` in Chrome.
