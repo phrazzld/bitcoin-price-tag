@@ -196,7 +196,7 @@
         1. Restart browser and check logs for cache rehydration.
     - **Depends-on:** [T015, T016]
 
-- [ ] **T019 · Feature · P1: implement service worker onalarm handler for periodic refresh**
+- [x] **T019 · Feature · P1: implement service worker onalarm handler for periodic refresh**
     - **Context:** Detailed Build Steps - 4. Service Worker Implementation
     - **Action:**
         1. Implement `chrome.alarms.onAlarm` handler in `src/service-worker/index.ts` to trigger price refresh using `api.ts` and update cache using `cache.ts`.

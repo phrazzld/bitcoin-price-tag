@@ -4,7 +4,8 @@
  */
 
 import { REFRESH_ALARM_NAME } from '../common/constants';
-import { rehydrateCache } from './cache';
+import { rehydrateCache, setCachedPrice } from './cache';
+import { fetchBtcPrice } from './api';
 
 /**
  * Handler for when the extension is installed or updated
@@ -55,9 +56,26 @@ async function handleStartup(): Promise<void> {
  * Handler for alarm events
  * This is where we'll handle periodic price updates
  */
-function handleAlarm(alarm: chrome.alarms.Alarm): void {
+async function handleAlarm(alarm: chrome.alarms.Alarm): Promise<void> {
   console.log('Alarm fired:', alarm.name);
-  // TODO: Implement price refresh logic based on alarm name
+
+  // Check if this is our price refresh alarm
+  if (alarm.name === REFRESH_ALARM_NAME) {
+    console.log('Starting price refresh...');
+
+    try {
+      // Fetch fresh price data from the API
+      const freshPriceData = await fetchBtcPrice();
+      console.log('Price data fetched successfully:', freshPriceData);
+
+      // Store the fresh data in the cache
+      await setCachedPrice(freshPriceData);
+      console.log('Price data cached successfully');
+    } catch (error) {
+      // Log the error but don't let it break the service worker
+      console.error('Failed to refresh price data:', error);
+    }
+  }
 }
 
 /**
