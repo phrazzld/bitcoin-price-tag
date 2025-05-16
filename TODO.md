@@ -300,7 +300,7 @@
         1. Run test command and verify it works.
     - **Depends-on:** [T001]
 
-- [ ] **T028 · Test · P1: write unit tests for api.ts**
+- [x] **T028 · Test · P1: write unit tests for api.ts**
     - **Context:** Testing Strategy - Unit Tests
     - **Action:**
         1. Mock `fetch`.
