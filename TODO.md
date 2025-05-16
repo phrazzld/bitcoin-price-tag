@@ -287,7 +287,7 @@
         1. Use DevTools to check console logs, network requests, and `chrome.storage.local`.
     - **Depends-on:** [T020, T024, T025]
 
-- [ ] **T027 · Test · P1: set up test runner (vitest or jest)**
+- [x] **T027 · Test · P1: set up test runner (vitest or jest)**
     - **Context:** Testing Strategy - Unit Tests
     - **Action:**
         1. Install chosen test runner (e.g., `pnpm add -D vitest`).
