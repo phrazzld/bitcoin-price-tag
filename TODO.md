@@ -164,7 +164,7 @@
         1. Test cache read/write with simulated data.
     - **Depends-on:** [T012, T013]
 
-- [ ] **T016 · Feature · P1: implement service worker entry point with listeners**
+- [x] **T016 · Feature · P1: implement service worker entry point with listeners**
     - **Context:** Detailed Build Steps - 4. Service Worker Implementation
     - **Action:**
         1. Create `src/service-worker/index.ts`.
