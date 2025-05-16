@@ -152,7 +152,7 @@
         1. Call function and verify API response parsing.
     - **Depends-on:** [T012]
 
-- [ ] **T015 · Feature · P1: implement persistent price cache logic in service-worker/cache.ts**
+- [x] **T015 · Feature · P1: implement persistent price cache logic in service-worker/cache.ts**
     - **Context:** Detailed Build Steps - 4. Service Worker Implementation
     - **Action:**
         1. Create `src/service-worker/cache.ts`.
