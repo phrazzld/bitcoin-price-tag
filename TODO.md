@@ -218,7 +218,7 @@
     - **Depends-on:** [T014, T015, T016]
 
 ## Content Script Implementation
-- [ ] **T021 · Feature · P1: implement content script messaging module**
+- [x] **T021 · Feature · P1: implement content script messaging module**
     - **Context:** Detailed Build Steps - 5. Content Script Implementation
     - **Action:**
         1. Create `src/content-script/messaging.ts`.
