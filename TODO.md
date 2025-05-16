@@ -332,7 +332,7 @@
         1. Run tests on mock DOM elements.
     - **Depends-on:** [T022, T027]
 
-- [ ] **T031 · Test · P1: write unit tests for service-worker/index.ts handlers**
+- [x] **T031 · Test · P1: write unit tests for service-worker/index.ts handlers**
     - **Context:** Testing Strategy - Unit Tests
     - **Action:**
         1. Mock `cache.ts`, `api.ts`, `chrome.runtime`, `chrome.alarms`.
