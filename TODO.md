@@ -176,7 +176,7 @@
         1. Run extension and check for listener callbacks.
     - **Depends-on:** [T012, T013]
 
-- [ ] **T017 · Feature · P1: implement service worker oninstalled handler for alarm creation**
+- [x] **T017 · Feature · P1: implement service worker oninstalled handler for alarm creation**
     - **Context:** Detailed Build Steps - 4. Service Worker Implementation
     - **Action:**
         1. Implement `chrome.runtime.onInstalled` handler in `src/service-worker/index.ts` to create the `REFRESH_ALARM_NAME` alarm.

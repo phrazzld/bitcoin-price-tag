@@ -3,16 +3,34 @@
  * This file sets up all the event listeners required for the service worker
  */
 
+import { REFRESH_ALARM_NAME } from '../common/constants';
+
 /**
  * Handler for when the extension is installed or updated
  * This is where we'll set up the initial state and create alarms
  */
-function handleInstalled(details: chrome.runtime.InstalledDetails): void {
+async function handleInstalled(details: chrome.runtime.InstalledDetails): Promise<void> {
   console.log('Extension installed/updated:', details.reason);
   if (details.previousVersion) {
     console.log('Previous version:', details.previousVersion);
   }
-  // TODO: Implement alarm creation and initial state setup
+
+  try {
+    // Clear any existing alarm first to prevent duplicates
+    await chrome.alarms.clear(REFRESH_ALARM_NAME);
+
+    // Create a periodic alarm for refreshing Bitcoin price
+    // Fires every 15 minutes, matching our cache TTL
+    await chrome.alarms.create(REFRESH_ALARM_NAME, {
+      periodInMinutes: 15,
+      // Fire the first alarm 1 minute after installation to get initial price
+      delayInMinutes: 1
+    });
+
+    console.log(`Alarm "${REFRESH_ALARM_NAME}" created successfully`);
+  } catch (error) {
+    console.error('Failed to create alarm:', error);
+  }
 }
 
 /**
