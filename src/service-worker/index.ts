@@ -4,7 +4,8 @@
  */
 
 import { REFRESH_ALARM_NAME } from '../common/constants';
-import { rehydrateCache, setCachedPrice } from './cache';
+import { PriceRequestMessage, PriceResponseMessage } from '../common/types';
+import { rehydrateCache, setCachedPrice, getCachedPrice } from './cache';
 import { fetchBtcPrice } from './api';
 
 /**
@@ -88,13 +89,97 @@ function handleMessage(
   sendResponse: (response: unknown) => void
 ): boolean {
   console.log('Message received:', message, 'from:', sender);
-  
-  // TODO: Implement message processing logic
-  // For now, just acknowledge the message
-  sendResponse({ status: 'received' });
-  
-  // Return true to indicate we'll send a response asynchronously
-  return true;
+
+  // Type check and handle price request messages
+  if (isPriceRequestMessage(message)) {
+    handlePriceRequest(message, sendResponse);
+    // Return true to indicate we'll send a response asynchronously
+    return true;
+  }
+
+  // Unknown message type - send error response
+  sendResponse({
+    type: 'PRICE_RESPONSE',
+    status: 'error',
+    error: {
+      message: 'Unknown message type',
+      code: 'unknown_message'
+    },
+    timestamp: Date.now()
+  } as PriceResponseMessage);
+
+  return false;
+}
+
+/**
+ * Type guard to check if a message is a PriceRequestMessage
+ */
+function isPriceRequestMessage(message: unknown): message is PriceRequestMessage {
+  return (
+    message !== null &&
+    typeof message === 'object' &&
+    'type' in message &&
+    message.type === 'PRICE_REQUEST' &&
+    'requestId' in message &&
+    'timestamp' in message
+  );
+}
+
+/**
+ * Handles price request messages by checking cache and fetching from API if needed
+ */
+async function handlePriceRequest(
+  request: PriceRequestMessage,
+  sendResponse: (response: PriceResponseMessage) => void
+): Promise<void> {
+  console.log('Processing price request:', request.requestId);
+
+  try {
+    // First, try to get the price from cache
+    const cachedPrice = await getCachedPrice();
+
+    if (cachedPrice) {
+      console.log('Price found in cache');
+      sendResponse({
+        requestId: request.requestId,
+        type: 'PRICE_RESPONSE',
+        status: 'success',
+        data: cachedPrice,
+        timestamp: Date.now()
+      });
+      return;
+    }
+
+    // Cache miss or expired - fetch from API
+    console.log('Cache miss - fetching from API');
+    const freshPrice = await fetchBtcPrice();
+
+    // Store in cache for future requests
+    await setCachedPrice(freshPrice);
+
+    // Send the fresh data
+    sendResponse({
+      requestId: request.requestId,
+      type: 'PRICE_RESPONSE',
+      status: 'success',
+      data: freshPrice,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Failed to get price data:', error);
+
+    // Send error response
+    sendResponse({
+      requestId: request.requestId,
+      type: 'PRICE_RESPONSE',
+      status: 'error',
+      error: {
+        message: error instanceof Error ? error.message : 'Failed to get price data',
+        code: 'price_fetch_error'
+      },
+      timestamp: Date.now()
+    });
+  }
 }
 
 // Register all event listeners

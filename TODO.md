@@ -206,7 +206,7 @@
         1. Monitor cache updates at alarm intervals.
     - **Depends-on:** [T013, T014, T015, T016]
 
-- [ ] **T020 · Feature · P1: integrate cache and api in service worker message handler**
+- [x] **T020 · Feature · P1: integrate cache and api in service worker message handler**
     - **Context:** Detailed Build Steps - 4. Service Worker Implementation; Data Flow Diagram
     - **Action:**
         1. Implement the `chrome.runtime.onMessage` handler in `src/service-worker/index.ts` to use `api.ts` and `cache.ts` according to the data flow logic for `PriceRequestMessage`.
