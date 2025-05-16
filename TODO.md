@@ -229,7 +229,7 @@
         1. Test message sending and receiving.
     - **Depends-on:** [T012]
 
-- [ ] **T022 · Feature · P1: implement dom interaction module**
+- [x] **T022 · Feature · P1: implement dom interaction module**
     - **Context:** Detailed Build Steps - 5. Content Script Implementation
     - **Action:**
         1. Create `src/content-script/dom.ts`.
