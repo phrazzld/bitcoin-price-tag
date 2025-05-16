@@ -311,7 +311,7 @@
         1. Run tests and check coverage report.
     - **Depends-on:** [T014, T027]
 
-- [ ] **T029 · Test · P1: write unit tests for cache.ts**
+- [x] **T029 · Test · P1: write unit tests for cache.ts**
     - **Context:** Testing Strategy - Unit Tests
     - **Action:**
         1. Mock `chrome.storage.local`.
@@ -322,7 +322,7 @@
         1. Run tests and verify TTL logic.
     - **Depends-on:** [T015, T027]
 
-- [ ] **T030 · Test · P1: write unit tests for dom.ts**
+- [x] **T030 · Test · P1: write unit tests for dom.ts**
     - **Context:** Testing Strategy - Unit Tests
     - **Action:**
         1. Test regex matching, price conversion, and DOM structure modification logic (using mock DOM elements if needed).
