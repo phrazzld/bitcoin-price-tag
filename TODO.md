@@ -186,7 +186,7 @@
         1. Check Chrome DevTools or logs for alarm creation after install.
     - **Depends-on:** [T013, T016]
 
-- [ ] **T018 · Feature · P1: implement service worker onstartup handler for cache rehydration**
+- [x] **T018 · Feature · P1: implement service worker onstartup handler for cache rehydration**
     - **Context:** Detailed Build Steps - 4. Service Worker Implementation
     - **Action:**
         1. Implement `chrome.runtime.onStartup` handler in `src/service-worker/index.ts` to rehydrate in-memory cache from `chrome.storage.local` (if in-memory mirror is used).

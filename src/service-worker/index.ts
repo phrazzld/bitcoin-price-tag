@@ -4,6 +4,7 @@
  */
 
 import { REFRESH_ALARM_NAME } from '../common/constants';
+import { rehydrateCache } from './cache';
 
 /**
  * Handler for when the extension is installed or updated
@@ -37,9 +38,17 @@ async function handleInstalled(details: chrome.runtime.InstalledDetails): Promis
  * Handler for when the browser starts up
  * This is where we'll rehydrate any in-memory state from storage
  */
-function handleStartup(): void {
+async function handleStartup(): Promise<void> {
   console.log('Service worker starting up');
-  // TODO: Implement cache rehydration and state restoration
+
+  try {
+    // Rehydrate the in-memory cache from chrome.storage.local
+    await rehydrateCache();
+    console.log('Cache successfully rehydrated');
+  } catch (error) {
+    // Don't let cache rehydration failures break the service worker
+    console.error('Failed to rehydrate cache:', error);
+  }
 }
 
 /**
