@@ -251,7 +251,7 @@
         1. Inject script and observe behavior on page load.
     - **Depends-on:** [T004]
 
-- [ ] **T024 · Feature · P1: wire content script entry point with messaging and dom modules**
+- [x] **T024 · Feature · P1: wire content script entry point with messaging and dom modules**
     - **Context:** Detailed Build Steps - 5. Content Script Implementation
     - **Action:**
         1. Update `src/content-script/index.ts` to call `messaging.requestPriceData()` and then `dom.findAndAnnotatePrices()` upon successful price retrieval.
