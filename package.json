@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "build": "rimraf dist && tsc && cpy src/manifest.json dist --flat && cpy 'images/**/*' dist/images && cpy styles.css dist"
   },
   "keywords": [
     "chrome-extension",
@@ -26,6 +26,8 @@
   "devDependencies": {
     "@types/chrome": "^0.0.322",
     "@types/node": "^22.15.17",
+    "cpy-cli": "^5.0.0",
+    "rimraf": "^6.0.1",
     "typescript": "^5.8.3"
   }
 }

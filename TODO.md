@@ -263,7 +263,7 @@
     - **Depends-on:** [T021, T022, T023]
 
 ## Build Process Refinement
-- [ ] **T025 · Chore · P1: enhance build script to clean dist and copy static assets**
+- [x] **T025 · Chore · P1: enhance build script to clean dist and copy static assets**
     - **Context:** Detailed Build Steps - 6. Build Process Refinement
     - **Action:**
         1. Update `build` script in `package.json` to: clean `dist/`, compile TypeScript (`tsc`), copy `src/manifest.json` to `dist/`, and copy any other static assets (e.g., icons, CSS) to `dist/`.
