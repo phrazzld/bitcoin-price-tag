@@ -354,7 +354,7 @@
         1. Run tests and assert responses.
     - **Depends-on:** [T020, T021, T027]
 
-- [ ] **T033 · Test · P2: test service worker restart scenarios for state persistence**
+- [x] **T033 · Test · P2: test service worker restart scenarios for state persistence**
     - **Context:** Risk Matrix - Service Worker Lifecycle Unpredictability
     - **Action:**
         1. Manually or programmatically (if test framework allows) force service worker restarts.
