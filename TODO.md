@@ -343,7 +343,7 @@
         1. Run tests and verify handler calls.
     - **Depends-on:** [T016, T017, T018, T019, T020, T027]
 
-- [ ] **T032 · Test · P1: write integration tests for service worker <-> content script communication**
+- [x] **T032 · Test · P1: write integration tests for service worker <-> content script communication**
     - **Context:** Testing Strategy - Integration Tests
     - **Action:**
         1. Mock `chrome.runtime.sendMessage` and `onMessage` listeners.

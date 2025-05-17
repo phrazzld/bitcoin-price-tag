@@ -61,25 +61,35 @@ export async function requestPriceData(timeoutMs = REQUEST_TIMEOUT_MS): Promise<
   return new Promise<PriceData>((resolve, reject) => {
     let timeoutId: number | undefined;
     
-    // Set up response listener
-    const handleResponse = (response: unknown) => {
-      // Type check the response
-      if (!isPriceResponseMessage(response)) {
-        return;
-      }
-      
-      // Check if this response is for our request
-      if (response.requestId !== requestId) {
-        return;
-      }
-      
+    // Set up timeout
+    timeoutId = setTimeout(() => {
+      reject(new PriceRequestTimeoutError(requestId));
+    }, timeoutMs) as unknown as number;
+    
+    // Send the request with callback to receive response
+    chrome.runtime.sendMessage(request, (response: unknown) => {
       // Clear the timeout
       if (timeoutId !== undefined) {
         clearTimeout(timeoutId);
       }
       
-      // Remove the listener
-      chrome.runtime.onMessage.removeListener(handleResponse);
+      // Check for Chrome runtime errors
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+      
+      // Type check the response
+      if (!isPriceResponseMessage(response)) {
+        reject(new Error('Invalid response format'));
+        return;
+      }
+      
+      // Check if this response is for our request
+      if (response.requestId !== requestId) {
+        reject(new Error('Response requestId mismatch'));
+        return;
+      }
       
       // Handle the response based on status
       if (response.status === 'success' && response.data) {
@@ -89,24 +99,6 @@ export async function requestPriceData(timeoutMs = REQUEST_TIMEOUT_MS): Promise<
       } else {
         reject(new Error('Invalid response format'));
       }
-    };
-    
-    // Set up timeout
-    timeoutId = setTimeout(() => {
-      chrome.runtime.onMessage.removeListener(handleResponse);
-      reject(new PriceRequestTimeoutError(requestId));
-    }, timeoutMs) as unknown as number;
-    
-    // Add the response listener
-    chrome.runtime.onMessage.addListener(handleResponse);
-    
-    // Send the request
-    chrome.runtime.sendMessage(request).catch((error) => {
-      if (timeoutId !== undefined) {
-        clearTimeout(timeoutId);
-      }
-      chrome.runtime.onMessage.removeListener(handleResponse);
-      reject(error);
     });
   });
 }

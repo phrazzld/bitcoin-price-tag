@@ -10,7 +10,7 @@ export default defineConfig({
     globals: true,
     
     // Test file patterns
-    include: ['src/**/*.{test,spec}.{js,ts}'],
+    include: ['src/**/*.{test,spec}.{js,ts}', 'tests/**/*.{test,spec}.{js,ts}'],
     
     // Coverage configuration
     coverage: {
