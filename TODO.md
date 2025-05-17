@@ -367,7 +367,7 @@
     - **Depends-on:** [T015, T017, T019, T026]
 
 ## Logging & Observability
-- [ ] **T034 · Feature · P2: implement lightweight structured logging utility**
+- [x] **T034 · Feature · P2: implement lightweight structured logging utility**
     - **Context:** Architecture Blueprint - Optional Shared Logger
     - **Action:**
         1. Create `src/shared/logger.ts`.
