@@ -456,7 +456,7 @@
         1. Use IDE to view generated docs.
     - **Depends-on:** [T012, T013, T014, T015, T021, T022]
 
-- [ ] **T042 · Chore · P2: update README.md with MV3 architecture, setup, and rationale**
+- [x] **T042 · Chore · P2: update README.md with MV3 architecture, setup, and rationale**
     - **Context:** Documentation - README.md Updates
     - **Action:**
         1. Document the new MV3 architecture (SW, CS, storage, messaging flow).
