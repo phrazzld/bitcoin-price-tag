@@ -44,7 +44,10 @@ async function initPriceAnnotation(): Promise<void> {
       function_name: 'initPriceAnnotation'
     });
   } catch (error) {
-    // Handle specific error types
+    // Silent failure approach: Log errors without showing visual indicators to users
+    // This ensures a non-intrusive browsing experience even when price data is unavailable
+    // See docs/ERROR_HANDLING.md for the rationale behind this design decision
+    
     if (error instanceof Error) {
       if (error.name === 'PriceRequestTimeoutError') {
         logger.error('Request timed out', error, {
@@ -65,6 +68,8 @@ async function initPriceAnnotation(): Promise<void> {
         context: { error }
       });
     }
+    
+    // Continue normal operation - page displays without price annotations
   }
 }
 

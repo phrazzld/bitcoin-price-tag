@@ -139,6 +139,7 @@ Key design decisions:
 - Content scripts remain lightweight, focusing only on DOM manipulation
 - TypeScript for type safety and better developer experience
 - Structured logging for debugging and monitoring
+- Silent error handling to maintain non-intrusive user experience (see [Error Handling](docs/ERROR_HANDLING.md))
 
 ## Contributing
 

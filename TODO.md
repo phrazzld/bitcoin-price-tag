@@ -481,7 +481,7 @@
         1. Change TTL value and verify it takes effect.
     - **Depends-on:** [T013]
 
-- [ ] **T044 · Chore · P2: document approach for content script price fetch failure handling**
+- [x] **T044 · Chore · P2: document approach for content script price fetch failure handling**
     - **Context:** Open Questions - Visual indication of failure
     - **Action:**
         1. Document decision on how to handle price fetch failures (silent logging vs visual indicator).
