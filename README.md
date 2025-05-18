@@ -8,7 +8,7 @@ Chrome extension that automatically annotates fiat prices on web pages with thei
 ## Features
 
 - Automatically detects and annotates USD prices on any webpage with bitcoin equivalents  
-- Uses real-time bitcoin price data from CoinDesk API
+- Uses real-time bitcoin price data from CoinGecko API
 - Shows prices in appropriate units (sats, k sats, M sats, BTC)
 - Handles various price formats ($100, $1.5k, 100 USD, etc.)
 - Special handling for Amazon price elements
@@ -37,6 +37,8 @@ Chrome extension that automatically annotates fiat prices on web pages with thei
    ```bash
    pnpm build
    ```
+   
+   The build uses webpack to bundle the TypeScript modules into browser-compatible JavaScript.
 
 ### Loading the Extension in Chrome
 
@@ -71,7 +73,7 @@ The extension periodically updates the bitcoin price in the background to ensure
 src/
 ├── service-worker/      # Background service worker
 │   ├── index.ts        # Service worker entry point
-│   ├── api.ts          # CoinDesk API client
+│   ├── api.ts          # CoinGecko API client
 │   └── cache.ts        # Price data caching
 ├── content-script/      # Page content scripts  
 │   ├── index.ts        # Content script entry point
@@ -91,7 +93,7 @@ This extension uses Chrome's Manifest V3 architecture:
 
 ### Service Worker
 - Handles background tasks and API communication
-- Fetches bitcoin prices from CoinDesk API
+- Fetches bitcoin prices from CoinGecko API
 - Manages persistent price cache using `chrome.storage.local`
 - Responds to price requests from content scripts
 - Uses `chrome.alarms` for periodic price updates

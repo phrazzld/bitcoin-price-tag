@@ -20,3 +20,11 @@ dist/
 .env
 .env.local
 .env.*.local
+
+# AI agent outputs
+thinktank_*/
+T[0-9]*-plan.md
+T[0-9]*-task.md
+
+# Temporary files
+*.tmp

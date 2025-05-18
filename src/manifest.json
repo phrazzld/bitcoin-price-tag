@@ -16,7 +16,7 @@
 
   "permissions": ["storage", "alarms"],
 
-  "host_permissions": ["*://api.coindesk.com/*"],
+  "host_permissions": ["*://api.coingecko.com/*"],
 
   "content_scripts": [
     {

@@ -1,15 +1,16 @@
 /**
- * Service worker API module for fetching Bitcoin price data from CoinDesk
+ * Service worker API module for fetching Bitcoin price data from CoinGecko
  */
 
-import { CoinDeskApiResponse, PriceData } from '../common/types';
+import { CoinGeckoApiResponse, PriceData } from '../common/types';
 import { Logger, createLogger } from '../shared/logger';
 
 /** 
- * CoinDesk API endpoint for fetching current Bitcoin price in USD
- * @see https://api.coindesk.com/v1/bpi/currentprice/USD.json
+ * CoinGecko API endpoint for fetching current Bitcoin price in USD
+ * Note: CoinDesk API was becoming unreliable, switched to CoinGecko
+ * @see https://docs.coingecko.com/reference/simple-price
  */
-const API_URL = 'https://api.coindesk.com/v1/bpi/currentprice/USD.json';
+const API_URL = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd';
 
 /** 
  * Maximum number of retry attempts for transient errors
@@ -65,10 +66,9 @@ export class ApiError extends Error {
  * @param data The parsed JSON response to validate
  * @throws ApiError if validation fails
  */
-function validateApiResponse(data: unknown): asserts data is CoinDeskApiResponse {
+function validateApiResponse(data: unknown): asserts data is CoinGeckoApiResponse {
   if (!data || typeof data !== 'object') {
-    baseLogger.error('API response data validation failed', {
-      error: new Error('Response is not an object'),
+    baseLogger.error('API response data validation failed', new Error('Response is not an object'), {
       url: API_URL,
       dataType: typeof data
     });
@@ -80,141 +80,59 @@ function validateApiResponse(data: unknown): asserts data is CoinDeskApiResponse
 
   const response = data as Record<string, unknown>;
 
-  // Check for required top-level properties
-  if (!response.time || !response.bpi) {
-    baseLogger.error('API response data validation failed', {
-      error: new Error('Missing required properties'),
+  // Check for required bitcoin property
+  if (!response.bitcoin) {
+    baseLogger.error('API response data validation failed', new Error('Missing bitcoin data'), {
       url: API_URL,
-      hasTime: !!response.time,
-      hasBpi: !!response.bpi
+      hasBitcoin: !!response.bitcoin
     });
     throw new ApiError(
-      'Invalid API response: missing required properties',
+      'Invalid API response: missing bitcoin data',
       ApiErrorCode.INVALID_RESPONSE
     );
   }
 
-  // Validate time object structure
-  const time = response.time as Record<string, unknown>;
-  if (typeof time !== 'object' || !time.updated || !time.updatedISO || !time.updateduk) {
-    baseLogger.error('API response data validation failed', {
-      error: new Error('Invalid time object structure'),
+  // Validate bitcoin object structure
+  const bitcoin = response.bitcoin as Record<string, unknown>;
+  if (typeof bitcoin !== 'object') {
+    baseLogger.error('API response data validation failed', new Error('bitcoin is not an object'), {
       url: API_URL,
-      hasUpdated: !!time.updated,
-      hasUpdatedISO: !!time.updatedISO,
-      hasUpdateduk: !!time.updateduk
+      bitcoinType: typeof bitcoin
     });
     throw new ApiError(
-      'Invalid API response: invalid time structure',
+      'Invalid API response: bitcoin must be an object',
       ApiErrorCode.INVALID_RESPONSE
     );
   }
 
-  // Validate that time fields are strings
-  if (typeof time.updated !== 'string' || typeof time.updatedISO !== 'string' || typeof time.updateduk !== 'string') {
-    baseLogger.error('API response data validation failed', {
-      error: new Error('Invalid time field types'),
+  // Check for USD property in bitcoin
+  if (typeof bitcoin.usd !== 'number') {
+    baseLogger.error('API response data validation failed', new Error('Missing or invalid USD data'), {
       url: API_URL,
-      updatedType: typeof time.updated,
-      updatedISOType: typeof time.updatedISO,
-      updateduiType: typeof time.updateduk
+      hasUsd: 'usd' in bitcoin,
+      usdType: typeof bitcoin.usd
     });
     throw new ApiError(
-      'Invalid API response: time fields must be strings',
+      'Invalid API response: usd must be a number',
       ApiErrorCode.INVALID_RESPONSE
     );
   }
 
-  // Validate bpi object
-  const bpi = response.bpi as Record<string, unknown>;
-  if (typeof bpi !== 'object') {
-    baseLogger.error('API response data validation failed', {
-      error: new Error('bpi is not an object'),
+  // Validate that USD price is positive
+  if (bitcoin.usd <= 0) {
+    baseLogger.error('API response data validation failed', new Error('Invalid USD price'), {
       url: API_URL,
-      bpiType: typeof bpi
+      usdValue: bitcoin.usd
     });
     throw new ApiError(
-      'Invalid API response: bpi must be an object',
-      ApiErrorCode.INVALID_RESPONSE
-    );
-  }
-
-  // Check for USD property in bpi
-  if (!bpi.USD) {
-    baseLogger.error('API response data validation failed', {
-      error: new Error('Missing USD data'),
-      url: API_URL
-    });
-    throw new ApiError(
-      'Invalid API response: missing USD data',
-      ApiErrorCode.INVALID_RESPONSE
-    );
-  }
-
-  // Validate USD object structure
-  const usd = bpi.USD as Record<string, unknown>;
-  if (typeof usd !== 'object') {
-    baseLogger.error('API response data validation failed', {
-      error: new Error('USD is not an object'),
-      url: API_URL,
-      usdType: typeof usd
-    });
-    throw new ApiError(
-      'Invalid API response: USD must be an object',
-      ApiErrorCode.INVALID_RESPONSE
-    );
-  }
-
-  // Check all required USD properties
-  if (!usd.code || !usd.rate || !usd.description || !('rate_float' in usd)) {
-    baseLogger.error('API response data validation failed', {
-      error: new Error('Missing required USD properties'),
-      url: API_URL,
-      hasCode: !!usd.code,
-      hasRate: !!usd.rate,
-      hasDescription: !!usd.description,
-      hasRateFloat: 'rate_float' in usd
-    });
-    throw new ApiError(
-      'Invalid API response: missing required USD properties',
-      ApiErrorCode.INVALID_RESPONSE
-    );
-  }
-
-  // Validate USD property types
-  if (typeof usd.code !== 'string' || typeof usd.rate !== 'string' || typeof usd.description !== 'string') {
-    baseLogger.error('API response data validation failed', {
-      error: new Error('Invalid USD property types'),
-      url: API_URL,
-      codeType: typeof usd.code,
-      rateType: typeof usd.rate,
-      descriptionType: typeof usd.description
-    });
-    throw new ApiError(
-      'Invalid API response: USD string properties have invalid types',
-      ApiErrorCode.INVALID_RESPONSE
-    );
-  }
-
-  // Validate rate_float is a number and is positive
-  if (typeof usd.rate_float !== 'number' || isNaN(usd.rate_float) || usd.rate_float < 0) {
-    baseLogger.error('API response data validation failed', {
-      error: new Error('Invalid rate_float value'),
-      url: API_URL,
-      rateFloatType: typeof usd.rate_float,
-      rateFloatValue: usd.rate_float,
-      isNaN: isNaN(usd.rate_float as number),
-      isNegative: (usd.rate_float as number) < 0
-    });
-    throw new ApiError(
-      'Invalid API response: rate_float must be a positive number',
+      'Invalid API response: USD price must be positive',
       ApiErrorCode.INVALID_RESPONSE
     );
   }
 }
 
 /**
- * Fetches the current Bitcoin price from the CoinDesk API
+ * Fetches the current Bitcoin price from the CoinGecko API
  * @param logger Logger instance for logging operations
  * @param retryAttempt Current retry attempt number (internal use for recursion)
  * @returns Promise resolving to PriceData with current Bitcoin price
@@ -259,7 +177,7 @@ export async function fetchBtcPrice(logger: Logger, retryAttempt = 0): Promise<P
     validateApiResponse(data);
 
     // Extract the Bitcoin price
-    const btcPrice = data.bpi.USD.rate_float;
+    const btcPrice = data.bitcoin.usd;
     
     // Calculate the satoshi price (1 BTC = 100,000,000 satoshis)
     const satoshiPrice = btcPrice / 100000000;
@@ -269,7 +187,7 @@ export async function fetchBtcPrice(logger: Logger, retryAttempt = 0): Promise<P
       usdRate: btcPrice,
       satoshiRate: satoshiPrice,
       fetchedAt: Date.now(),
-      source: 'CoinDesk'
+      source: 'CoinGecko'
     };
 
     logger.debug('Price data successfully fetched', {
@@ -330,8 +248,7 @@ export async function fetchBtcPrice(logger: Logger, retryAttempt = 0): Promise<P
     
     // For network errors like connection failures
     if (error instanceof TypeError || error instanceof DOMException) {
-      logger.error('Error fetching BTC price', {
-        error,
+      logger.error('Error fetching BTC price', error, {
         attempt: retryAttempt + 1,
         url: API_URL,
         errorType: 'network'
@@ -365,8 +282,7 @@ export async function fetchBtcPrice(logger: Logger, retryAttempt = 0): Promise<P
     }
     
     // For unknown errors
-    logger.error('Error fetching BTC price', {
-      error,
+    logger.error('Error fetching BTC price', error, {
       attempt: retryAttempt + 1,
       url: API_URL,
       errorType: 'unknown'

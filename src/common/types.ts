@@ -62,22 +62,11 @@ export interface LocalStorageCache {
 }
 
 /**
- * Structure representing the response from the CoinDesk API
- * Based on https://api.coindesk.com/v1/bpi/currentprice/USD.json format
+ * Structure representing the response from the CoinGecko API
+ * Based on https://api.coingecko.com/api/v3/simple/price format
  */
-export interface CoinDeskApiResponse {
-  readonly time: {
-    readonly updated: string;
-    readonly updatedISO: string;
-    readonly updateduk: string;
-  };
-  readonly disclaimer: string;
-  readonly bpi: {
-    readonly USD: {
-      readonly code: string;
-      readonly rate: string;
-      readonly description: string;
-      readonly rate_float: number;
-    };
+export interface CoinGeckoApiResponse {
+  readonly bitcoin: {
+    readonly usd: number;
   };
 }

@@ -259,7 +259,7 @@ describe('service-worker/index.ts', () => {
       usdRate: 45000,
       satoshiRate: 0.00045,
       fetchedAt: Date.now() - 5000,
-      source: 'CoinDesk'
+      source: 'CoinGecko'
     };
 
     beforeEach(() => {
