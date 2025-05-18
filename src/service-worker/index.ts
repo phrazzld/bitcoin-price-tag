@@ -7,16 +7,21 @@ import { REFRESH_ALARM_NAME } from '../common/constants';
 import { PriceRequestMessage, PriceResponseMessage } from '../common/types';
 import { rehydrateCache, setCachedPrice, getCachedPrice } from './cache';
 import { fetchBtcPrice } from './api';
+import { createLogger } from '../shared/logger';
+
+/** Logger instance for this module */
+const logger = createLogger('service-worker');
 
 /**
  * Handler for when the extension is installed or updated
  * This is where we'll set up the initial state and create alarms
  */
 async function handleInstalled(details: chrome.runtime.InstalledDetails): Promise<void> {
-  console.log('Extension installed/updated:', details.reason);
-  if (details.previousVersion) {
-    console.log('Previous version:', details.previousVersion);
-  }
+  logger.info('Extension installed/updated', {
+    function_name: 'handleInstalled',
+    reason: details.reason,
+    previousVersion: details.previousVersion
+  });
 
   try {
     // Clear any existing alarm first to prevent duplicates
@@ -30,9 +35,17 @@ async function handleInstalled(details: chrome.runtime.InstalledDetails): Promis
       delayInMinutes: 1
     });
 
-    console.log(`Alarm "${REFRESH_ALARM_NAME}" created successfully`);
+    logger.info('Alarm created successfully', {
+      function_name: 'handleInstalled',
+      alarmName: REFRESH_ALARM_NAME,
+      periodInMinutes: 15,
+      delayInMinutes: 1
+    });
   } catch (error) {
-    console.error('Failed to create alarm:', error);
+    logger.error('Failed to create alarm', error, {
+      function_name: 'handleInstalled',
+      alarmName: REFRESH_ALARM_NAME
+    });
   }
 }
 
@@ -41,15 +54,21 @@ async function handleInstalled(details: chrome.runtime.InstalledDetails): Promis
  * This is where we'll rehydrate any in-memory state from storage
  */
 async function handleStartup(): Promise<void> {
-  console.log('Service worker starting up');
+  logger.info('Service worker starting up', {
+    function_name: 'handleStartup'
+  });
 
   try {
     // Rehydrate the in-memory cache from chrome.storage.local
     await rehydrateCache();
-    console.log('Cache successfully rehydrated');
+    logger.info('Cache successfully rehydrated', {
+      function_name: 'handleStartup'
+    });
   } catch (error) {
     // Don't let cache rehydration failures break the service worker
-    console.error('Failed to rehydrate cache:', error);
+    logger.error('Failed to rehydrate cache', error, {
+      function_name: 'handleStartup'
+    });
   }
 }
 
@@ -58,23 +77,43 @@ async function handleStartup(): Promise<void> {
  * This is where we'll handle periodic price updates
  */
 async function handleAlarm(alarm: chrome.alarms.Alarm): Promise<void> {
-  console.log('Alarm fired:', alarm.name);
+  logger.info('Alarm fired', {
+    function_name: 'handleAlarm',
+    alarmName: alarm.name
+  });
 
   // Check if this is our price refresh alarm
   if (alarm.name === REFRESH_ALARM_NAME) {
-    console.log('Starting price refresh...');
+    logger.info('Starting price refresh', {
+      function_name: 'handleAlarm',
+      alarmName: alarm.name
+    });
 
     try {
       // Fetch fresh price data from the API
-      const freshPriceData = await fetchBtcPrice();
-      console.log('Price data fetched successfully:', freshPriceData);
+      const freshPriceData = await fetchBtcPrice(logger);
+      logger.info('Price data fetched successfully', {
+        function_name: 'handleAlarm',
+        alarmName: alarm.name,
+        priceData: {
+          usdRate: freshPriceData.usdRate,
+          fetchedAt: freshPriceData.fetchedAt,
+          source: freshPriceData.source
+        }
+      });
 
       // Store the fresh data in the cache
       await setCachedPrice(freshPriceData);
-      console.log('Price data cached successfully');
+      logger.info('Price data cached successfully', {
+        function_name: 'handleAlarm',
+        alarmName: alarm.name
+      });
     } catch (error) {
       // Log the error but don't let it break the service worker
-      console.error('Failed to refresh price data:', error);
+      logger.error('Failed to refresh price data', error, {
+        function_name: 'handleAlarm',
+        alarmName: alarm.name
+      });
     }
   }
 }
@@ -88,7 +127,14 @@ function handleMessage(
   sender: chrome.runtime.MessageSender,
   sendResponse: (response: unknown) => void
 ): boolean {
-  console.log('Message received:', message, 'from:', sender);
+  logger.info('Message received', {
+    function_name: 'handleMessage',
+    sender: {
+      tab: sender.tab ? { id: sender.tab.id, url: sender.tab.url } : undefined,
+      frameId: sender.frameId,
+      origin: sender.origin
+    }
+  });
 
   // Type check and handle price request messages
   if (isPriceRequestMessage(message)) {
@@ -98,6 +144,11 @@ function handleMessage(
   }
 
   // Unknown message type - send error response
+  logger.warn('Unknown message type received', {
+    function_name: 'handleMessage',
+    messageType: (message as any)?.type
+  });
+  
   sendResponse({
     type: 'PRICE_RESPONSE',
     status: 'error',
@@ -132,16 +183,31 @@ async function handlePriceRequest(
   request: PriceRequestMessage,
   sendResponse: (response: PriceResponseMessage) => void
 ): Promise<void> {
-  console.log('Processing price request:', request.requestId);
+  const requestId = request.requestId;
+  const correlationLogger = logger.child({ correlationId: requestId });
+  
+  correlationLogger.info('Processing price request', {
+    function_name: 'handlePriceRequest',
+    timestamp: request.timestamp
+  });
 
   try {
     // First, try to get the price from cache
     const cachedPrice = await getCachedPrice();
 
     if (cachedPrice) {
-      console.log('Price found in cache');
+      correlationLogger.info('Price found in cache', {
+        function_name: 'handlePriceRequest',
+        cached: true,
+        priceData: {
+          usdRate: cachedPrice.usdRate,
+          fetchedAt: cachedPrice.fetchedAt,
+          source: cachedPrice.source
+        }
+      });
+      
       sendResponse({
-        requestId: request.requestId,
+        requestId: requestId,
         type: 'PRICE_RESPONSE',
         status: 'success',
         data: cachedPrice,
@@ -151,26 +217,41 @@ async function handlePriceRequest(
     }
 
     // Cache miss or expired - fetch from API
-    console.log('Cache miss - fetching from API');
-    const freshPrice = await fetchBtcPrice();
+    correlationLogger.info('Cache miss - fetching from API', {
+      function_name: 'handlePriceRequest',
+      cached: false
+    });
+    
+    const freshPrice = await fetchBtcPrice(correlationLogger);
 
     // Store in cache for future requests
     await setCachedPrice(freshPrice);
+    
+    correlationLogger.info('Price data cached and sending response', {
+      function_name: 'handlePriceRequest',
+      priceData: {
+        usdRate: freshPrice.usdRate,
+        fetchedAt: freshPrice.fetchedAt,
+        source: freshPrice.source
+      }
+    });
 
     // Send the fresh data
     sendResponse({
-      requestId: request.requestId,
+      requestId: requestId,
       type: 'PRICE_RESPONSE',
       status: 'success',
       data: freshPrice,
       timestamp: Date.now()
     });
   } catch (error) {
-    console.error('Failed to get price data:', error);
+    correlationLogger.error('Failed to get price data', error, {
+      function_name: 'handlePriceRequest'
+    });
 
     // Send error response
     sendResponse({
-      requestId: request.requestId,
+      requestId: requestId,
       type: 'PRICE_RESPONSE',
       status: 'error',
       error: {

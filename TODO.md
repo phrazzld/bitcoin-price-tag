@@ -400,7 +400,7 @@
         1. Inject script and verify logs.
     - **Depends-on:** [T021, T023, T034]
 
-- [ ] **T037 · Refactor · P2: propagate and log requestId for all messaging events**
+- [x] **T037 · Refactor · P2: propagate and log requestId for all messaging events**
     - **Context:** Logging & Observability - Correlation ID Propagation
     - **Action:**
         1. Ensure `requestId` is generated in content script, sent in messages, and included in all logs and responses.
