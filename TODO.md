@@ -470,7 +470,7 @@
     - **Depends-on:** [T026]
 
 ## Open Questions & Risk Management
-- [ ] **T043 · Chore · P1: make BTC price cache TTL configurable in constants**
+- [x] **T043 · Chore · P1: make BTC price cache TTL configurable in constants**
     - **Context:** Open Questions - TTL for BTC price cache
     - **Action:**
         1. Ensure `DEFAULT_CACHE_TTL_MS` in `constants.ts` is used consistently.

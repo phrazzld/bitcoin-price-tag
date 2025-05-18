@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { REFRESH_ALARM_NAME } from '../common/constants';
+import { REFRESH_ALARM_NAME, DEFAULT_CACHE_TTL_MS } from '../common/constants';
 import { PriceData, PriceRequestMessage } from '../common/types';
 
 // Mock Chrome APIs
@@ -118,7 +118,7 @@ describe('service-worker/index.ts', () => {
       expect(mockConsole.log).toHaveBeenCalledWith('Extension installed/updated:', 'install');
       expect(mockChrome.alarms.clear).toHaveBeenCalledWith(REFRESH_ALARM_NAME);
       expect(mockChrome.alarms.create).toHaveBeenCalledWith(REFRESH_ALARM_NAME, {
-        periodInMinutes: 15,
+        periodInMinutes: DEFAULT_CACHE_TTL_MS / (60 * 1000),
         delayInMinutes: 1
       });
       expect(mockConsole.log).toHaveBeenCalledWith(`Alarm "${REFRESH_ALARM_NAME}" created successfully`);

@@ -3,7 +3,7 @@
  * This file sets up all the event listeners required for the service worker
  */
 
-import { REFRESH_ALARM_NAME } from '../common/constants';
+import { REFRESH_ALARM_NAME, DEFAULT_CACHE_TTL_MS } from '../common/constants';
 import { PriceRequestMessage, PriceResponseMessage } from '../common/types';
 import { rehydrateCache, setCachedPrice, getCachedPrice } from './cache';
 import { fetchBtcPrice } from './api';
@@ -27,10 +27,13 @@ async function handleInstalled(details: chrome.runtime.InstalledDetails): Promis
     // Clear any existing alarm first to prevent duplicates
     await chrome.alarms.clear(REFRESH_ALARM_NAME);
 
+    // Convert TTL from milliseconds to minutes for Chrome alarms API
+    const periodInMinutes = DEFAULT_CACHE_TTL_MS / (60 * 1000);
+
     // Create a periodic alarm for refreshing Bitcoin price
-    // Fires every 15 minutes, matching our cache TTL
+    // Fires periodically, matching our cache TTL
     await chrome.alarms.create(REFRESH_ALARM_NAME, {
-      periodInMinutes: 15,
+      periodInMinutes: periodInMinutes,
       // Fire the first alarm 1 minute after installation to get initial price
       delayInMinutes: 1
     });
@@ -38,7 +41,7 @@ async function handleInstalled(details: chrome.runtime.InstalledDetails): Promis
     logger.info('Alarm created successfully', {
       function_name: 'handleInstalled',
       alarmName: REFRESH_ALARM_NAME,
-      periodInMinutes: 15,
+      periodInMinutes: periodInMinutes,
       delayInMinutes: 1
     });
   } catch (error) {
