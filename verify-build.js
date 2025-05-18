@@ -66,10 +66,10 @@ try {
         hasErrors = true;
     }
     
-    if (manifest.host_permissions?.includes('*://api.coindesk.com/*')) {
+    if (manifest.host_permissions?.includes('*://api.coingecko.com/*')) {
         console.log('✓ Host permissions present');
     } else {
-        console.error('❌ Missing host permissions');
+        console.error('❌ Missing host permissions - expected: *://api.coingecko.com/*');
         hasErrors = true;
     }
 } catch (error) {
