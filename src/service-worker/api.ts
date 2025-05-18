@@ -82,8 +82,52 @@ function validateApiResponse(data: unknown): asserts data is CoinDeskApiResponse
     );
   }
 
-  // Check for USD property in bpi
+  // Validate time object structure
+  const time = response.time as Record<string, unknown>;
+  if (typeof time !== 'object' || !time.updated || !time.updatedISO || !time.updateduk) {
+    baseLogger.error('API response data validation failed', {
+      error: new Error('Invalid time object structure'),
+      url: API_URL,
+      hasUpdated: !!time.updated,
+      hasUpdatedISO: !!time.updatedISO,
+      hasUpdateduk: !!time.updateduk
+    });
+    throw new ApiError(
+      'Invalid API response: invalid time structure',
+      ApiErrorCode.INVALID_RESPONSE
+    );
+  }
+
+  // Validate that time fields are strings
+  if (typeof time.updated !== 'string' || typeof time.updatedISO !== 'string' || typeof time.updateduk !== 'string') {
+    baseLogger.error('API response data validation failed', {
+      error: new Error('Invalid time field types'),
+      url: API_URL,
+      updatedType: typeof time.updated,
+      updatedISOType: typeof time.updatedISO,
+      updateduiType: typeof time.updateduk
+    });
+    throw new ApiError(
+      'Invalid API response: time fields must be strings',
+      ApiErrorCode.INVALID_RESPONSE
+    );
+  }
+
+  // Validate bpi object
   const bpi = response.bpi as Record<string, unknown>;
+  if (typeof bpi !== 'object') {
+    baseLogger.error('API response data validation failed', {
+      error: new Error('bpi is not an object'),
+      url: API_URL,
+      bpiType: typeof bpi
+    });
+    throw new ApiError(
+      'Invalid API response: bpi must be an object',
+      ApiErrorCode.INVALID_RESPONSE
+    );
+  }
+
+  // Check for USD property in bpi
   if (!bpi.USD) {
     baseLogger.error('API response data validation failed', {
       error: new Error('Missing USD data'),
@@ -95,16 +139,63 @@ function validateApiResponse(data: unknown): asserts data is CoinDeskApiResponse
     );
   }
 
-  // Check for rate_float in USD
+  // Validate USD object structure
   const usd = bpi.USD as Record<string, unknown>;
-  if (typeof usd.rate_float !== 'number') {
+  if (typeof usd !== 'object') {
     baseLogger.error('API response data validation failed', {
-      error: new Error('Missing or invalid rate_float'),
+      error: new Error('USD is not an object'),
       url: API_URL,
-      rateFloatType: typeof usd.rate_float
+      usdType: typeof usd
     });
     throw new ApiError(
-      'Invalid API response: missing or invalid rate_float',
+      'Invalid API response: USD must be an object',
+      ApiErrorCode.INVALID_RESPONSE
+    );
+  }
+
+  // Check all required USD properties
+  if (!usd.code || !usd.rate || !usd.description || !('rate_float' in usd)) {
+    baseLogger.error('API response data validation failed', {
+      error: new Error('Missing required USD properties'),
+      url: API_URL,
+      hasCode: !!usd.code,
+      hasRate: !!usd.rate,
+      hasDescription: !!usd.description,
+      hasRateFloat: 'rate_float' in usd
+    });
+    throw new ApiError(
+      'Invalid API response: missing required USD properties',
+      ApiErrorCode.INVALID_RESPONSE
+    );
+  }
+
+  // Validate USD property types
+  if (typeof usd.code !== 'string' || typeof usd.rate !== 'string' || typeof usd.description !== 'string') {
+    baseLogger.error('API response data validation failed', {
+      error: new Error('Invalid USD property types'),
+      url: API_URL,
+      codeType: typeof usd.code,
+      rateType: typeof usd.rate,
+      descriptionType: typeof usd.description
+    });
+    throw new ApiError(
+      'Invalid API response: USD string properties have invalid types',
+      ApiErrorCode.INVALID_RESPONSE
+    );
+  }
+
+  // Validate rate_float is a number and is positive
+  if (typeof usd.rate_float !== 'number' || isNaN(usd.rate_float) || usd.rate_float < 0) {
+    baseLogger.error('API response data validation failed', {
+      error: new Error('Invalid rate_float value'),
+      url: API_URL,
+      rateFloatType: typeof usd.rate_float,
+      rateFloatValue: usd.rate_float,
+      isNaN: isNaN(usd.rate_float as number),
+      isNegative: (usd.rate_float as number) < 0
+    });
+    throw new ApiError(
+      'Invalid API response: rate_float must be a positive number',
       ApiErrorCode.INVALID_RESPONSE
     );
   }

@@ -411,7 +411,7 @@
     - **Depends-on:** [T020, T021, T035, T036]
 
 ## Security & Config
-- [ ] **T038 · Chore · P1: implement API response validation in api.ts**
+- [x] **T038 · Chore · P1: implement API response validation in api.ts**
     - **Context:** Security & Config - Input Validation Hotspots
     - **Action:**
         1. Add structure validation in `fetchBtcPrice` before parsing the API response.
