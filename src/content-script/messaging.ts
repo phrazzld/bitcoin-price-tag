@@ -5,10 +5,16 @@
 import { PriceData, PriceRequestMessage, PriceResponseMessage } from '../common/types';
 import { createLogger } from '../shared/logger';
 
-/** Logger instance for this module */
+/** 
+ * Logger instance for this module
+ * Used for tracking message flow and debugging communication issues
+ */
 const logger = createLogger('content-script/messaging');
 
-/** Default timeout for price data requests in milliseconds */
+/** 
+ * Default timeout for price data requests in milliseconds
+ * Prevents indefinite waiting if service worker doesn't respond
+ */
 const REQUEST_TIMEOUT_MS = 10000; // 10 seconds
 
 /**
@@ -36,6 +42,8 @@ export class PriceRequestError extends Error {
 
 /**
  * Generates a unique request ID for message correlation
+ * Uses crypto.randomUUID when available, falls back to timestamp + random
+ * @returns Unique identifier string for the request
  */
 function generateRequestId(): string {
   // Use crypto.randomUUID if available, otherwise fallback to timestamp + random

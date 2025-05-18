@@ -2,7 +2,10 @@
  * Lightweight structured logging utility for the Bitcoin Price Tag extension
  */
 
-/** Log level enumeration */
+/** 
+ * Log level enumeration
+ * Defines available log levels in order of severity
+ */
 export const LogLevel = {
   DEBUG: 'debug',
   INFO: 'info',
@@ -12,7 +15,10 @@ export const LogLevel = {
 
 export type LogLevelType = typeof LogLevel[keyof typeof LogLevel];
 
-/** Structure of a log entry */
+/** 
+ * Structure of a log entry
+ * Represents the complete format of a structured log message
+ */
 export interface LogEntry {
   readonly timestamp: string;
   readonly level: LogLevelType;
@@ -27,7 +33,10 @@ export interface LogEntry {
   readonly context?: any;
 }
 
-/** Logger configuration */
+/** 
+ * Logger configuration
+ * Options for customizing logger behavior and output
+ */
 export interface LoggerConfig {
   readonly module?: string;
   readonly correlationId?: string;
@@ -186,5 +195,9 @@ export function createLogger(module: string, config: Partial<LoggerConfig> = {})
 
 /**
  * Default logger instance for quick usage
+ * Can be imported and used directly without configuration
+ * @example
+ * import { logger } from './shared/logger';
+ * logger.info('Application started');
  */
 export const logger = new Logger();

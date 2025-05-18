@@ -4,19 +4,34 @@
 
 import { PriceData } from '../common/types';
 
-/** Currency pattern for USD symbols and text */
+/** 
+ * Currency pattern for USD symbols and text
+ * Matches $ symbol or USD text
+ */
 const CURRENCY_PATTERN = '(\\$|USD)';
 
-/** Pattern for thousands separators */
+/** 
+ * Pattern for thousands separators
+ * Matches digits with optional commas (e.g., 1,000)
+ */
 const THOUSANDS_PATTERN = '(\\d|\\,)*';
 
-/** Pattern for decimal parts */
+/** 
+ * Pattern for decimal parts
+ * Matches optional decimal point followed by digits
+ */
 const DECIMAL_PATTERN = '(\\.\\d+)?';
 
-/** Pattern for magnitude suffixes (k, m, b, t for thousand, million, billion, trillion) */
+/** 
+ * Pattern for magnitude suffixes (k, m, b, t for thousand, million, billion, trillion)
+ * Also matches full words like "million", "billion", etc.
+ */
 const MAGNITUDE_PATTERN = '\\s?((t|b|m{1,2}|k)(r?illion|n)?(\\W|$))?';
 
-/** Magnitude multipliers */
+/** 
+ * Magnitude multipliers mapping suffix letters to their numeric values
+ * Used to convert shorthand notations (e.g., "$5k" -> $5000)
+ */
 const MAGNITUDE_MULTIPLIERS = {
   t: 1000000000000, // trillion
   b: 1000000000,    // billion
@@ -24,7 +39,11 @@ const MAGNITUDE_MULTIPLIERS = {
   k: 1000           // thousand
 };
 
-/** Bitcoin unit suffixes with magnitude thresholds */
+/** 
+ * Bitcoin unit suffixes with magnitude thresholds
+ * Each entry contains: [min_magnitude, divisor_magnitude, suffix]
+ * Used to format Bitcoin amounts with appropriate units (sats, BTC, etc.)
+ */
 const UNIT_SUFFIXES: Array<[number, number, string]> = [
   [0, 0, ' sats'],
   [4, 3, 'k sats'],
@@ -35,7 +54,9 @@ const UNIT_SUFFIXES: Array<[number, number, string]> = [
 ];
 
 /**
- * Builds regex pattern for prices with currency symbol preceding the amount (e.g., $100)
+ * Builds regex pattern for prices with currency symbol preceding the amount
+ * Examples: $100, $1,000.50, $5k, $1.5m
+ * @returns Regular expression pattern for preceding currency format
  */
 function buildPrecedingPricePattern(): RegExp {
   return new RegExp(
@@ -45,7 +66,9 @@ function buildPrecedingPricePattern(): RegExp {
 }
 
 /**
- * Builds regex pattern for prices with currency symbol following the amount (e.g., 100 USD)
+ * Builds regex pattern for prices with currency symbol following the amount
+ * Examples: 100 USD, 1,000 USD, 5k USD
+ * @returns Regular expression pattern for following currency format
  */
 function buildConcludingPricePattern(): RegExp {
   return new RegExp(
@@ -56,6 +79,8 @@ function buildConcludingPricePattern(): RegExp {
 
 /**
  * Extracts magnitude multiplier from a price string
+ * @param priceString The price string to analyze
+ * @returns Multiplier value (1 for no suffix, 1000 for k, etc.)
  */
 function getMagnitudeMultiplier(priceString: string): number {
   const lowerPrice = priceString.toLowerCase();
@@ -71,6 +96,9 @@ function getMagnitudeMultiplier(priceString: string): number {
 
 /**
  * Rounds a number to specified decimal places
+ * @param value The number to round
+ * @param decimals Number of decimal places
+ * @returns Rounded number
  */
 function round(value: number, decimals: number): number {
   return Math.round(value * 10 ** decimals) / 10 ** decimals;
@@ -78,6 +106,10 @@ function round(value: number, decimals: number): number {
 
 /**
  * Converts USD amount to Bitcoin/Satoshi with appropriate unit
+ * Automatically selects the best unit (sats, k sats, M sats, BTC, etc.)
+ * @param usdAmount The USD amount to convert
+ * @param priceData Current Bitcoin price data
+ * @returns Formatted string with Bitcoin value and unit
  */
 function formatBitcoinPrice(usdAmount: number, priceData: PriceData): string {
   const satoshis = Math.floor(usdAmount / priceData.satoshiRate);
@@ -96,6 +128,10 @@ function formatBitcoinPrice(usdAmount: number, priceData: PriceData): string {
 
 /**
  * Creates the price annotation snippet
+ * @param originalText The original price text (e.g., "$100")
+ * @param usdAmount The USD amount extracted from the text
+ * @param priceData Current Bitcoin price data
+ * @returns Annotated text with Bitcoin equivalent (e.g., "$100 (2.5M sats)")
  */
 function createPriceAnnotation(originalText: string, usdAmount: number, priceData: PriceData): string {
   const btcPrice = formatBitcoinPrice(usdAmount, priceData);
@@ -104,6 +140,9 @@ function createPriceAnnotation(originalText: string, usdAmount: number, priceDat
 
 /**
  * Processes a text node to find and annotate prices
+ * Searches for price patterns and adds Bitcoin equivalents in parentheses
+ * @param textNode The text node to process
+ * @param priceData Current Bitcoin price data
  */
 function processTextNode(textNode: Text, priceData: PriceData): void {
   if (!textNode.nodeValue) return;
@@ -139,6 +178,10 @@ function processTextNode(textNode: Text, priceData: PriceData): void {
 
 /**
  * Walks through DOM nodes and processes text nodes
+ * Handles special cases for Amazon price elements
+ * Recursively traverses the DOM tree
+ * @param node The DOM node to process
+ * @param priceData Current Bitcoin price data
  */
 function walkNodes(node: Node, priceData: PriceData): void {
   // Handle special cases for Amazon price elements

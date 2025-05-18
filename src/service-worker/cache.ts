@@ -5,10 +5,17 @@
 import { LocalStorageCache, PriceData } from '../common/types';
 import { DEFAULT_CACHE_TTL_MS, PRICE_CACHE_KEY } from '../common/constants';
 
-/** Current cache schema version - increment when structure changes */
+/** 
+ * Current cache schema version - increment when structure changes
+ * Used to detect incompatible cache formats for potential migrations
+ */
 const CACHE_VERSION = 1;
 
-/** In-memory cache mirror for faster access */
+/** 
+ * In-memory cache mirror for faster access
+ * Avoids repeated reads from chrome.storage.local
+ * Automatically rehydrated on service worker startup
+ */
 let memoryCache: LocalStorageCache | null = null;
 
 /**

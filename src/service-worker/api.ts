@@ -5,16 +5,28 @@
 import { CoinDeskApiResponse, PriceData } from '../common/types';
 import { Logger, createLogger } from '../shared/logger';
 
-/** CoinDesk API endpoint */
+/** 
+ * CoinDesk API endpoint for fetching current Bitcoin price in USD
+ * @see https://api.coindesk.com/v1/bpi/currentprice/USD.json
+ */
 const API_URL = 'https://api.coindesk.com/v1/bpi/currentprice/USD.json';
 
-/** Maximum number of retry attempts for transient errors */
+/** 
+ * Maximum number of retry attempts for transient errors
+ * Applies to network errors and retryable HTTP status codes (429, 5xx)
+ */
 const MAX_RETRY_ATTEMPTS = 3;
 
-/** Base delay for exponential backoff in milliseconds */
+/** 
+ * Base delay for exponential backoff in milliseconds
+ * Actual delay is calculated as BASE_RETRY_DELAY_MS * 2^attemptNumber
+ */
 const BASE_RETRY_DELAY_MS = 1000;
 
-/** Base logger for API module */
+/** 
+ * Base logger for API module
+ * Used for logging API calls, responses, and errors
+ */
 const baseLogger = createLogger('service-worker:api');
 
 /** 

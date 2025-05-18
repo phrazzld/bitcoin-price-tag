@@ -445,7 +445,7 @@
     - **Depends-on:** [T007, T008, T009, T010, T011]
 
 ## Documentation
-- [ ] **T041 · Chore · P2: add TSDoc to exported functions, types, interfaces, and constants**
+- [x] **T041 · Chore · P2: add TSDoc to exported functions, types, interfaces, and constants**
     - **Context:** Documentation - Code Self-Doc Patterns
     - **Action:**
         1. Add TSDoc (`/** ... */`) for all exported functions, classes, types, interfaces, and constants.
