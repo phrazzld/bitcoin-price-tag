@@ -11,6 +11,25 @@
   - **Dependencies**: Minimal TypeScript setup (can be done with a lightweight configuration first)
   - **Timeline Constraint**: Critical due to Chrome's deprecation timeline
 
+### 🚨 Critical Test Infrastructure Issues (From Code Review)
+
+- **[Bug] Update Tests and Mocks to Use CoinGecko API Instead of CoinDesk**
+  - **Complexity**: Medium
+  - **Rationale**: CRITICAL - Tests are using CoinDesk API structures while production uses CoinGecko. This creates a false sense of security and could lead to undetected bugs.
+  - **Expected Outcome**: All tests, mocks, and related documentation use the correct CoinGecko API URL and response format.
+  - **Affected Files**: 
+    - `src/service-worker/api.test.ts`
+    - `tests/mocks/fetch.ts`
+    - `README.md` (line 160)
+    - `verify-build.js` (line 69)
+    - `MANIFEST_V3_APPROACHES.md`
+  
+- **[Bug] Fix Manifest Host Permissions Check in Build Script**
+  - **Complexity**: Simple
+  - **Rationale**: BLOCKER - Build verification script checks for CoinDesk but manifest uses CoinGecko, causing false negatives.
+  - **Expected Outcome**: `verify-build.js` correctly validates CoinGecko host permissions.
+  - **Fix**: Change line 69 in `verify-build.js` from `*://api.coindesk.com/*` to `*://api.coingecko.com/*`
+
 - **[Enhancement] Minimal TypeScript Setup for V3 Migration**
   - **Complexity**: Simple
   - **Rationale**: Provides just enough TypeScript infrastructure to support the V3 migration efficiently without overinvesting in tooling that might need adjustment post-migration.
@@ -26,6 +45,59 @@
   - **Note**: This combines V3 migration with the Gordian approach to state management
 
 ## High Priority
+
+### 🐛 Significant Issues from Code Review
+
+- **[Refactor] Replace Fragile Content Script Initialization Delay**
+  - **Complexity**: High
+  - **Rationale**: Using a fixed 2500ms setTimeout is unreliable and can miss price annotations on dynamic/slow-loading pages.
+  - **Expected Outcome**: Replace setTimeout with MutationObserver or more robust DOM change detection.
+  - **Location**: `src/content-script/index.ts:30`
+
+- **[Security] Enhance Type Guards for Chrome API Messages**
+  - **Complexity**: High  
+  - **Rationale**: Current type guards only perform shallow validation, risking runtime errors from malformed messages.
+  - **Expected Outcome**: Deep validation of all message fields including nested objects.
+  - **Affected**: `isPriceResponseMessage`, `isPriceRequestMessage`
+
+- **[Refactor] Simplify Complex Price Pattern Regexes**
+  - **Complexity**: High
+  - **Rationale**: Current regex patterns are overly complex, duplicated, and brittle. Hard to maintain and extend.
+  - **Expected Outcome**: Simplified, consolidated regex logic with comprehensive test coverage.
+  - **Location**: `src/content-script/dom.ts:11-44`
+
+- **[Refactor] Extract Amazon-Specific Logic to Separate Module**
+  - **Complexity**: High
+  - **Rationale**: Hardcoded Amazon selectors are brittle and clutter generic DOM parsing logic.
+  - **Expected Outcome**: Isolated Amazon adapter with error handling that doesn't break generic annotations.
+  - **Location**: `src/content-script/dom.ts:168-205`
+
+- **[Refactor] Replace Magic Numbers with Named Constants**
+  - **Complexity**: Medium
+  - **Rationale**: Hardcoded values make code harder to understand and maintain.
+  - **Expected Outcome**: All configuration values moved to `constants.ts`.
+  - **Examples**: `MAX_RETRY_ATTEMPTS`, `BASE_RETRY_DELAY_MS`, alarm delays
+
+- **[Bug] Fix Service Worker Memory Cache Versioning**
+  - **Complexity**: High
+  - **Rationale**: Memory cache doesn't validate version against `CACHE_VERSION`, potentially serving stale data.
+  - **Expected Outcome**: Proper version checking in memory cache operations.
+  - **Location**: `src/service-worker/cache.ts`
+
+- **[Testing] Mock Logger Instead of Console in Tests**
+  - **Complexity**: High
+  - **Rationale**: Tests that mock console methods are too low-level and brittle.
+  - **Expected Outcome**: Tests mock logger methods directly, not console output.
+
+- **[Dependencies] Update @types/chrome to Latest Version**
+  - **Complexity**: Medium
+  - **Rationale**: Version 0.0.322 is significantly outdated for Manifest V3 development.
+  - **Expected Outcome**: Update to latest stable version and fix any resulting type errors.
+
+- **[Dependencies] Clarify/Fix Vitest Version**
+  - **Complexity**: Medium
+  - **Rationale**: Version 3.1.3 appears incorrect (current stable is 1.x).
+  - **Expected Outcome**: Use correct, documented Vitest version.
 
 ### 🏗️ Project Foundations (Post-V3 Migration)
 
@@ -103,6 +175,29 @@
 
 ## Medium Priority
 
+### 🔧 Minor Improvements from Code Review
+
+- **[Enhancement] Use Structured DOM Manipulation for Price Annotations**
+  - **Complexity**: Medium
+  - **Rationale**: Direct text node modification is less robust than creating proper DOM elements.
+  - **Expected Outcome**: Create span elements for annotations instead of string concatenation.
+  - **Location**: `src/content-script/dom.ts:138,147`
+
+- **[Enhancement] Improve Logger Error Handling for Non-Error Types**
+  - **Complexity**: Medium
+  - **Rationale**: Converting non-Error objects to strings loses debugging information.
+  - **Expected Outcome**: Preserve original values in context when logging non-Error objects.
+
+- **[Configuration] Make Playwright Tests Run Headless by Default**
+  - **Complexity**: Simple
+  - **Rationale**: Running headful by default is inefficient for CI.
+  - **Expected Outcome**: Set `headless: true` or `headless: !!process.env.CI`.
+
+- **[Configuration] Relax pnpm Version Requirement**
+  - **Complexity**: Simple
+  - **Rationale**: Exact version pinning creates friction for developers.
+  - **Expected Outcome**: Use version range like `pnpm@^10.10.0`.
+
 ### 🛠️ Library Integration & Enhancements
 
 - **[Enhancement] Integrate `money.js` (or similar) for Currency Handling**
@@ -160,6 +255,29 @@
   - **Dependencies**: Manifest V3 Migration
 
 ## Low Priority
+
+### 📝 Code Quality Improvements from Code Review
+
+- **[Cleanup] Remove Excessive Comments**
+  - **Complexity**: Simple
+  - **Rationale**: Comments explaining obvious code add noise. Good code should be self-documenting.
+  - **Expected Outcome**: Remove redundant comments, keep only those explaining "why".
+  - **Examples**: `constants.ts:7-35`, regex comments in `dom.ts`
+
+- **[Style] Apply readonly Consistently in TypeScript Types**
+  - **Complexity**: Simple
+  - **Rationale**: Inconsistent use of readonly makes mutability unclear.
+  - **Expected Outcome**: Apply readonly consistently to all data-transfer objects.
+
+- **[Refactor] Encourage Module-Specific Loggers**
+  - **Complexity**: Simple
+  - **Rationale**: Default logger lacks module context.
+  - **Expected Outcome**: Use `createLogger("module-name")` everywhere.
+
+- **[Cleanup] Review Manifest short_name Usage**
+  - **Complexity**: Simple
+  - **Rationale**: Generic short_name might be redundant.
+  - **Expected Outcome**: Verify if needed, remove or make more distinct.
 
 ### 📚 Documentation & Developer Experience
 

@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+
+  "name": "Bitcoin Price Tag",
+  "short_name": "btc-price-tag",
+  "description": "See prices in bitcoin, not fiat.",
+  "version": "0.6",
+
+  "action": {
+    "default_title": "Bitcoin Price Tag",
+    "default_icon": {
+      "19": "images/icon_19.png",
+      "38": "images/icon_38.png"
+    }
+  },
+
+  "permissions": ["storage", "alarms"],
+
+  "host_permissions": ["*://api.coingecko.com/*"],
+
+  "content_scripts": [
+    {
+      "js": ["content-script/index.js"],
+      "matches": ["*://*/*"],
+      "run_at": "document_end"
+    }
+  ],
+
+  "background": {
+    "service_worker": "service-worker/index.js"
+  },
+
+  "icons": {
+    "16": "images/icon_16.png",
+    "48": "images/icon_48.png",
+    "128": "images/icon_128.png"
+  }
+}
