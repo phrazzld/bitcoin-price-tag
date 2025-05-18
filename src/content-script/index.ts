@@ -5,6 +5,10 @@
 
 import { requestPriceData } from './messaging';
 import { findAndAnnotatePrices } from './dom';
+import { createLogger } from '../shared/logger';
+
+/** Logger instance for this module */
+const logger = createLogger('content-script');
 
 /** Delay before initial price request (in milliseconds) */
 const INITIAL_REQUEST_DELAY = 2500;
@@ -14,30 +18,52 @@ const INITIAL_REQUEST_DELAY = 2500;
  * Requests price data and annotates the DOM
  */
 async function initPriceAnnotation(): Promise<void> {
-  console.log('Bitcoin Price Tag: Initializing price annotation');
+  logger.info('Initializing price annotation', {
+    url: window.location.href,
+    function_name: 'initPriceAnnotation'
+  });
 
   try {
     // Request price data from the service worker
-    console.log('Bitcoin Price Tag: Requesting price data...');
+    logger.info('Requesting price data', {
+      function_name: 'initPriceAnnotation'
+    });
     const priceData = await requestPriceData();
-    console.log('Bitcoin Price Tag: Price data received', priceData);
+    logger.info('Price data received', {
+      function_name: 'initPriceAnnotation',
+      rate: priceData.usdRate,
+      fetchedAt: priceData.fetchedAt
+    });
 
     // Annotate prices in the DOM
-    console.log('Bitcoin Price Tag: Annotating prices in DOM...');
+    logger.info('Annotating prices in DOM', {
+      function_name: 'initPriceAnnotation'
+    });
     findAndAnnotatePrices(document.body, priceData);
-    console.log('Bitcoin Price Tag: Price annotation completed');
+    logger.info('Price annotation completed', {
+      function_name: 'initPriceAnnotation'
+    });
   } catch (error) {
     // Handle specific error types
     if (error instanceof Error) {
       if (error.name === 'PriceRequestTimeoutError') {
-        console.error('Bitcoin Price Tag: Request timed out', error.message);
+        logger.error('Request timed out', error, {
+          function_name: 'initPriceAnnotation'
+        });
       } else if (error.name === 'PriceRequestError') {
-        console.error('Bitcoin Price Tag: Request failed', error.message);
+        logger.error('Request failed', error, {
+          function_name: 'initPriceAnnotation'
+        });
       } else {
-        console.error('Bitcoin Price Tag: Unexpected error', error);
+        logger.error('Unexpected error', error, {
+          function_name: 'initPriceAnnotation'
+        });
       }
     } else {
-      console.error('Bitcoin Price Tag: Unknown error', error);
+      logger.error('Unknown error', new Error(String(error)), {
+        function_name: 'initPriceAnnotation',
+        context: { error }
+      });
     }
   }
 }
@@ -56,16 +82,23 @@ function initialize(): void {
   if (document.readyState === 'loading') {
     // If DOM is still loading, wait for it to complete
     document.addEventListener('DOMContentLoaded', () => {
-      console.log('Bitcoin Price Tag: DOM content loaded');
+      logger.info('DOM content loaded', {
+        function_name: 'initialize'
+      });
       runWithDelay();
     });
   } else {
     // DOM is already loaded
-    console.log('Bitcoin Price Tag: DOM already loaded');
+    logger.info('DOM already loaded', {
+      function_name: 'initialize',
+      readyState: document.readyState
+    });
     runWithDelay();
   }
 }
 
 // Start initialization
-console.log('Bitcoin Price Tag: Content script loaded');
+logger.info('Content script loaded', {
+  url: window.location.href
+});
 initialize();

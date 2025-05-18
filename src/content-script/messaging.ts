@@ -3,6 +3,10 @@
  */
 
 import { PriceData, PriceRequestMessage, PriceResponseMessage } from '../common/types';
+import { createLogger } from '../shared/logger';
+
+/** Logger instance for this module */
+const logger = createLogger('content-script/messaging');
 
 /** Default timeout for price data requests in milliseconds */
 const REQUEST_TIMEOUT_MS = 10000; // 10 seconds
@@ -58,11 +62,22 @@ export async function requestPriceData(timeoutMs = REQUEST_TIMEOUT_MS): Promise<
     timestamp: Date.now()
   };
 
+  logger.info('Sending price request to service worker', {
+    function_name: 'requestPriceData',
+    requestId,
+    timeoutMs
+  });
+
   return new Promise<PriceData>((resolve, reject) => {
     let timeoutId: number | undefined;
     
     // Set up timeout
     timeoutId = setTimeout(() => {
+      logger.warn('Price request timed out', {
+        function_name: 'requestPriceData',
+        requestId,
+        timeoutMs
+      });
       reject(new PriceRequestTimeoutError(requestId));
     }, timeoutMs) as unknown as number;
     
@@ -75,28 +90,62 @@ export async function requestPriceData(timeoutMs = REQUEST_TIMEOUT_MS): Promise<
       
       // Check for Chrome runtime errors
       if (chrome.runtime.lastError) {
+        logger.error('Chrome runtime error', new Error(chrome.runtime.lastError.message), {
+          function_name: 'requestPriceData',
+          requestId
+        });
         reject(new Error(chrome.runtime.lastError.message));
         return;
       }
       
       // Type check the response
       if (!isPriceResponseMessage(response)) {
+        logger.error('Invalid response format', new Error('Response does not match expected format'), {
+          function_name: 'requestPriceData',
+          requestId,
+          response
+        });
         reject(new Error('Invalid response format'));
         return;
       }
       
       // Check if this response is for our request
       if (response.requestId !== requestId) {
+        logger.error('Response requestId mismatch', new Error('Response ID does not match request ID'), {
+          function_name: 'requestPriceData',
+          requestId,
+          responseId: response.requestId
+        });
         reject(new Error('Response requestId mismatch'));
         return;
       }
       
       // Handle the response based on status
       if (response.status === 'success' && response.data) {
+        logger.info('Price request successful', {
+          function_name: 'requestPriceData',
+          requestId,
+          responseTime: response.timestamp - request.timestamp,
+          priceData: {
+            usdRate: response.data.usdRate,
+            fetchedAt: response.data.fetchedAt,
+            source: response.data.source
+          }
+        });
         resolve(response.data);
       } else if (response.status === 'error' && response.error) {
+        logger.error('Price request failed', new PriceRequestError(response.error.message, response.error.code), {
+          function_name: 'requestPriceData',
+          requestId,
+          errorCode: response.error.code
+        });
         reject(new PriceRequestError(response.error.message, response.error.code));
       } else {
+        logger.error('Invalid response status', new Error('Response has neither success nor error status'), {
+          function_name: 'requestPriceData',
+          requestId,
+          status: response.status
+        });
         reject(new Error('Invalid response format'));
       }
     });

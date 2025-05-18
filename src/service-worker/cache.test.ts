@@ -204,8 +204,8 @@ describe('cache.ts', () => {
         expect.fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(CacheError);
-        expect((error as CacheError).code).toBe(CacheErrorCode.READ_ERROR);
-        expect((error as CacheError).message).toBe('Failed to read price cache: Storage error');
+        expect((error as any).code).toBe(CacheErrorCode.READ_ERROR);
+        expect((error as any).message).toBe('Failed to read price cache: Storage error');
       }
     });
 
@@ -249,8 +249,8 @@ describe('cache.ts', () => {
         expect.fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(CacheError);
-        expect((error as CacheError).code).toBe(CacheErrorCode.WRITE_ERROR);
-        expect((error as CacheError).message).toBe('Failed to write price cache: Write error');
+        expect((error as any).code).toBe(CacheErrorCode.WRITE_ERROR);
+        expect((error as any).message).toBe('Failed to write price cache: Write error');
       }
     });
 
@@ -282,8 +282,8 @@ describe('cache.ts', () => {
         expect.fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(CacheError);
-        expect((error as CacheError).code).toBe(CacheErrorCode.WRITE_ERROR);
-        expect((error as CacheError).message).toBe('Failed to clear price cache: Remove error');
+        expect((error as any).code).toBe(CacheErrorCode.WRITE_ERROR);
+        expect((error as any).message).toBe('Failed to clear price cache: Remove error');
       }
     });
 

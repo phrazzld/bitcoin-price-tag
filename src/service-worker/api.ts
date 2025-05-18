@@ -3,6 +3,7 @@
  */
 
 import { CoinDeskApiResponse, PriceData } from '../common/types';
+import { Logger, createLogger } from '../shared/logger';
 
 /** CoinDesk API endpoint */
 const API_URL = 'https://api.coindesk.com/v1/bpi/currentprice/USD.json';
@@ -12,6 +13,9 @@ const MAX_RETRY_ATTEMPTS = 3;
 
 /** Base delay for exponential backoff in milliseconds */
 const BASE_RETRY_DELAY_MS = 1000;
+
+/** Base logger for API module */
+const baseLogger = createLogger('service-worker:api');
 
 /** 
  * Error codes for API-related errors 
@@ -51,6 +55,11 @@ export class ApiError extends Error {
  */
 function validateApiResponse(data: unknown): asserts data is CoinDeskApiResponse {
   if (!data || typeof data !== 'object') {
+    baseLogger.error('API response data validation failed', {
+      error: new Error('Response is not an object'),
+      url: API_URL,
+      dataType: typeof data
+    });
     throw new ApiError(
       'Invalid API response: not an object',
       ApiErrorCode.INVALID_RESPONSE
@@ -61,6 +70,12 @@ function validateApiResponse(data: unknown): asserts data is CoinDeskApiResponse
 
   // Check for required top-level properties
   if (!response.time || !response.bpi) {
+    baseLogger.error('API response data validation failed', {
+      error: new Error('Missing required properties'),
+      url: API_URL,
+      hasTime: !!response.time,
+      hasBpi: !!response.bpi
+    });
     throw new ApiError(
       'Invalid API response: missing required properties',
       ApiErrorCode.INVALID_RESPONSE
@@ -70,6 +85,10 @@ function validateApiResponse(data: unknown): asserts data is CoinDeskApiResponse
   // Check for USD property in bpi
   const bpi = response.bpi as Record<string, unknown>;
   if (!bpi.USD) {
+    baseLogger.error('API response data validation failed', {
+      error: new Error('Missing USD data'),
+      url: API_URL
+    });
     throw new ApiError(
       'Invalid API response: missing USD data',
       ApiErrorCode.INVALID_RESPONSE
@@ -79,6 +98,11 @@ function validateApiResponse(data: unknown): asserts data is CoinDeskApiResponse
   // Check for rate_float in USD
   const usd = bpi.USD as Record<string, unknown>;
   if (typeof usd.rate_float !== 'number') {
+    baseLogger.error('API response data validation failed', {
+      error: new Error('Missing or invalid rate_float'),
+      url: API_URL,
+      rateFloatType: typeof usd.rate_float
+    });
     throw new ApiError(
       'Invalid API response: missing or invalid rate_float',
       ApiErrorCode.INVALID_RESPONSE
@@ -88,16 +112,29 @@ function validateApiResponse(data: unknown): asserts data is CoinDeskApiResponse
 
 /**
  * Fetches the current Bitcoin price from the CoinDesk API
+ * @param logger Logger instance for logging operations
+ * @param retryAttempt Current retry attempt number (internal use for recursion)
  * @returns Promise resolving to PriceData with current Bitcoin price
  * @throws ApiError if the request fails or returns invalid data
  */
-export async function fetchBtcPrice(retryAttempt = 0): Promise<PriceData> {
+export async function fetchBtcPrice(logger: Logger, retryAttempt = 0): Promise<PriceData> {
+  logger.info('Fetching BTC price', { 
+    attempt: retryAttempt + 1, 
+    url: API_URL 
+  });
+
   try {
     // Make the API request
+    logger.debug('Attempting fetch call');
     const response = await fetch(API_URL);
 
     // Check for HTTP errors
     if (!response.ok) {
+      logger.warn('API call failed with HTTP error', {
+        status: response.status,
+        statusText: response.statusText,
+        url: API_URL
+      });
       throw new ApiError(
         `HTTP error ${response.status}: ${response.statusText}`,
         ApiErrorCode.HTTP_ERROR,
@@ -105,10 +142,17 @@ export async function fetchBtcPrice(retryAttempt = 0): Promise<PriceData> {
       );
     }
 
+    logger.info('API call successful', {
+      status: response.status,
+      url: API_URL
+    });
+
     // Parse the JSON response
+    logger.debug('Parsing API response JSON');
     const data = await response.json();
 
     // Validate the response structure
+    logger.debug('Validating API response data');
     validateApiResponse(data);
 
     // Extract the Bitcoin price
@@ -118,14 +162,33 @@ export async function fetchBtcPrice(retryAttempt = 0): Promise<PriceData> {
     const satoshiPrice = btcPrice / 100000000;
 
     // Return the formatted price data
-    return {
+    const priceData = {
       usdRate: btcPrice,
       satoshiRate: satoshiPrice,
       fetchedAt: Date.now(),
       source: 'CoinDesk'
     };
+
+    logger.debug('Price data successfully fetched', {
+      usdRate: priceData.usdRate,
+      fetchedAt: priceData.fetchedAt
+    });
+
+    return priceData;
   } catch (error) {
-    // If it's already an ApiError, rethrow it
+    // If it's a JSON parsing error
+    if (error instanceof SyntaxError && error.message.includes('JSON')) {
+      logger.error('Failed to parse API response JSON', {
+        error,
+        url: API_URL
+      });
+      throw new ApiError(
+        'Failed to parse API response',
+        ApiErrorCode.INVALID_RESPONSE
+      );
+    }
+
+    // If it's already an ApiError, handle it
     if (error instanceof ApiError) {
       // For HTTP 429 (Too Many Requests) or 5xx errors, retry with exponential backoff
       const isRetryable = 
@@ -137,17 +200,40 @@ export async function fetchBtcPrice(retryAttempt = 0): Promise<PriceData> {
         // Calculate delay with exponential backoff
         const delay = BASE_RETRY_DELAY_MS * Math.pow(2, retryAttempt);
         
+        logger.info('Retrying API call', {
+          attempt: retryAttempt + 2, // Next attempt number
+          delayMs: delay,
+          url: API_URL,
+          errorCode: error.code,
+          httpStatus: error.statusCode
+        });
+        
         // Wait and then retry
         await new Promise(resolve => setTimeout(resolve, delay));
-        return fetchBtcPrice(retryAttempt + 1);
+        return fetchBtcPrice(logger, retryAttempt + 1);
       }
       
-      // If we've exhausted retries or the error isn't retryable, rethrow
+      // If we've exhausted retries or the error isn't retryable, log and rethrow
+      if (retryAttempt >= MAX_RETRY_ATTEMPTS - 1) {
+        logger.error('API call failed after max retries', {
+          attempts: MAX_RETRY_ATTEMPTS,
+          url: API_URL,
+          errorCode: error.code,
+          httpStatus: error.statusCode
+        });
+      }
       throw error;
     }
     
     // For network errors like connection failures
     if (error instanceof TypeError || error instanceof DOMException) {
+      logger.error('Error fetching BTC price', {
+        error,
+        attempt: retryAttempt + 1,
+        url: API_URL,
+        errorType: 'network'
+      });
+
       const networkError = new ApiError(
         `Network error: ${error.message}`,
         ApiErrorCode.NETWORK_ERROR
@@ -156,14 +242,33 @@ export async function fetchBtcPrice(retryAttempt = 0): Promise<PriceData> {
       // Retry network errors
       if (retryAttempt < MAX_RETRY_ATTEMPTS) {
         const delay = BASE_RETRY_DELAY_MS * Math.pow(2, retryAttempt);
+        logger.info('Retrying API call', {
+          attempt: retryAttempt + 2,
+          delayMs: delay,
+          url: API_URL,
+          errorCode: ApiErrorCode.NETWORK_ERROR
+        });
         await new Promise(resolve => setTimeout(resolve, delay));
-        return fetchBtcPrice(retryAttempt + 1);
+        return fetchBtcPrice(logger, retryAttempt + 1);
       }
+      
+      logger.error('API call failed after max retries', {
+        attempts: MAX_RETRY_ATTEMPTS,
+        url: API_URL,
+        errorCode: ApiErrorCode.NETWORK_ERROR
+      });
       
       throw networkError;
     }
     
     // For unknown errors
+    logger.error('Error fetching BTC price', {
+      error,
+      attempt: retryAttempt + 1,
+      url: API_URL,
+      errorType: 'unknown'
+    });
+    
     throw new ApiError(
       `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
       ApiErrorCode.UNKNOWN_ERROR

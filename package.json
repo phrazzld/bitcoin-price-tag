@@ -7,7 +7,9 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "build": "rimraf dist && tsc && cpy src/manifest.json dist --flat && cpy 'images/**/*' dist/images && cpy styles.css dist"
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "build": "rimraf dist && tsc && cpy src/manifest.json dist --flat && cpy 'images/**/*' dist/images && cpy styles.css dist && cpy tests/playwright/fixtures/index.html dist"
   },
   "keywords": [
     "chrome-extension",
@@ -26,6 +28,7 @@
     "url": "https://github.com/dylanseago/bitcoin-price-tag.git"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@types/chrome": "^0.0.322",
     "@types/node": "^22.15.17",
     "@vitest/coverage-v8": "^3.1.3",

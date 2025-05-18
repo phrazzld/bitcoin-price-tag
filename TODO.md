@@ -378,7 +378,7 @@
         1. Import and use logger, check console output format.
     - **Depends-on:** [T004]
 
-- [ ] **T035 · Chore · P2: add structured logging to service worker modules**
+- [x] **T035 · Chore · P2: add structured logging to service worker modules**
     - **Context:** Logging & Observability - Log Events & Structured Fields (Service Worker)
     - **Action:**
         1. Import and use the logging utility (or `console` directly if T034 is deferred) in `src/service-worker/index.ts`, `cache.ts`, `api.ts`.
@@ -389,7 +389,7 @@
         1. Run extension and check console output.
     - **Depends-on:** [T014, T015, T016, T034]
 
-- [ ] **T036 · Chore · P2: add structured logging to content script modules**
+- [x] **T036 · Chore · P2: add structured logging to content script modules**
     - **Context:** Logging & Observability - Log Events & Structured Fields (Content Script)
     - **Action:**
         1. Import and use the logging utility (or `console` directly) in `src/content-script/index.ts`, `messaging.ts`.

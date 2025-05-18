@@ -1,10 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fetchBtcPrice, ApiError, ApiErrorCode } from './api';
 import { CoinDeskApiResponse } from '../common/types';
+import { Logger } from '../shared/logger';
 
 // Mock the global fetch function
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
+
+// Create a mock logger
+const mockLogger: Logger = {
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  child: vi.fn().mockImplementation(() => mockLogger)
+};
 
 describe('api.ts', () => {
   beforeEach(() => {
@@ -57,7 +67,7 @@ describe('api.ts', () => {
           json: async () => validApiResponse
         });
 
-        const result = await fetchBtcPrice();
+        const result = await fetchBtcPrice(mockLogger);
 
         expect(mockFetch).toHaveBeenCalledWith('https://api.coindesk.com/v1/bpi/currentprice/USD.json');
         expect(result).toEqual({
@@ -65,6 +75,20 @@ describe('api.ts', () => {
           satoshiRate: 0.00043,
           fetchedAt: expect.any(Number),
           source: 'CoinDesk'
+        });
+        
+        // Verify logging calls
+        expect(mockLogger.info).toHaveBeenCalledWith('Fetching BTC price', {
+          attempt: 1,
+          url: 'https://api.coindesk.com/v1/bpi/currentprice/USD.json'
+        });
+        expect(mockLogger.info).toHaveBeenCalledWith('API call successful', {
+          status: undefined, // mockResolvedValue doesn't set status
+          url: 'https://api.coindesk.com/v1/bpi/currentprice/USD.json'
+        });
+        expect(mockLogger.debug).toHaveBeenCalledWith('Price data successfully fetched', {
+          usdRate: 43000,
+          fetchedAt: expect.any(Number)
         });
       });
     });

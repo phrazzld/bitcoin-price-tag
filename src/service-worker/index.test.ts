@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { REFRESH_ALARM_NAME } from '../common/constants';
-import { PriceData, PriceRequestMessage, PriceResponseMessage } from '../common/types';
+import { PriceData, PriceRequestMessage } from '../common/types';
 
 // Mock Chrome APIs
 const mockChrome = {

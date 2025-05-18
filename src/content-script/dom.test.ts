@@ -1,12 +1,13 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { findAndAnnotatePrices } from './dom';
 import { PriceData } from '../common/types';
 
 // Test data
 const mockPriceData: PriceData = {
-  btcRate: 30000,
+  usdRate: 30000,
   satoshiRate: 0.0003, // 30000 USD = 100M satoshis
-  timestamp: Date.now()
+  fetchedAt: Date.now(),
+  source: 'coindesk'
 };
 
 describe('dom.ts', () => {
@@ -130,7 +131,7 @@ describe('dom.ts', () => {
         { input: '$1 trillion', usdAmount: 1000000000000 }
       ];
 
-      patterns.forEach(({ input, usdAmount }) => {
+      patterns.forEach(({ input }) => {
         const textNode = document.createTextNode(input);
         const parent = document.createElement('div');
         parent.appendChild(textNode);
