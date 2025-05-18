@@ -6,7 +6,7 @@
   "description": "See prices in bitcoin, not fiat.",
   "version": "0.6",
 
-  "browser_action": {
+  "action": {
     "default_title": "Bitcoin Price Tag",
     "default_icon": {
       "19": "images/icon_19.png",

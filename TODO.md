@@ -422,7 +422,7 @@
         1. Test with invalid responses and check error handling.
     - **Depends-on:** [T014]
 
-- [ ] **T039 · Chore · P1: implement storage data validation in cache.ts**
+- [x] **T039 · Chore · P1: implement storage data validation in cache.ts**
     - **Context:** Security & Config - Input Validation Hotspots
     - **Action:**
         1. Add validation for cached data read from `chrome.storage.local`.
@@ -433,7 +433,7 @@
         1. Test with corrupted storage data.
     - **Depends-on:** [T015]
 
-- [ ] **T040 · Refactor · P1: review and minimize permissions and content script matches in manifest**
+- [x] **T040 · Refactor · P1: review and minimize permissions and content script matches in manifest**
     - **Context:** Security & Config - Least-Privilege Notes
     - **Action:**
         1. Audit manifest for principle of least privilege.
