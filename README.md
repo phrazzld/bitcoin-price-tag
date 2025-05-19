@@ -111,7 +111,7 @@ sequenceDiagram
     participant CS as Content Script
     participant SW as Service Worker
     participant Store as chrome.storage.local
-    participant API as CoinDesk API
+    participant API as CoinGecko API
 
     CS->>SW: Request Bitcoin Price
     SW->>Store: Check Cache
@@ -158,4 +158,4 @@ Key design decisions:
 ## Acknowledgments
 
 - Fork of the original extension published [here](https://chrome.google.com/webstore/detail/bitcoin-price-tag/phjlopbkegpphenpgimnlckfmjfanceh)
-- Bitcoin price data provided by [CoinDesk API](https://www.coindesk.com/price/bitcoin)
+- Bitcoin price data provided by [CoinGecko API](https://www.coingecko.com/)
