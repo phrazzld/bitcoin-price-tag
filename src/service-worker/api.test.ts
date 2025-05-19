@@ -80,6 +80,48 @@ describe('api.ts', () => {
           fetchedAt: expect.any(Number)
         });
       });
+
+      it('should handle extremely large Bitcoin prices', async () => {
+        const largePrice = 1_000_000_000; // 1 billion USD
+        const apiResponse: CoinGeckoApiResponse = {
+          bitcoin: {
+            usd: largePrice
+          }
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => apiResponse
+        });
+
+        const result = await fetchBtcPrice(mockLogger);
+
+        expect(result.usdRate).toBe(largePrice);
+        expect(result.satoshiRate).toBe(largePrice / 100_000_000);
+      });
+
+      it('should ignore extra fields in API response', async () => {
+        const apiResponseWithExtras = {
+          bitcoin: {
+            usd: 43000.00,
+            eur: 39000.00, // Extra field
+            last_updated_at: 1234567890 // Extra field
+          },
+          ethereum: { // Extra field
+            usd: 3000.00
+          }
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => apiResponseWithExtras
+        });
+
+        const result = await fetchBtcPrice(mockLogger);
+
+        expect(result.usdRate).toBe(43000.00);
+        expect(result.satoshiRate).toBe(43000.00 / 100_000_000);
+      });
     });
 
     describe('error handling', () => {
@@ -98,6 +140,66 @@ describe('api.ts', () => {
           expect((error as ApiError).code).toBe(ApiErrorCode.HTTP_ERROR);
           expect((error as ApiError).statusCode).toBe(404);
           expect((error as ApiError).message).toBe('HTTP error 404: Not Found');
+        }
+      });
+
+      it('should throw ApiError for HTTP 400 Bad Request', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          statusText: 'Bad Request'
+        });
+
+        try {
+          await fetchBtcPrice(mockLogger);
+          expect.fail('Should have thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe(ApiErrorCode.HTTP_ERROR);
+          expect((error as ApiError).statusCode).toBe(400);
+          expect((error as ApiError).message).toBe('HTTP error 400: Bad Request');
+          // Verify no retry for 400 errors
+          expect(mockFetch).toHaveBeenCalledTimes(1);
+        }
+      });
+
+      it('should throw ApiError for HTTP 401 Unauthorized', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized'
+        });
+
+        try {
+          await fetchBtcPrice(mockLogger);
+          expect.fail('Should have thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe(ApiErrorCode.HTTP_ERROR);
+          expect((error as ApiError).statusCode).toBe(401);
+          expect((error as ApiError).message).toBe('HTTP error 401: Unauthorized');
+          // Verify no retry for 401 errors
+          expect(mockFetch).toHaveBeenCalledTimes(1);
+        }
+      });
+
+      it('should throw ApiError for HTTP 403 Forbidden', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          statusText: 'Forbidden'
+        });
+
+        try {
+          await fetchBtcPrice(mockLogger);
+          expect.fail('Should have thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe(ApiErrorCode.HTTP_ERROR);
+          expect((error as ApiError).statusCode).toBe(403);
+          expect((error as ApiError).message).toBe('HTTP error 403: Forbidden');
+          // Verify no retry for 403 errors
+          expect(mockFetch).toHaveBeenCalledTimes(1);
         }
       });
 
@@ -249,6 +351,49 @@ describe('api.ts', () => {
           expect((error as ApiError).message).toBe('Unexpected error: String error');
         }
       });
+
+      it('should throw ApiError for malformed JSON response', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => {
+            throw new SyntaxError('Unexpected token < in JSON at position 0');
+          }
+        });
+
+        try {
+          await fetchBtcPrice(mockLogger);
+          expect.fail('Should have thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
+          expect((error as ApiError).message).toBe('Failed to parse API response');
+        }
+      });
+
+      it('should handle DOMException network errors', async () => {
+        // Reset mock to ensure clean state
+        mockFetch.mockReset();
+        
+        // Create a DOMException for the abort error
+        const domException = new DOMException('The operation was aborted.', 'AbortError');
+        mockFetch.mockRejectedValueOnce(domException);
+        
+        // Mock the retry logic to not actually wait
+        vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
+          cb();
+          return 0 as any;
+        });
+        
+        try {
+          await fetchBtcPrice(mockLogger);
+          expect.fail('Should have thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe(ApiErrorCode.NETWORK_ERROR);
+          expect((error as ApiError).message).toContain('Network error:');
+          expect((error as ApiError).message).toContain('aborted');
+        }
+      }, 10000);
     });
 
     describe('retry logic', () => {
@@ -320,6 +465,66 @@ describe('api.ts', () => {
         expect(result.usdRate).toBe(43000);
       });
 
+      it('should retry on HTTP 500 Internal Server Error', async () => {
+        // First attempt: 500 error
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error'
+        });
+
+        // Second attempt: success
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => validApiResponse
+        });
+
+        const promise = fetchBtcPrice(mockLogger);
+        
+        // Advance timer for first retry
+        await vi.advanceTimersByTimeAsync(1000);
+        
+        const result = await promise;
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(result.usdRate).toBe(43000);
+        expect(mockLogger.info).toHaveBeenCalledWith('Retrying API call', expect.objectContaining({
+          attempt: 2,
+          errorCode: ApiErrorCode.HTTP_ERROR,
+          httpStatus: 500
+        }));
+      });
+
+      it('should retry on HTTP 503 Service Unavailable', async () => {
+        // First attempt: 503 error
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable'
+        });
+
+        // Second attempt: success
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => validApiResponse
+        });
+
+        const promise = fetchBtcPrice(mockLogger);
+        
+        // Advance timer for first retry
+        await vi.advanceTimersByTimeAsync(1000);
+        
+        const result = await promise;
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(result.usdRate).toBe(43000);
+        expect(mockLogger.info).toHaveBeenCalledWith('Retrying API call', expect.objectContaining({
+          attempt: 2,
+          errorCode: ApiErrorCode.HTTP_ERROR,
+          httpStatus: 503
+        }));
+      });
+
       it('should retry on network errors', async () => {
         // First attempt: network error (TypeError for fetch failures)
         mockFetch.mockRejectedValueOnce(new TypeError('Network failure'));
@@ -358,7 +563,41 @@ describe('api.ts', () => {
         }
       });
 
+      it('should retry on CoinGecko rate limit (429) errors', async () => {
+        // First attempt: 429 rate limit
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          statusText: 'Too Many Requests'
+        });
+
+        // Second attempt: success
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => validApiResponse
+        });
+
+        const promise = fetchBtcPrice(mockLogger);
+        
+        // Advance timer for first retry
+        await vi.advanceTimersByTimeAsync(1000);
+        
+        const result = await promise;
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(result.usdRate).toBe(43000);
+        expect(mockLogger.info).toHaveBeenCalledWith('Retrying API call', expect.objectContaining({
+          attempt: 2,
+          delayMs: 1000,
+          errorCode: ApiErrorCode.HTTP_ERROR,
+          httpStatus: 429
+        }));
+      });
+
       it('should respect max retry attempts', async () => {
+        // Reset mock to ensure no lingering call count
+        mockFetch.mockReset();
+        
         // All attempts fail with 503
         mockFetch.mockResolvedValue({
           ok: false,
@@ -366,14 +605,20 @@ describe('api.ts', () => {
           statusText: 'Service Unavailable'
         });
 
+        // Skip retry delay by mocking setTimeout
+        vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
+          cb();
+          return 0 as any;
+        });
+        
         try {
-          await vi.runAllTimersAsync();
           await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
           expect((error as ApiError).code).toBe(ApiErrorCode.HTTP_ERROR);
-          expect(mockFetch).toHaveBeenCalledTimes(3); // MAX_RETRY_ATTEMPTS
+          // First call + 2 retries = 3 total calls
+          expect(mockFetch).toHaveBeenCalledTimes(3); 
         }
       }, 10000);
 
@@ -413,18 +658,27 @@ describe('api.ts', () => {
       });
 
       it('should throw ApiError for network errors after exhausting retries', async () => {
+        // Reset mock to ensure no lingering call count
+        mockFetch.mockReset();
+        
         // All attempts fail with network error (TypeError)
         mockFetch.mockRejectedValue(new TypeError('Network failure'));
 
+        // Skip retry delay by mocking setTimeout
+        vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
+          cb();
+          return 0 as any;
+        });
+        
         try {
-          await vi.runAllTimersAsync();
           await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
           expect((error as ApiError).code).toBe(ApiErrorCode.NETWORK_ERROR);
           expect((error as ApiError).message).toBe('Network error: Network failure');
-          expect(mockFetch).toHaveBeenCalledTimes(3); // MAX_RETRY_ATTEMPTS
+          // First call + 2 retries = 3 total calls
+          expect(mockFetch).toHaveBeenCalledTimes(3);
         }
       }, 10000);
     });
