@@ -79,7 +79,7 @@ See `src/service-worker/api.ts` for the implementation of exponential backoff an
 
 Error handling can be tested by:
 1. Disabling network connectivity
-2. Blocking the CoinDesk API domain
+2. Blocking the CoinGecko API domain
 3. Simulating service worker failures
 4. Using browser developer tools to throttle network speed
 

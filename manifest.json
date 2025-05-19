@@ -1,4 +1,6 @@
 {
+  "_comment": "This is the LEGACY Manifest V2 version. The current extension uses Manifest V3 (see src/manifest.json).",
+  
   "manifest_version": 2,
 
   "name": "Bitcoin Price Tag",

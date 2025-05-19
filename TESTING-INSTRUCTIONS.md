@@ -33,7 +33,7 @@
 
 ### 4. API and Alarm Testing
 - [ ] Wait 1 minute after installation for first alarm
-- [ ] Check Network tab in Service Worker DevTools for API call to api.coindesk.com
+- [ ] Check Network tab in Service Worker DevTools for API call to api.coingecko.com
 - [ ] Wait 15 minutes for periodic refresh alarm
 - [ ] Verify new API call is made
 
@@ -61,7 +61,7 @@
 
 ### API calls failing
 - Check network connectivity
-- Verify CoinDesk API is accessible
+- Verify CoinGecko API is accessible
 - Check for CORS errors in console
 
 ## Logging Issues

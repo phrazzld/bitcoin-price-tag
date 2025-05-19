@@ -18,7 +18,7 @@ export const REFRESH_ALARM_NAME = 'btc_price_refresh';
  * Default time-to-live for cached price data in milliseconds (15 minutes)
  * 
  * This defines how long cached price data should be considered valid before requiring a refresh.
- * The value balances data freshness with minimizing API calls to the CoinDesk API.
+ * The value balances data freshness with minimizing API calls to the CoinGecko API.
  * 
  * Current value: 15 minutes (900,000 milliseconds)
  * 

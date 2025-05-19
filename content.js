@@ -1,3 +1,12 @@
+/**
+ * This file is from the Manifest V2 version of the extension (legacy).
+ * 
+ * The current extension uses Manifest V3 with TypeScript modules
+ * located in src/content-script/.
+ * 
+ * This file is kept for reference but is not used in the current build.
+ */
+
 let btcPrice;
 let satPrice;
 
@@ -48,101 +57,131 @@ const friendlySuffixes = [
   [12, 11, 'k BTC'],
   [14, 14, 'M BTC'],
 ]
-function round(x, y) { return Math.round(x * 10 ** y) / 10 ** y }
-const valueFriendly = (fiatAmount) => {
-  let sats = Math.floor(fiatAmount / satPrice)
-  let m = String(sats).length
-  let si = friendlySuffixes.findIndex(([l]) => l >= m)
-  si = si < 0 ? friendlySuffixes.length : si
-  let [l, d, suffix] = friendlySuffixes[si - 1]
-  let roundDigits = Math.max(0, 3 - (m - d))
-  return round(sats / 10 ** d, roundDigits).toLocaleString() + suffix
+
+const valueInFriendlyUnits = (fiatAmount) => {
+  const magnitude = Math.log10(fiatAmount / satPrice);
+  let suffix = '';
+
+  for (let i = friendlySuffixes.length - 1; i >= 0; i--) {
+    const row = friendlySuffixes[i];
+    if (magnitude >= row[0]) {
+      suffix = row[2];
+      const denomMag = row[1];
+      if (denomMag === 8) {
+        const value = fiatAmount / btcPrice;
+        return value.toFixed(2).toLocaleString() + suffix;
+      } else {
+        const denom = Math.pow(10, denomMag);
+        const value = fiatAmount / satPrice / denom;
+        return value.toFixed(2).toLocaleString() + suffix;
+      }
+    }
+  }
+  return valueInSats(fiatAmount) + suffix;
 }
 
-// Build text element in the form of: original (conversion)
-const makeSnippet = (sourceElement, fiatAmount) => {
-  /*if (fiatAmount >= btcPrice) {
-    return `${sourceElement} (${valueInBtc(fiatAmount)} BTC) `;
-  } else {
-    return `${sourceElement} (${valueInSats(fiatAmount)} sats) `;
-  }*/
-  return `${sourceElement} (${valueFriendly(fiatAmount)}) `
-};
+const dollarAmount = (matchingText) => {
+  let dollars = matchingText;
+  dollars = dollars.replace(/\$/g, "");
+  dollars = dollars.replace(/USD/gi, "");
+  dollars = dollars.replace(/t(r?illion)?/gi, " trillion");
+  dollars = dollars.replace(/b(n|illion)?/gi, " billion");
+  dollars = dollars.replace(/m+n?/gi, " million");
+  dollars = dollars.replace(/k(n)?/gi, " thousand");
+  dollars = dollars.replace(/\s+/g, " ");
+  dollars = dollars.trim();
 
-const getMultiplier = (e) => {
-  let multiplier = 1;
-  if (e.toLowerCase().indexOf("t") > -1) {
-    multiplier = ONE_TRILLION;
-  } else if (e.toLowerCase().indexOf("b") > -1) {
-    multiplier = ONE_BILLION;
-  } else if (e.toLowerCase().indexOf("m") > -1) {
-    multiplier = ONE_MILLION;
-  } else if (e.toLowerCase().indexOf("k") > -1) {
-    multiplier = ONE_THOUSAND;
+  // Crude approach to ignoring simple year values like "2027"
+  if (!dollars.includes(",") && !dollars.includes(" ") && !dollars.includes(".")
+      && dollars.length == 4 && (dollars.startsWith("19") || dollars.startsWith("20"))) {
+    return 0;
   }
-  return multiplier;
+
+  const sections = dollars.split(" ");
+  if (sections.length == 2) {
+    const illionsMapping = {
+      trillion: ONE_TRILLION,
+      billion: ONE_BILLION,
+      million: ONE_MILLION,
+      thousand: ONE_THOUSAND,
+    };
+    dollars = (
+      parseFloat(sections[0].replace(",", "")) * illionsMapping[sections[1]]
+    ).toString();
+  }
+
+  return parseFloat(dollars.replace(/,/g, ""));
 };
 
-const convert = (textNode) => {
-  let sourceMoney;
-  // Currency indicator preceding amount
-  let matchPattern = buildPrecedingMatchPattern();
-  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
-    let multiplier = getMultiplier(e);
-    sourceMoney = parseFloat(e.replace(/[^\d.]/g, "")).toFixed(2);
-    return makeSnippet(e, sourceMoney * multiplier);
-  });
-  // Currency indicator concluding amount
-  matchPattern = buildConcludingMatchPattern();
-  textNode.nodeValue = textNode.nodeValue.replace(matchPattern, function (e) {
-    let multiplier = getMultiplier(e);
-    sourceMoney = parseFloat(e.replace(/[^\d.]/g, "")).toFixed(2);
-    return makeSnippet(e, sourceMoney * multiplier);
-  });
+const replacePrecedingMatches = (text) => {
+  let replacedText = text;
+  const matchPattern = buildPrecedingMatchPattern();
+  const matches = text.match(matchPattern) || [];
+
+  for (let match of matches) {
+    let dollars = dollarAmount(match);
+    // Skip text that just matches years
+    if (dollars == 0) {
+      continue;
+    }
+    if (dollars < 0.5) {
+      replacedText = replacedText.replace(match, match + " (" + valueInSats(dollars) + " sats)");
+    } else {
+      replacedText = replacedText.replace(match, match + " (" + valueInFriendlyUnits(dollars) + ")");
+    }
+  }
+
+  return replacedText;
 };
 
-// Credit to t-j-crowder on StackOverflow for this walk function
-// http://bit.ly/1o47R7V
+const replaceConcludingMatches = (text) => {
+  let replacedText = text;
+  const matchPattern = buildConcludingMatchPattern();
+  const matches = text.match(matchPattern) || [];
+
+  for (let match of matches) {
+    let dollars = dollarAmount(match);
+    // Skip text that just matches years
+    if (dollars == 0) {
+      continue;
+    }
+    if (dollars < 0.5) {
+      replacedText = replacedText.replace(match, match + " (" + valueInSats(dollars) + " sats)");
+    } else {
+      replacedText = replacedText.replace(match, match + " (" + valueInFriendlyUnits(dollars) + ")");
+    }
+  }
+
+  return replacedText;
+};
+
+const convert = (node) => {
+  let text = node.nodeValue;
+  text = replacePrecedingMatches(text);
+  text = replaceConcludingMatches(text);
+  node.nodeValue = text;
+};
+
 const walk = (node) => {
-  let child, next, price;
+  let child, next;
 
   switch (node.nodeType) {
-    case 1: // Element
-    case 9: // Document
-    case 11: // Document fragment
+    case 1: // Element node
+    case 9: // Document node
+    case 11: // Document fragment node
+      // <hnilica> - The Amazon-specific hack is designed to avoid
+      // mangling the price / text in Amazon's "Add to Cart" dialog.
+      if (
+        node.className &&
+        (node.className.includes("a-fixed") ||
+          node.className.includes("a-popover"))
+      ) {
+        break;
+      }
+      // </hnilica>
       child = node.firstChild;
       while (child) {
         next = child.nextSibling;
-
-        // Check if child is Amazon display price
-        const classes = child.classList;
-        if (
-          classes &&
-          ["sx-price-currency", "a-price-symbol"].includes(classes.value)
-        ) {
-          price = child.firstChild.nodeValue.toString();
-          child.firstChild.nodeValue = null;
-        } else if (
-          classes &&
-          ["sx-price-whole", "a-price-whole", "a-price-decimal"].includes(
-            classes.value
-          )
-        ) {
-          price +=
-            child.firstChild.nodeValue.toString() +
-            "." +
-            next.firstChild.nodeValue.toString();
-          child.firstChild.nodeValue = price;
-          convert(child.firstChild);
-          child = next;
-        } else if (
-          classes &&
-          ["sx-price-fractional", "a-price-fraction"].includes(classes.value)
-        ) {
-          child.firstChild.nodeValue = null;
-          price = null;
-        }
-
         walk(child);
         child = next;
       }
@@ -155,7 +194,8 @@ const walk = (node) => {
 
 // Run on page load
 (window.setTimeout(() => {
-  // Get current price of bitcoin in USD
+  // LEGACY: This used the CoinDesk API directly
+  // The current V3 extension uses CoinGecko API via service worker
   fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json")
     .then((response) => response.json())
     .then((data) => {

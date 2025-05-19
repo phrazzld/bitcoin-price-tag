@@ -31,7 +31,7 @@
 **Expected:** Price data is fetched after 1 minute (initial alarm delay)
 **Test Steps:**
 1. Wait 1 minute after installation
-2. Monitor Network tab for API calls to api.coindesk.com
+2. Monitor Network tab for API calls to api.coingecko.com
 3. Check console logs for price fetch confirmation
 
 **Expected Logs:**
