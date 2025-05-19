@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fetchBtcPrice, ApiError, ApiErrorCode } from './api';
-import { CoinDeskApiResponse } from '../common/types';
+import { CoinGeckoApiResponse } from '../common/types';
 import { Logger } from '../shared/logger';
 
 // Mock the global fetch function
@@ -43,20 +43,9 @@ describe('api.ts', () => {
   });
 
   describe('fetchBtcPrice', () => {
-    const validApiResponse: CoinDeskApiResponse = {
-      time: {
-        updated: 'Dec 6, 2023 10:00:00 UTC',
-        updatedISO: '2023-12-06T10:00:00+00:00',
-        updateduk: 'Dec 6, 2023 at 10:00 GMT'
-      },
-      disclaimer: 'This data was produced from the CoinDesk Bitcoin Price Index',
-      bpi: {
-        USD: {
-          code: 'USD',
-          rate: '43,000.00',
-          description: 'United States Dollar',
-          rate_float: 43000.00
-        }
+    const validApiResponse: CoinGeckoApiResponse = {
+      bitcoin: {
+        usd: 43000.00
       }
     };
 
@@ -69,22 +58,22 @@ describe('api.ts', () => {
 
         const result = await fetchBtcPrice(mockLogger);
 
-        expect(mockFetch).toHaveBeenCalledWith('https://api.coindesk.com/v1/bpi/currentprice/USD.json');
+        expect(mockFetch).toHaveBeenCalledWith('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
         expect(result).toEqual({
           usdRate: 43000.00,
-          satoshiRate: 0.00043,
+          satoshiRate: 43000.00 / 100_000_000,
           fetchedAt: expect.any(Number),
-          source: 'CoinDesk'
+          source: 'CoinGecko'
         });
         
         // Verify logging calls
         expect(mockLogger.info).toHaveBeenCalledWith('Fetching BTC price', {
           attempt: 1,
-          url: 'https://api.coindesk.com/v1/bpi/currentprice/USD.json'
+          url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
         });
         expect(mockLogger.info).toHaveBeenCalledWith('API call successful', {
           status: undefined, // mockResolvedValue doesn't set status
-          url: 'https://api.coindesk.com/v1/bpi/currentprice/USD.json'
+          url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
         });
         expect(mockLogger.debug).toHaveBeenCalledWith('Price data successfully fetched', {
           usdRate: 43000,
@@ -102,7 +91,7 @@ describe('api.ts', () => {
         });
 
         try {
-          await fetchBtcPrice();
+          await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
@@ -119,7 +108,7 @@ describe('api.ts', () => {
         });
 
         try {
-          await fetchBtcPrice();
+          await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
@@ -128,9 +117,9 @@ describe('api.ts', () => {
         }
       });
 
-      it('should throw ApiError for missing time property', async () => {
+      it('should throw ApiError for missing bitcoin property', async () => {
         const invalidResponse = {
-          bpi: validApiResponse.bpi
+          // missing bitcoin property
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -139,18 +128,18 @@ describe('api.ts', () => {
         });
 
         try {
-          await fetchBtcPrice();
+          await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
           expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
-          expect((error as ApiError).message).toBe('Invalid API response: missing required properties');
+          expect((error as ApiError).message).toBe('Invalid API response: missing bitcoin data');
         }
       });
 
-      it('should throw ApiError for missing bpi property', async () => {
+      it('should throw ApiError for invalid bitcoin object', async () => {
         const invalidResponse = {
-          time: validApiResponse.time
+          bitcoin: "not an object"
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -159,46 +148,19 @@ describe('api.ts', () => {
         });
 
         try {
-          await fetchBtcPrice();
+          await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
           expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
-          expect((error as ApiError).message).toBe('Invalid API response: missing required properties');
+          expect((error as ApiError).message).toBe('Invalid API response: bitcoin must be an object');
         }
       });
 
       it('should throw ApiError for missing USD data', async () => {
         const invalidResponse = {
-          time: validApiResponse.time,
-          bpi: {}
-        };
-
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => invalidResponse
-        });
-
-        try {
-          await fetchBtcPrice();
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(ApiError);
-          expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
-          expect((error as ApiError).message).toBe('Invalid API response: missing USD data');
-        }
-      });
-
-      it('should throw ApiError for missing rate_float', async () => {
-        const invalidResponse = {
-          time: validApiResponse.time,
-          bpi: {
-            USD: {
-              code: 'USD',
-              rate: '43,000.00',
-              description: 'United States Dollar'
-              // Missing rate_float
-            }
+          bitcoin: {
+            // missing usd property
           }
         };
 
@@ -208,25 +170,19 @@ describe('api.ts', () => {
         });
 
         try {
-          await fetchBtcPrice();
+          await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
           expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
-          expect((error as ApiError).message).toBe('Invalid API response: missing or invalid rate_float');
+          expect((error as ApiError).message).toBe('Invalid API response: usd must be a number');
         }
       });
 
-      it('should throw ApiError for non-numeric rate_float', async () => {
+      it('should throw ApiError for non-numeric USD value', async () => {
         const invalidResponse = {
-          time: validApiResponse.time,
-          bpi: {
-            USD: {
-              code: 'USD',
-              rate: '43,000.00',
-              description: 'United States Dollar',
-              rate_float: '43000' // String instead of number
-            }
+          bitcoin: {
+            usd: "not a number"
           }
         };
 
@@ -236,44 +192,68 @@ describe('api.ts', () => {
         });
 
         try {
-          await fetchBtcPrice();
+          await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
           expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
-          expect((error as ApiError).message).toBe('Invalid API response: missing or invalid rate_float');
+          expect((error as ApiError).message).toBe('Invalid API response: usd must be a number');
+        }
+      });
+
+      it('should throw ApiError for non-positive USD value', async () => {
+        const invalidResponse = {
+          bitcoin: {
+            usd: 0
+          }
+        };
+
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => invalidResponse
+        });
+
+        try {
+          await fetchBtcPrice(mockLogger);
+          expect.fail('Should have thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
+          expect((error as ApiError).message).toBe('Invalid API response: USD price must be positive');
         }
       });
 
       it('should handle unknown errors', async () => {
-        mockFetch.mockRejectedValueOnce(new Error('Some unexpected error'));
+        const unknownError = new Error('Unknown error');
+        mockFetch.mockRejectedValueOnce(unknownError);
 
         try {
-          await fetchBtcPrice();
+          await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
           expect((error as ApiError).code).toBe(ApiErrorCode.UNKNOWN_ERROR);
-          expect((error as ApiError).message).toBe('Unexpected error: Some unexpected error');
+          expect((error as ApiError).message).toBe('Unexpected error: Unknown error');
         }
       });
 
       it('should handle non-Error unknown errors', async () => {
-        mockFetch.mockRejectedValueOnce('string error');
+        mockFetch.mockRejectedValueOnce('String error');
 
         try {
-          await fetchBtcPrice();
+          await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
           expect((error as ApiError).code).toBe(ApiErrorCode.UNKNOWN_ERROR);
-          expect((error as ApiError).message).toBe('Unexpected error: string error');
+          expect((error as ApiError).message).toBe('Unexpected error: String error');
         }
       });
     });
 
     describe('retry logic', () => {
       beforeEach(() => {
+        // Need to use fake timers for retry tests
         vi.useFakeTimers();
       });
 
@@ -282,51 +262,56 @@ describe('api.ts', () => {
       });
 
       it('should retry on HTTP 429 (Too Many Requests)', async () => {
-        // First two attempts fail with 429, third succeeds
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: false,
-            status: 429,
-            statusText: 'Too Many Requests'
-          })
-          .mockResolvedValueOnce({
-            ok: false,
-            status: 429,
-            statusText: 'Too Many Requests'
-          })
-          .mockResolvedValueOnce({
-            ok: true,
-            json: async () => validApiResponse
-          });
+        // First attempt: 429 error
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          statusText: 'Too Many Requests'
+        });
 
-        const promise = fetchBtcPrice();
+        // Second attempt: success
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => validApiResponse
+        });
 
-        // Advance timers for retries
-        await vi.advanceTimersByTimeAsync(1000); // First retry
-        await vi.advanceTimersByTimeAsync(2000); // Second retry
-
+        const promise = fetchBtcPrice(mockLogger);
+        
+        // Advance timer for first retry
+        await vi.advanceTimersByTimeAsync(1000);
+        
         const result = await promise;
 
-        expect(mockFetch).toHaveBeenCalledTimes(3);
+        expect(mockFetch).toHaveBeenCalledTimes(2);
         expect(result.usdRate).toBe(43000);
+
+        // Verify retry logging
+        expect(mockLogger.info).toHaveBeenCalledWith('Retrying API call', {
+          attempt: 2,
+          delayMs: 1000,
+          url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+          errorCode: ApiErrorCode.HTTP_ERROR,
+          httpStatus: 429
+        });
       });
 
       it('should retry on HTTP 500+ errors', async () => {
-        // First attempt fails with 500, second succeeds
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: false,
-            status: 500,
-            statusText: 'Internal Server Error'
-          })
-          .mockResolvedValueOnce({
-            ok: true,
-            json: async () => validApiResponse
-          });
+        // First attempt: 503 error
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable'
+        });
 
-        const promise = fetchBtcPrice();
+        // Second attempt: success
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => validApiResponse
+        });
+
+        const promise = fetchBtcPrice(mockLogger);
         
-        // Advance timer for retry
+        // Advance timer for first retry
         await vi.advanceTimersByTimeAsync(1000);
         
         const result = await promise;
@@ -336,17 +321,18 @@ describe('api.ts', () => {
       });
 
       it('should retry on network errors', async () => {
-        // First attempt fails with network error, second succeeds
-        mockFetch
-          .mockRejectedValueOnce(new TypeError('Network failure'))
-          .mockResolvedValueOnce({
-            ok: true,
-            json: async () => validApiResponse
-          });
+        // First attempt: network error (TypeError for fetch failures)
+        mockFetch.mockRejectedValueOnce(new TypeError('Network failure'));
 
-        const promise = fetchBtcPrice();
+        // Second attempt: success
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => validApiResponse
+        });
+
+        const promise = fetchBtcPrice(mockLogger);
         
-        // Advance timer for retry
+        // Advance timer for first retry
         await vi.advanceTimersByTimeAsync(1000);
         
         const result = await promise;
@@ -363,111 +349,105 @@ describe('api.ts', () => {
         });
 
         try {
-          await fetchBtcPrice();
+          await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
-          expect(mockFetch).toHaveBeenCalledTimes(1);
+          expect((error as ApiError).code).toBe(ApiErrorCode.HTTP_ERROR);
+          expect(mockFetch).toHaveBeenCalledTimes(1); // No retry
         }
       });
 
       it('should respect max retry attempts', async () => {
-        // All attempts fail
-        mockFetch
-          .mockResolvedValue({
-            ok: false,
-            status: 429,
-            statusText: 'Too Many Requests'
-          });
+        // All attempts fail with 503
+        mockFetch.mockResolvedValue({
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable'
+        });
 
-        const promise = fetchBtcPrice();
-        
-        // Advance timers for all retry attempts
-        await vi.advanceTimersByTimeAsync(1000); // First retry
-        await vi.advanceTimersByTimeAsync(2000); // Second retry
-        await vi.advanceTimersByTimeAsync(4000); // Third retry
-        
         try {
-          await promise;
+          await vi.runAllTimersAsync();
+          await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
-          expect(mockFetch).toHaveBeenCalledTimes(4); // Initial + 3 retries
+          expect((error as ApiError).code).toBe(ApiErrorCode.HTTP_ERROR);
+          expect(mockFetch).toHaveBeenCalledTimes(3); // MAX_RETRY_ATTEMPTS
         }
-      });
+      }, 10000);
 
       it('should use exponential backoff for retries', async () => {
+        // Mock setTimeout before the test
+        const originalSetTimeout = global.setTimeout;
+        const delays: number[] = [];
+        global.setTimeout = vi.fn((callback: any, delay?: number) => {
+          delays.push(delay || 0);
+          return originalSetTimeout(callback, 0);
+        }) as any;
+
         // All attempts fail
-        mockFetch
-          .mockResolvedValue({
-            ok: false,
-            status: 500,
-            statusText: 'Server Error'
-          });
+        mockFetch.mockResolvedValue({
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable'
+        });
 
-        const promise = fetchBtcPrice();
-
-        // Advance timers to trigger retries with exponential backoff
-        await vi.advanceTimersByTimeAsync(1000); // First retry (1s delay)
-        await vi.advanceTimersByTimeAsync(2000); // Second retry (2s delay)
-        await vi.advanceTimersByTimeAsync(4000); // Third retry (4s delay)
-
+        const promise = fetchBtcPrice(mockLogger);
+        
+        // Advance timer for all retries
+        await vi.runAllTimersAsync();
+        
         try {
           await promise;
           expect.fail('Should have thrown');
         } catch (error) {
-          expect(error).toBeInstanceOf(ApiError);
-          expect(mockFetch).toHaveBeenCalledTimes(4);
+          // Expected to throw
         }
+
+        // Verify exponential backoff: 1000ms, 2000ms
+        expect(delays.slice(0, 2)).toEqual([1000, 2000]);
+        
+        // Restore original setTimeout
+        global.setTimeout = originalSetTimeout;
       });
 
       it('should throw ApiError for network errors after exhausting retries', async () => {
-        // Mock fetch to always fail with network error
-        mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
-
-        const promise = fetchBtcPrice();
-
-        // Advance timers for all retry attempts
-        await vi.advanceTimersByTimeAsync(1000); // First retry
-        await vi.advanceTimersByTimeAsync(2000); // Second retry
-        await vi.advanceTimersByTimeAsync(4000); // Third retry
+        // All attempts fail with network error (TypeError)
+        mockFetch.mockRejectedValue(new TypeError('Network failure'));
 
         try {
-          await promise;
+          await vi.runAllTimersAsync();
+          await fetchBtcPrice(mockLogger);
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
           expect((error as ApiError).code).toBe(ApiErrorCode.NETWORK_ERROR);
-          expect((error as ApiError).message).toBe('Network error: Failed to fetch');
-          // Should have tried 4 times (initial + 3 retries)
-          expect(mockFetch).toHaveBeenCalledTimes(4);
+          expect((error as ApiError).message).toBe('Network error: Network failure');
+          expect(mockFetch).toHaveBeenCalledTimes(3); // MAX_RETRY_ATTEMPTS
         }
-      });
+      }, 10000);
     });
 
     describe('rate calculations', () => {
       it('should correctly calculate satoshi rate', async () => {
         const btcPrice = 50000;
-        const response = {
-          ...validApiResponse,
-          bpi: {
-            USD: {
-              ...validApiResponse.bpi.USD,
-              rate_float: btcPrice
-            }
+        const apiResponse: CoinGeckoApiResponse = {
+          bitcoin: {
+            usd: btcPrice
           }
         };
 
         mockFetch.mockResolvedValueOnce({
           ok: true,
-          json: async () => response
+          json: async () => apiResponse
         });
 
-        const result = await fetchBtcPrice();
+        const result = await fetchBtcPrice(mockLogger);
 
         expect(result.usdRate).toBe(btcPrice);
-        expect(result.satoshiRate).toBe(btcPrice / 100000000);
-        expect(result.satoshiRate).toBe(0.0005);
+        expect(result.satoshiRate).toBe(btcPrice / 100_000_000);
+        expect(result.satoshiRate).toBe(0.0005); // 50000 / 100000000
       });
     });
   });

@@ -49,7 +49,7 @@
     - **Depends‑on:** T001
 
 ## API Unit Tests
-- [ ] **T004 · Test · P0: Align `src/service-worker/api.test.ts` with CoinGecko API and mocks**
+- [x] **T004 · Test · P0: Align `src/service-worker/api.test.ts` with CoinGecko API and mocks**
     - **Context:** PLAN.md > Detailed Build Steps > 3. Update API Unit Tests (`src/service-worker/api.test.ts`)
     - **Action:**
         1. Ensure API URL in tests uses the production constant from `src/service-worker/api.ts` for the CoinGecko endpoint.
