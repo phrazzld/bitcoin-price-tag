@@ -60,7 +60,7 @@ The migration to Manifest V3 involves adapting to fundamental architectural chan
 #### E. Content Script Direct Fetch
 - **Summary:** Keep fetch in content script, minimal Service Worker
 - **Implementation:**
-  - Configure host_permissions for api.coindesk.com
+  - Configure host_permissions for api.coingecko.com
   - Keep fetch logic in content.js
   - Minimal Service Worker implementation
 - **Advantages:** Minimal architectural change
