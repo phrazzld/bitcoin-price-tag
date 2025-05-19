@@ -3,13 +3,14 @@
  * Used to simulate external API calls in tests
  */
 
-import type { CoinDeskApiResponse } from '../../src/common/types';
+import type { CoinGeckoApiResponse } from '../../src/common/types';
 
 export interface FetchMockConfig {
   defaultPrice?: number;
   shouldFail?: boolean;
   failureMessage?: string;
   responseDelay?: number;
+  statusCode?: number;
 }
 
 export function createFetchMock(config: FetchMockConfig = {}) {
@@ -18,6 +19,7 @@ export function createFetchMock(config: FetchMockConfig = {}) {
     shouldFail = false,
     failureMessage = 'Network error',
     responseDelay = 0,
+    statusCode = 500,
   } = config;
 
   return vi.fn().mockImplementation(async (url: string) => {
@@ -27,25 +29,20 @@ export function createFetchMock(config: FetchMockConfig = {}) {
     }
 
     if (shouldFail) {
-      throw new Error(failureMessage);
+      // Return appropriate HTTP response for error scenarios
+      return {
+        ok: false,
+        status: statusCode,
+        json: () => Promise.reject(new Error(failureMessage)),
+        text: () => Promise.resolve(failureMessage),
+      };
     }
 
-    // Simulate CoinDesk API response
-    if (url.includes('api.coindesk.com')) {
-      const response: CoinDeskApiResponse = {
-        time: {
-          updated: 'Jan 1, 2024 00:00:00 UTC',
-          updatedISO: '2024-01-01T00:00:00+00:00',
-          updateduk: 'Jan 1, 2024 at 00:00 GMT'
-        },
-        disclaimer: 'This data was produced from the CoinDesk Bitcoin Price Index...',
-        bpi: {
-          USD: {
-            code: 'USD',
-            rate: defaultPrice.toLocaleString('en-US'),
-            description: 'United States Dollar',
-            rate_float: defaultPrice
-          }
+    // Simulate CoinGecko API response
+    if (url.includes('api.coingecko.com')) {
+      const response: CoinGeckoApiResponse = {
+        bitcoin: {
+          usd: defaultPrice
         }
       };
 
@@ -71,6 +68,22 @@ export function mockFetchPrice(price: number) {
   return createFetchMock({ defaultPrice: price });
 }
 
-export function mockFetchError(message = 'Network error') {
-  return createFetchMock({ shouldFail: true, failureMessage: message });
+export function mockFetchError(message = 'Network error', statusCode = 500) {
+  return createFetchMock({ shouldFail: true, failureMessage: message, statusCode });
+}
+
+/**
+ * Mock CoinGecko API specific error responses
+ */
+export function mockCoinGeckoError(errorType: 'rate-limit' | 'unauthorized' | 'not-found' | 'bad-request' | 'server-error') {
+  const errorConfig = {
+    'rate-limit': { message: 'API rate limit exceeded', statusCode: 429 },
+    'unauthorized': { message: 'Invalid API key', statusCode: 403 },
+    'not-found': { message: 'Resource not found', statusCode: 404 },
+    'bad-request': { message: 'Invalid request parameters', statusCode: 400 },
+    'server-error': { message: 'Internal server error', statusCode: 500 },
+  };
+
+  const { message, statusCode } = errorConfig[errorType];
+  return mockFetchError(message, statusCode);
 }

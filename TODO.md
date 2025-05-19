@@ -36,7 +36,7 @@
     - **Depends‑on:** none
 
 ## Test Mocks
-- [ ] **T003 · Refactor · P0: Update `tests/mocks/fetch.ts` to simulate CoinGecko API**
+- [x] **T003 · Refactor · P0: Update `tests/mocks/fetch.ts` to simulate CoinGecko API**
     - **Context:** PLAN.md > Detailed Build Steps > 2. Update Mock Fetch Implementation (`tests/mocks/fetch.ts`)
     - **Action:**
         1. Replace `CoinDeskApiResponse` type usage with `CoinGeckoApiResponse` (imported from `src/common/types.ts`).
