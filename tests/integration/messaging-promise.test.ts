@@ -101,7 +101,8 @@ describe('Promise-based Messaging Test', () => {
       if (message.type === 'PRICE_REQUEST') {
         // Simulate async response
         setTimeout(() => {
-          sendResponse({
+          // Send the response directly instead of through the mock Chrome
+          const response = {
             requestId: message.requestId,
             type: 'PRICE_RESPONSE',
             status: 'success',
@@ -109,10 +110,19 @@ describe('Promise-based Messaging Test', () => {
               usdRate: 50000,
               satoshiRate: 0.00002,
               fetchedAt: Date.now(),
-              source: 'CoinDesk',
+              source: 'CoinGecko',
             },
             timestamp: Date.now(),
-          });
+          };
+          
+          sendResponse(response);
+          
+          // Also trigger any registered message listeners with the response
+          // This is needed to simulate Chrome's behavior where message listeners
+          // are triggered for all responses
+          for (const listener of messageListeners) {
+            listener(response, sender, () => {});
+          }
         }, 10);
         return true; // Will respond asynchronously
       }
