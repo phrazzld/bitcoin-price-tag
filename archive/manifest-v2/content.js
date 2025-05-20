@@ -1,10 +1,11 @@
 /**
+ * ARCHIVED: Manifest V2 Content Script
+ * 
  * This file is from the Manifest V2 version of the extension (legacy).
+ * It is kept for historical reference only and is not used in the current build.
  * 
  * The current extension uses Manifest V3 with TypeScript modules
  * located in src/content-script/.
- * 
- * This file is kept for reference but is not used in the current build.
  */
 
 let btcPrice;
@@ -58,26 +59,17 @@ const friendlySuffixes = [
   [14, 14, 'M BTC'],
 ]
 
-const valueInFriendlyUnits = (fiatAmount) => {
-  const magnitude = Math.log10(fiatAmount / satPrice);
-  let suffix = '';
+function round(x, y) { return Math.round(x * 10 ** y) / 10 ** y }
 
-  for (let i = friendlySuffixes.length - 1; i >= 0; i--) {
-    const row = friendlySuffixes[i];
-    if (magnitude >= row[0]) {
-      suffix = row[2];
-      const denomMag = row[1];
-      if (denomMag === 8) {
-        const value = fiatAmount / btcPrice;
-        return value.toFixed(2).toLocaleString() + suffix;
-      } else {
-        const denom = Math.pow(10, denomMag);
-        const value = fiatAmount / satPrice / denom;
-        return value.toFixed(2).toLocaleString() + suffix;
-      }
-    }
-  }
-  return valueInSats(fiatAmount) + suffix;
+// Original implementation of valueFriendly (renamed from older version)
+const valueFriendly = (fiatAmount) => {
+  let sats = Math.floor(fiatAmount / satPrice)
+  let m = String(sats).length
+  let si = friendlySuffixes.findIndex(([l]) => l >= m)
+  si = si < 0 ? friendlySuffixes.length : si
+  let [l, d, suffix] = friendlySuffixes[si - 1]
+  let roundDigits = Math.max(0, 3 - (m - d))
+  return round(sats / 10 ** d, roundDigits).toLocaleString() + suffix
 }
 
 const dollarAmount = (matchingText) => {
@@ -127,7 +119,7 @@ const replacePrecedingMatches = (text) => {
     if (dollars < 0.5) {
       replacedText = replacedText.replace(match, match + " (" + valueInSats(dollars) + " sats)");
     } else {
-      replacedText = replacedText.replace(match, match + " (" + valueInFriendlyUnits(dollars) + ")");
+      replacedText = replacedText.replace(match, match + " (" + valueFriendly(dollars) + ")");
     }
   }
 
@@ -148,7 +140,7 @@ const replaceConcludingMatches = (text) => {
     if (dollars < 0.5) {
       replacedText = replacedText.replace(match, match + " (" + valueInSats(dollars) + " sats)");
     } else {
-      replacedText = replacedText.replace(match, match + " (" + valueInFriendlyUnits(dollars) + ")");
+      replacedText = replacedText.replace(match, match + " (" + valueFriendly(dollars) + ")");
     }
   }
 
@@ -194,8 +186,8 @@ const walk = (node) => {
 
 // Run on page load
 (window.setTimeout(() => {
-  // LEGACY: This file previously used the CoinDesk API directly
-  // The current V3 extension uses CoinGecko API via service worker
+  // LEGACY: The original extension used the CoinDesk API
+  // Updated to use the CoinGecko API for consistency
   fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd")
     .then((response) => response.json())
     .then((data) => {

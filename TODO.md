@@ -89,7 +89,7 @@ This todo list addresses critical and high-severity issues identified in the cod
 
 ## File Organization & Documentation
 
-- [ ] **CR-05 · Refactor · P1: Organize legacy Manifest V2 files**
+- [x] **CR-05 · Refactor · P1: Organize legacy Manifest V2 files**
     - **Context:** Legacy Manifest V2 files (`content.js`, root `manifest.json`) are being actively modified despite being functionally unused.
     - **Action:**
         1. Create a dedicated `archive/manifest-v2/` directory
@@ -100,6 +100,13 @@ This todo list addresses critical and high-severity issues identified in the cod
         1. Legacy V2 files are moved to a dedicated directory
         2. Unnecessary functional changes are reverted
         3. Files are clearly documented as historical reference only
+    - **Results:**
+        1. Created `archive/manifest-v2/` directory with a detailed README.md
+        2. Moved `content.js` and `manifest.json` to the archive directory
+        3. Reverted the `valueInFriendlyUnits` function to the original `valueFriendly` implementation
+        4. Added clear documentation about the archival status in both files
+        5. Updated the main README.md to mention the archived files
+        6. Maintained references to CoinGecko API for consistency
     - **Depends‑on:** none
 
 - [ ] **CR-07 · Documentation · P2: Add TSDoc for exported mock helpers**

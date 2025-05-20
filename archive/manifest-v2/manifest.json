@@ -1,8 +1,8 @@
 {
-  "_comment": "This is the LEGACY Manifest V2 version. The current extension uses Manifest V3 (see src/manifest.json).",
-  
   "manifest_version": 2,
-
+  
+  "_comment": "ARCHIVED: This is the legacy Manifest V2 version, kept for historical reference only. The current extension uses Manifest V3 (see src/manifest.json).",
+  
   "name": "Bitcoin Price Tag",
   "short_name": "btc-price-tag",
   "description": "See prices in bitcoin, not fiat.",
