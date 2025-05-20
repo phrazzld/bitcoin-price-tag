@@ -12,7 +12,7 @@ export function createTestPriceData(overrides: Partial<PriceData> = {}): PriceDa
     usdRate: 50000,
     satoshiRate: 0.00002,
     fetchedAt: Date.now(),
-    source: 'CoinDesk',
+    source: 'CoinGecko',
     ...overrides,
   };
 }

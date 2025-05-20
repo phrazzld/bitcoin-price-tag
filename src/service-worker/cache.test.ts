@@ -55,7 +55,7 @@ describe('cache.ts', () => {
     usdRate: 43000,
     satoshiRate: 0.00043,
     fetchedAt: NOW - 1000,
-    source: 'CoinDesk'
+    source: 'CoinGecko'
   };
 
   const validCacheData: LocalStorageCache = {
@@ -181,7 +181,7 @@ describe('cache.ts', () => {
           usdRate: 'not a number', // Invalid type
           satoshiRate: 0.00043,
           fetchedAt: NOW - 1000,
-          source: 'CoinDesk'
+          source: 'CoinGecko'
         },
         cachedAt: NOW - 1000,
         version: 1
