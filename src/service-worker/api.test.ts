@@ -3,18 +3,32 @@ import { fetchBtcPrice, ApiError, ApiErrorCode } from './api';
 import { CoinGeckoApiResponse } from '../common/types';
 import { Logger } from '../shared/logger';
 
+// Mock the logger module
+vi.mock('../shared/logger', () => {
+  const mockLogger = {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    child: vi.fn().mockImplementation(() => mockLogger)
+  };
+
+  return {
+    createLogger: vi.fn().mockReturnValue(mockLogger),
+    logger: mockLogger,
+    Logger: vi.fn().mockImplementation(() => mockLogger)
+  };
+});
+
+// Import the mock after vi.mock
+import * as loggerModule from '../shared/logger';
+
 // Mock the global fetch function
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-// Create a mock logger
-const mockLogger: Logger = {
-  debug: vi.fn(),
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  child: vi.fn().mockImplementation(() => mockLogger)
-};
+// Use the mock logger from the mocked module
+const mockLogger = loggerModule.createLogger();
 
 describe('api.ts', () => {
   beforeEach(() => {
