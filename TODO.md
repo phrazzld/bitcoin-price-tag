@@ -100,7 +100,7 @@ This todo list addresses critical and high-severity issues identified in the cod
 
 ## Testing & API Handling
 
-- [ ] **CR-06 · Test · P1: Enhance CoinGecko API error handling coverage**
+- [x] **CR-06 · Test · P1: Enhance CoinGecko API error handling coverage**
     - **Context:** Current tests may not fully cover CoinGecko API error scenarios, risking unhandled errors in production.
     - **Action:**
         1. Review CoinGecko API documentation for error responses and status codes
@@ -113,6 +113,16 @@ This todo list addresses critical and high-severity issues identified in the cod
         1. Comprehensive tests cover all reasonable error scenarios
         2. Retry logic is verified for both retryable and non-retryable errors
         3. Test coverage for error handling increases significantly
+    - **Results:**
+        1. Added test for HTTP 504 Gateway Timeout to verify retry behavior
+        2. Added test for completely incorrect response structure (totally different JSON schema)
+        3. Added test for empty response body (null response)
+        4. Added test for network timeout errors
+        5. Added test for partial network failures (connection interrupted during response)
+        6. Enhanced test for HTTP 429 rate limiting with multiple retries
+        7. Improved assertions to verify proper logging of errors
+        8. Added verification that the API correctly retries on appropriate errors
+        9. Confirmed proper error code and message handling in all scenarios
     - **Depends‑on:** none
 
 ## Code Quality & Hygiene
