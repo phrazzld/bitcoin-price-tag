@@ -161,7 +161,7 @@ This todo list addresses critical and high-severity issues identified in the cod
 
 ## Code Quality & Hygiene
 
-- [ ] **CR-08 · Cleanup · P3: Shorten redundant comments in constants.ts**
+- [x] **CR-08 · Cleanup · P3: Shorten redundant comments in constants.ts**
     - **Context:** `constants.ts` contains overly verbose comments that add little value beyond what the code already expresses.
     - **Action:**
         1. Review comments in `src/common/constants.ts`
@@ -170,6 +170,12 @@ This todo list addresses critical and high-severity issues identified in the cod
     - **Done‑when:**
         1. No redundant comments remain in `constants.ts`
         2. File is more concise while maintaining clarity
+    - **Results:**
+        1. Shortened comments for all constants to be more concise
+        2. Removed redundant descriptions that restated what the code already expressed
+        3. Preserved the trade-off explanation for cache TTL as it explains the rationale
+        4. Reduced overall comment length by approximately 70% while maintaining clarity
+        5. Kept the @see reference to related files that provides valuable context
     - **Depends‑on:** none
 
 - [ ] **CR-09 · Cleanup · P3: Review source field in PriceData mocks**
