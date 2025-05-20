@@ -8,6 +8,20 @@
 - [x] **CL002 · Clarification · P2: Identify any other files or scripts (e.g., E2E test setup) hardcoding CoinDesk URLs/structures**
     - **Context:** PLAN.md > Open Questions ("Are there any other files or scripts... that might hardcode CoinDesk URLs...")
     - **Blocking?:** no (T008 includes a project-wide search as mitigation)
+    - **Findings:**
+        1. Core Files:
+           - content.js: Contains CoinDesk API URL and references
+        2. Test Files:
+           - src/service-worker/cache.test.ts: Contains references to 'CoinDesk' as source
+           - src/service-worker/index.test.ts: Contains CoinDesk API URL and bpi structure
+           - tests/integration/messaging-promise.test.ts: Contains CoinDesk references
+           - tests/integration/service-worker-persistence.test.ts: Multiple CoinDesk references
+           - tests/utils/test-helpers.ts: Uses CoinDesk in test data
+        3. Documentation:
+           - CLAUDE.md: Contains outdated CoinDesk references
+        4. Legitimate Documentation (historical context):
+           - API_MIGRATION.md, BACKLOG.md, TODO.md
+    - **Documentation:** Full findings documented in `REMAINING_COINDESK_REFERENCES.md`
 
 ## Core Type Definition
 - [x] **T001 · Refactor · P0: Define/Update `CoinGeckoApiResponse` type in `src/common/types.ts`**
@@ -125,4 +139,39 @@
     - **Status:**
         1. Build verification script passes successfully with exit code 0.
         2. Some tests are still failing and need to be updated to use CoinGecko API URLs and response formats.
-    - **Depends‑on:** T002, T005, T008
+    - **Depends‑on:** T002, T005, T008, T010
+
+- [ ] **T010 · Test · P1: Update remaining test files to use CoinGecko API**
+    - **Context:** Based on CL002 findings documented in `REMAINING_COINDESK_REFERENCES.md`
+    - **Action:**
+        1. Update `src/service-worker/cache.test.ts` to use "CoinGecko" as source.
+        2. Update `src/service-worker/index.test.ts` to use CoinGecko API URL and response format.
+        3. Update `tests/integration/messaging-promise.test.ts` to use CoinGecko references.
+        4. Update `tests/integration/service-worker-persistence.test.ts` to use CoinGecko API URL and format.
+        5. Update `tests/utils/test-helpers.ts` to use CoinGecko in test data helpers.
+        6. Verify all test files work with correct CoinGecko response format.
+    - **Done‑when:**
+        1. All test files use CoinGecko API URLs and response formats.
+        2. All tests pass successfully when run with `pnpm test`.
+    - **Depends‑on:** CL002, T003, T004
+
+- [ ] **T011 · Refactor · P2: Update legacy content.js file to use CoinGecko API**
+    - **Context:** Based on CL002 findings - legacy content.js still contains CoinDesk references
+    - **Action:**
+        1. Evaluate if the legacy content.js file is still needed; consider removing if obsolete.
+        2. If the file is needed, update it to use the CoinGecko API URL and response format.
+        3. Ensure any BPI-specific parsing logic is updated to work with CoinGecko response format.
+    - **Done‑when:**
+        1. Either the legacy content.js file is removed (if obsolete) or updated to use CoinGecko API.
+        2. No CoinDesk references remain in production code.
+    - **Depends‑on:** CL002
+
+- [ ] **T012 · Documentation · P2: Update CLAUDE.md to reference CoinGecko API**
+    - **Context:** Based on CL002 findings - CLAUDE.md contains outdated CoinDesk references
+    - **Action:**
+        1. Update CLAUDE.md to correctly state that the extension uses CoinGecko API (not CoinDesk).
+        2. Ensure all documentation is consistent in referencing CoinGecko as the data source.
+    - **Done‑when:**
+        1. CLAUDE.md is updated to correctly reference CoinGecko API.
+        2. All documentation consistently refers to CoinGecko as the price data source.
+    - **Depends‑on:** CL002
