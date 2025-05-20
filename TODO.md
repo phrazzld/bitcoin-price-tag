@@ -5,7 +5,7 @@
     - **Context:** PLAN.md > Open Questions ("Confirm the exact structure of the `CoinGeckoApiResponse` expected by `src/service-worker/api.ts`...")
     - **Blocking?:** yes (for T001)
 
-- [ ] **CL002 · Clarification · P2: Identify any other files or scripts (e.g., E2E test setup) hardcoding CoinDesk URLs/structures**
+- [x] **CL002 · Clarification · P2: Identify any other files or scripts (e.g., E2E test setup) hardcoding CoinDesk URLs/structures**
     - **Context:** PLAN.md > Open Questions ("Are there any other files or scripts... that might hardcode CoinDesk URLs...")
     - **Blocking?:** no (T008 includes a project-wide search as mitigation)
 
@@ -61,7 +61,7 @@
         3. TSDoc comments within the test file are updated.
     - **Depends‑on:** T001, T003
 
-- [ ] **T005 · Test · P1: Enhance `api.test.ts` coverage for CoinGecko specific scenarios**
+- [x] **T005 · Test · P1: Enhance `api.test.ts` coverage for CoinGecko specific scenarios**
     - **Context:** PLAN.md > Testing Strategy > Coverage Targets & Edge‑Case Notes; Risk Matrix (Test coverage gaps for new CoinGecko-specific error handling or data paths.)
     - **Action:**
         1. Review `api.test.ts`; add/update tests for successful CoinGecko response parsing (e.g., `response.bitcoin.usd`).
@@ -111,7 +111,7 @@
         1. Perform a final project-wide search for the specified terms to confirm zero relevant hits.
     - **Depends‑on:** T006, T007
 
-- [ ] **T009 · Test · P0: Execute full test suite and build verification script**
+- [~] **T009 · Test · P0: Execute full test suite and build verification script**
     - **Context:** PLAN.md > Detailed Build Steps > 6 (Verification and Cleanup - Run `pnpm test`, Run `pnpm build && node verify-build.js`)
     - **Action:**
         1. Run `pnpm test` (or equivalent) to execute all unit and integration tests.
@@ -122,4 +122,7 @@
     - **Verification:**
         1. Observe test runner output for 100% pass rate.
         2. Observe `verify-build.js` exit code 0 and success message in CI logs or local console.
+    - **Status:**
+        1. Build verification script passes successfully with exit code 0.
+        2. Some tests are still failing and need to be updated to use CoinGecko API URLs and response formats.
     - **Depends‑on:** T002, T005, T008
