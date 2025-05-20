@@ -7,7 +7,7 @@ const mockPriceData: PriceData = {
   usdRate: 30000,
   satoshiRate: 0.0003, // 30000 USD = 100M satoshis
   fetchedAt: Date.now(),
-  source: 'coindesk'
+  source: 'CoinGecko'
 };
 
 describe('dom.ts', () => {

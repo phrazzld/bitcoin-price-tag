@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Bitcoin Price Tag is a Chrome extension that automatically annotates fiat prices on web pages with their equivalent values in bitcoin. The extension uses the CoinDesk API to fetch the current price of bitcoin and converts detected USD prices to both BTC and satoshi units.
+Bitcoin Price Tag is a Chrome extension that automatically annotates fiat prices on web pages with their equivalent values in bitcoin. The extension uses the CoinGecko API to fetch the current price of bitcoin and converts detected USD prices to both BTC and satoshi units.
 
 ## Repository Structure
 
@@ -20,7 +20,7 @@ Bitcoin Price Tag is a Chrome extension that automatically annotates fiat prices
 
 - Chrome Extension API (manifest v2)
 - JavaScript for price detection and conversion
-- CoinDesk API for BTC price data
+- CoinGecko API for BTC price data
 
 ### Development Notes
 

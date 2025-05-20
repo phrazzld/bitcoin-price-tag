@@ -89,7 +89,7 @@ describe('Service Worker Persistence Integration Tests', () => {
         usdRate: 45000,
         satoshiRate: 0.00002222,
         fetchedAt: Date.now(),
-        source: 'CoinDesk',
+        source: 'CoinGecko',
       };
 
       // Set cached price
@@ -112,7 +112,7 @@ describe('Service Worker Persistence Integration Tests', () => {
           usdRate: 50000,
           satoshiRate: 0.00002,
           fetchedAt: timestamp,
-          source: 'CoinDesk',
+          source: 'CoinGecko',
         },
         cachedAt: timestamp,
         version: 1,
@@ -137,7 +137,7 @@ describe('Service Worker Persistence Integration Tests', () => {
             usdRate: 55000,
             satoshiRate: 0.00001818,
             fetchedAt: Date.now(),
-            source: 'CoinDesk',
+            source: 'CoinGecko',
           },
           cachedAt: Date.now(),
           version: 1,
@@ -211,20 +211,9 @@ describe('Service Worker Persistence Integration Tests', () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({
-          time: {
-            updated: 'Jan 17, 2025 15:18:00 UTC',
-            updatedISO: '2025-01-17T15:18:00+00:00',
-            updateduk: 'Jan 17, 2025 at 15:18 GMT'
-          },
-          disclaimer: 'This data was produced from the CoinDesk Bitcoin Price Index',
-          bpi: {
-            USD: {
-              code: 'USD',
-              rate: '60,000.00',
-              description: 'United States Dollar',
-              rate_float: 60000,
-            },
-          },
+          bitcoin: {
+            usd: 60000
+          }
         }),
       });
       global.fetch = mockFetch;
@@ -241,7 +230,7 @@ describe('Service Worker Persistence Integration Tests', () => {
       // Verify API was called
       expect(mockFetch).toHaveBeenCalled();
       const url = mockFetch.mock.calls[0][0];
-      expect(url).toContain('coindesk.com');
+      expect(url).toContain('coingecko.com');
 
       // Verify cache was updated
       expect(mockStorage.set).toHaveBeenCalledWith(
@@ -264,7 +253,7 @@ describe('Service Worker Persistence Integration Tests', () => {
             usdRate: 55000,
             satoshiRate: 0.00001818,
             fetchedAt: Date.now() - 60000,
-            source: 'CoinDesk',
+            source: 'CoinGecko',
           },
           cachedAt: Date.now() - 60000,
           version: 1,
@@ -290,7 +279,7 @@ describe('Service Worker Persistence Integration Tests', () => {
         usdRate: 48000,
         satoshiRate: 0.00002083,
         fetchedAt: Date.now() - 30000,
-        source: 'CoinDesk',
+        source: 'CoinGecko',
       };
 
       mockStorage.get.mockResolvedValue({
@@ -369,7 +358,7 @@ describe('Service Worker Persistence Integration Tests', () => {
           usdRate: 40000 + i * 1000,
           satoshiRate: 0.00002 + i * 0.00001,
           fetchedAt: Date.now() + i,
-          source: 'CoinDesk',
+          source: 'CoinGecko',
         };
         operations.push(cacheModule.setCachedPrice(priceData));
       }
