@@ -194,13 +194,13 @@ const walk = (node) => {
 
 // Run on page load
 (window.setTimeout(() => {
-  // LEGACY: This used the CoinDesk API directly
+  // LEGACY: This file previously used the CoinDesk API directly
   // The current V3 extension uses CoinGecko API via service worker
-  fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json")
+  fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd")
     .then((response) => response.json())
     .then((data) => {
       // Save BTC and sat prices to globals
-      btcPrice = parseFloat(data["bpi"]["USD"]["rate"].replace(",", ""));
+      btcPrice = data["bitcoin"]["usd"];
       satPrice = btcPrice / 100000000;
       // Read the page and annotate prices with their equivalent bitcoin values
       walk(document.body);

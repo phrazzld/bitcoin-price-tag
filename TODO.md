@@ -163,7 +163,7 @@
         2. These will be addressed in a separate task.
     - **Depends‑on:** CL002, T003, T004
 
-- [ ] **T011 · Refactor · P2: Update legacy content.js file to use CoinGecko API**
+- [x] **T011 · Refactor · P2: Update legacy content.js file to use CoinGecko API**
     - **Context:** Based on CL002 findings - legacy content.js still contains CoinDesk references
     - **Action:**
         1. Evaluate if the legacy content.js file is still needed; consider removing if obsolete.
@@ -172,6 +172,13 @@
     - **Done‑when:**
         1. Either the legacy content.js file is removed (if obsolete) or updated to use CoinGecko API.
         2. No CoinDesk references remain in production code.
+    - **Results:**
+        1. Determined that content.js is a legacy file kept for reference but not used in current builds.
+        2. Updated the file to use CoinGecko API for consistency and reference purposes:
+            - Changed API URL from CoinDesk to CoinGecko
+            - Updated JSON parsing to extract price from CoinGecko's format
+            - Updated comments to reflect CoinGecko instead of CoinDesk
+        3. Verified the changes are functionally correct by testing the data extraction logic.
     - **Depends‑on:** CL002
 
 - [ ] **T012 · Documentation · P2: Update CLAUDE.md to reference CoinGecko API**
