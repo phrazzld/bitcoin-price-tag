@@ -5,14 +5,69 @@
 
 import type { CoinGeckoApiResponse } from '../../src/common/types';
 
+/**
+ * Configuration options for creating a mock fetch implementation.
+ */
 export interface FetchMockConfig {
+  /**
+   * The default Bitcoin price in USD to use in mock responses.
+   * @default 50000
+   */
   defaultPrice?: number;
+  
+  /**
+   * Whether the mock should simulate a failed request.
+   * @default false
+   */
   shouldFail?: boolean;
+  
+  /**
+   * The error message to use when simulating a failed request.
+   * @default 'Network error'
+   */
   failureMessage?: string;
+  
+  /**
+   * The delay in milliseconds to simulate network latency.
+   * @default 0
+   */
   responseDelay?: number;
+  
+  /**
+   * The HTTP status code to return for failed requests.
+   * @default 500
+   */
   statusCode?: number;
 }
 
+/**
+ * Creates a mock implementation of the global fetch function for testing.
+ * 
+ * This function returns a Jest/Vitest mock function that simulates API responses
+ * and network conditions based on the provided configuration. It is primarily used
+ * to test code that makes HTTP requests without making actual network calls.
+ * 
+ * @param config - Configuration options for the mock behavior
+ * @returns A mock function that implements the fetch API interface
+ * 
+ * @example
+ * // Basic usage with default settings (successful response with BTC price of 50000)
+ * global.fetch = createFetchMock();
+ * 
+ * @example
+ * // Configure a failed request with a specific error
+ * global.fetch = createFetchMock({
+ *   shouldFail: true,
+ *   failureMessage: 'Connection timeout',
+ *   statusCode: 504
+ * });
+ * 
+ * @example
+ * // Simulate network latency
+ * global.fetch = createFetchMock({
+ *   responseDelay: 100 // 100ms delay
+ * });
+ */
 export function createFetchMock(config: FetchMockConfig = {}) {
   const {
     defaultPrice = 50000,
@@ -64,16 +119,65 @@ export function createFetchMock(config: FetchMockConfig = {}) {
   });
 }
 
+/**
+ * Creates a mock fetch implementation that returns a successful response with a
+ * specified Bitcoin price.
+ * 
+ * This is a convenience wrapper around createFetchMock() for the common use case
+ * of mocking a successful price response.
+ * 
+ * @param price - The Bitcoin price in USD to include in the mock response
+ * @returns A mock function that implements the fetch API interface
+ * 
+ * @example
+ * // Mock a response with Bitcoin priced at 45000 USD
+ * global.fetch = mockFetchPrice(45000);
+ */
 export function mockFetchPrice(price: number) {
   return createFetchMock({ defaultPrice: price });
 }
 
+/**
+ * Creates a mock fetch implementation that simulates an error response.
+ * 
+ * This function helps test error handling code by simulating network errors 
+ * or HTTP error responses.
+ * 
+ * @param message - The error message to return
+ * @param statusCode - The HTTP status code to return
+ * @returns A mock function that implements the fetch API interface
+ * @throws Will cause the json() method to reject with the specified error message
+ * 
+ * @example
+ * // Simulate a server error
+ * global.fetch = mockFetchError('Internal Server Error', 500);
+ * 
+ * @example
+ * // Simulate a client error
+ * global.fetch = mockFetchError('Not Found', 404);
+ */
 export function mockFetchError(message = 'Network error', statusCode = 500) {
   return createFetchMock({ shouldFail: true, failureMessage: message, statusCode });
 }
 
 /**
- * Mock CoinGecko API specific error responses
+ * Creates a mock fetch implementation for specific CoinGecko API error scenarios.
+ * 
+ * This function provides pre-configured error responses for common API error
+ * situations, making it easy to test error handling for specific scenarios
+ * without having to remember the appropriate status codes.
+ * 
+ * @param errorType - The type of CoinGecko API error to simulate
+ * @returns A mock function that implements the fetch API interface
+ * @throws Will cause the json() method to reject with the appropriate error
+ * 
+ * @example
+ * // Simulate a rate limit error
+ * global.fetch = mockCoinGeckoError('rate-limit');
+ * 
+ * @example
+ * // Simulate a not found error
+ * global.fetch = mockCoinGeckoError('not-found');
  */
 export function mockCoinGeckoError(errorType: 'rate-limit' | 'unauthorized' | 'not-found' | 'bad-request' | 'server-error') {
   const errorConfig = {

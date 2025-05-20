@@ -109,7 +109,7 @@ This todo list addresses critical and high-severity issues identified in the cod
         6. Maintained references to CoinGecko API for consistency
     - **Depends‑on:** none
 
-- [ ] **CR-07 · Documentation · P2: Add TSDoc for exported mock helpers**
+- [x] **CR-07 · Documentation · P2: Add TSDoc for exported mock helpers**
     - **Context:** Exported helper functions in mock files lack proper TSDoc comments, reducing discoverability and clarity.
     - **Action:**
         1. Add comprehensive TSDoc comments to all exported functions in `tests/mocks/fetch.ts`
@@ -117,6 +117,19 @@ This todo list addresses critical and high-severity issues identified in the cod
     - **Done‑when:**
         1. All exported mock helpers have proper TSDoc comments
         2. Documentation clearly explains the purpose and usage of each function
+    - **Results:**
+        1. Added detailed TSDoc comments to all exported functions in `tests/mocks/fetch.ts`:
+           - `createFetchMock`: Documented config options, return values, and added usage examples
+           - `mockFetchPrice`: Documented purpose, parameters, and example usage
+           - `mockFetchError`: Documented error simulation capabilities with examples
+           - `mockCoinGeckoError`: Enhanced existing documentation with parameter details and examples
+        2. Extended documentation to `tests/mocks/storage.ts` for completeness:
+           - `createStorageMock`: Documented Chrome storage simulation with examples
+           - `createStorageWithCache`: Added detailed usage examples for fresh and aged caches
+           - `createEmptyStorage`: Documented this convenience function
+           - `createFailingStorage`: Added examples for testing error handling
+        3. Included `@param`, `@returns`, `@throws`, and `@example` tags for all functions
+        4. Added documentation for default values in configuration objects
     - **Depends‑on:** none
 
 ## Testing & API Handling
