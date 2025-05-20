@@ -26,7 +26,7 @@ This todo list addresses critical and high-severity issues identified in the cod
         6. Fixed 20 of 21 tests to use the new approach; skipped one test for future work (CR-02)
     - **Depends‑on:** none
 
-- [ ] **CR-01 · Fix · P0: Implement effective log assertion logic in tests**
+- [x] **CR-01 · Fix · P0: Implement effective log assertion logic in tests**
     - **Context:** The `expectLogToContain` helper in `src/service-worker/index.test.ts` uses `expect(true).toBe(true)`, performing no actual validation.
     - **Action:**
         1. Modify `expectLogToContain` to inspect mock calls captured by mocked `Logger` methods
@@ -37,6 +37,12 @@ This todo list addresses critical and high-severity issues identified in the cod
         1. The helper correctly validates log messages and structured log properties
         2. Tests provide meaningful assertions and fail when log output is incorrect
         3. No instances of `expect(true).toBe(true)` remain in log assertion helpers
+    - **Results:**
+        1. Enhanced the `findLogWithMessage` function to provide better error messages with available logs
+        2. Improved `expectLogToContain` with robust validation of log structure, context, and error details
+        3. Added proper type checking for log entries and improved error handling
+        4. Confirmed tests now fail appropriately when log assertions are incorrect
+        5. Added additional validation for array indexes and empty log collections
     - **Depends‑on:** CR-03
 
 - [ ] **CR-02 · Fix · P0: Un-skip critical cached price test**
