@@ -45,10 +45,34 @@ export interface LoggerConfig {
 }
 
 /**
+ * Output adapter interface for Logger
+ * Provides methods for outputting log entries
+ * This allows for dependency injection and easier testing
+ */
+export interface LoggerOutputAdapter {
+  debug(message: string): void;
+  info(message: string): void;
+  warn(message: string): void;
+  error(message: string): void;
+}
+
+/**
+ * Default console-based output adapter
+ * Uses standard console methods for output
+ */
+export const consoleOutputAdapter: LoggerOutputAdapter = {
+  debug: console.debug,
+  info: console.info,
+  warn: console.warn,
+  error: console.error
+};
+
+/**
  * Logger class that provides structured logging capabilities
  */
 export class Logger {
   private readonly config: LoggerConfig;
+  private readonly outputAdapter: LoggerOutputAdapter;
   private readonly levelPriority: Record<LogLevelType, number> = {
     [LogLevel.DEBUG]: 0,
     [LogLevel.INFO]: 1,
@@ -56,12 +80,21 @@ export class Logger {
     [LogLevel.ERROR]: 3,
   };
 
-  constructor(config: LoggerConfig = {}) {
+  /**
+   * Create a new Logger instance
+   * @param config Logger configuration options
+   * @param outputAdapter Output adapter for log entries (defaults to console)
+   */
+  constructor(
+    config: LoggerConfig = {}, 
+    outputAdapter: LoggerOutputAdapter = consoleOutputAdapter
+  ) {
     this.config = {
       enabled: true,
       level: LogLevel.INFO,
       ...config,
     };
+    this.outputAdapter = outputAdapter;
   }
 
   /**
@@ -71,7 +104,7 @@ export class Logger {
     return new Logger({
       ...this.config,
       ...childConfig,
-    });
+    }, this.outputAdapter);
   }
 
   /**
@@ -89,7 +122,7 @@ export class Logger {
   /**
    * Format a log entry as JSON
    */
-  private formatEntry(level: LogLevelType, message: string, context?: any, error?: Error): string {
+  private formatEntry(level: LogLevelType, message: string, context?: any, error?: Error): LogEntry {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -106,6 +139,13 @@ export class Logger {
       ...(context !== undefined && { context }),
     };
 
+    return entry;
+  }
+
+  /**
+   * Format entry as JSON string and handle potential circular references
+   */
+  private stringifyEntry(entry: LogEntry): string {
     try {
       return JSON.stringify(entry);
     } catch (stringifyError) {
@@ -119,21 +159,23 @@ export class Logger {
   }
 
   /**
-   * Output the log entry using appropriate console method
+   * Output the log entry using appropriate adapter method
    */
-  private output(level: LogLevelType, formattedEntry: string): void {
+  private output(level: LogLevelType, entry: LogEntry): void {
+    const formattedEntry = this.stringifyEntry(entry);
+    
     switch (level) {
       case LogLevel.DEBUG:
-        console.debug(formattedEntry);
+        this.outputAdapter.debug(formattedEntry);
         break;
       case LogLevel.INFO:
-        console.info(formattedEntry);
+        this.outputAdapter.info(formattedEntry);
         break;
       case LogLevel.WARN:
-        console.warn(formattedEntry);
+        this.outputAdapter.warn(formattedEntry);
         break;
       case LogLevel.ERROR:
-        console.error(formattedEntry);
+        this.outputAdapter.error(formattedEntry);
         break;
     }
   }
@@ -143,8 +185,8 @@ export class Logger {
    */
   debug(message: string, context?: any): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
-      const formatted = this.formatEntry(LogLevel.DEBUG, message, context);
-      this.output(LogLevel.DEBUG, formatted);
+      const entry = this.formatEntry(LogLevel.DEBUG, message, context);
+      this.output(LogLevel.DEBUG, entry);
     }
   }
 
@@ -153,8 +195,8 @@ export class Logger {
    */
   info(message: string, context?: any): void {
     if (this.shouldLog(LogLevel.INFO)) {
-      const formatted = this.formatEntry(LogLevel.INFO, message, context);
-      this.output(LogLevel.INFO, formatted);
+      const entry = this.formatEntry(LogLevel.INFO, message, context);
+      this.output(LogLevel.INFO, entry);
     }
   }
 
@@ -163,8 +205,8 @@ export class Logger {
    */
   warn(message: string, context?: any): void {
     if (this.shouldLog(LogLevel.WARN)) {
-      const formatted = this.formatEntry(LogLevel.WARN, message, context);
-      this.output(LogLevel.WARN, formatted);
+      const entry = this.formatEntry(LogLevel.WARN, message, context);
+      this.output(LogLevel.WARN, entry);
     }
   }
 
@@ -174,8 +216,8 @@ export class Logger {
   error(message: string, error?: Error | unknown, context?: any): void {
     if (this.shouldLog(LogLevel.ERROR)) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
-      const formatted = this.formatEntry(LogLevel.ERROR, message, context, errorObj);
-      this.output(LogLevel.ERROR, formatted);
+      const entry = this.formatEntry(LogLevel.ERROR, message, context, errorObj);
+      this.output(LogLevel.ERROR, entry);
     }
   }
 }
@@ -184,13 +226,18 @@ export class Logger {
  * Create a logger instance for a specific module
  * @param module The module name to include in logs
  * @param config Additional configuration options
+ * @param outputAdapter Optional output adapter (uses console by default)
  * @returns A configured Logger instance
  */
-export function createLogger(module: string, config: Partial<LoggerConfig> = {}): Logger {
+export function createLogger(
+  module: string, 
+  config: Partial<LoggerConfig> = {}, 
+  outputAdapter: LoggerOutputAdapter = consoleOutputAdapter
+): Logger {
   return new Logger({
     module,
     ...config,
-  });
+  }, outputAdapter);
 }
 
 /**

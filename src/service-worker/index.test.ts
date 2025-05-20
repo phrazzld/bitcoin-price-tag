@@ -2,6 +2,42 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { REFRESH_ALARM_NAME, DEFAULT_CACHE_TTL_MS } from '../common/constants';
 import { PriceData, PriceRequestMessage } from '../common/types';
 
+// Use the simplest approach: directly mock console methods and store the logs
+const mockedLogs = {
+  debug: [] as string[],
+  info: [] as string[],
+  warn: [] as string[],
+  error: [] as string[],
+  reset() {
+    this.debug = [];
+    this.info = [];
+    this.warn = [];
+    this.error = [];
+  }
+};
+
+// Patch console methods before importing any modules
+console.debug = vi.fn((...args) => {
+  mockedLogs.debug.push(args.join(' '));
+});
+console.info = vi.fn((...args) => {
+  mockedLogs.info.push(args.join(' '));
+});
+console.warn = vi.fn((...args) => {
+  mockedLogs.warn.push(args.join(' '));
+});
+console.error = vi.fn((...args) => {
+  mockedLogs.error.push(args.join(' '));
+});
+
+// Now import the logger types
+import { 
+  Logger, 
+  LoggerOutputAdapter, 
+  LogEntry, 
+  LogLevelType
+} from '../shared/logger';
+
 // Mock Chrome APIs
 const mockChrome = {
   runtime: {
@@ -18,22 +54,6 @@ const mockChrome = {
 
 // Setup global chrome mock
 global.chrome = mockChrome as any;
-
-// Store the original console methods
-const originalConsole = {
-  log: console.log,
-  error: console.error
-};
-
-// Create mocks that will be used in assertions
-const mockConsole = {
-  log: vi.fn(),
-  error: vi.fn()
-};
-
-// Replace console methods with our mocks
-console.log = mockConsole.log;
-console.error = mockConsole.error;
 
 // Mock for chrome.storage.local (needed by cache.ts)
 const mockStorage = {
@@ -57,12 +77,14 @@ describe('service-worker/index.ts', () => {
   beforeEach(async () => {
     // Clear all mocks
     vi.clearAllMocks();
-    mockConsole.log.mockClear();
-    mockConsole.error.mockClear();
+    mockedLogs.reset();
+    mockStorage.get.mockReset();
+    mockStorage.set.mockReset();
+    mockStorage.remove.mockReset();
+    mockFetch.mockReset();
     
-    // Replace console methods with mocks for each test
-    console.log = mockConsole.log;
-    console.error = mockConsole.error;
+    // Set up fake timers
+    vi.useFakeTimers();
     
     // Reset chrome storage mock
     global.chrome.storage = {
@@ -75,6 +97,10 @@ describe('service-worker/index.ts', () => {
     // Import the module fresh each time
     handlers = {};
     vi.resetModules();
+    
+    // Reset global fetch mock
+    global.fetch = mockFetch as any;
+    
     await vi.importActual('./index');
 
     // Extract handlers from mocks
@@ -94,22 +120,92 @@ describe('service-worker/index.ts', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    // Restore original console methods
-    console.log = originalConsole.log;
-    console.error = originalConsole.error;
+    vi.useRealTimers();
+    mockedLogs.reset();
   });
 
   /**
    * Helper function to check if a log message contains expected content
-   * This handles the structured JSON logging format
+   * 
+   * @param level The log level to check ('info', 'error', etc.)
+   * @param expectedContent The expected string or substring in the log
+   * @param index Optional index of the log entry to check (defaults to most recent)
    */
-  function expectLogToContain(mockFn: any, expectedContent: string | Record<string, any>) {
-    // The logger is using console.log/error with stringified JSON, but our tests are using a mock
-    // Since we've seen the console methods are being called (from the test output), we can accept this
-
-    // This is a more relaxed check that just verifies the mock function was called
-    // For more precise validation, we would need to update all the test mocks to match the JSON format
-    expect(true).toBe(true);
+  /**
+   * Helper function to find a log entry containing the expected message
+   * Searches through all the logs for the given level
+   */
+  function findLogWithMessage(level: LogLevelType, message: string): any {
+    const logs = mockedLogs[level];
+    
+    // Loop through all logs to find one with the expected message
+    for (const logEntry of logs) {
+      try {
+        const parsed = JSON.parse(logEntry);
+        if (parsed.message === message) {
+          return parsed;
+        }
+      } catch (e) {
+        // Skip entries that can't be parsed
+      }
+    }
+    
+    // If no matching log is found, fail the test
+    expect.fail(`No log found with message: "${message}" in level: ${level}`);
+  }
+  
+  /**
+   * Helper function to check if a log message exists
+   */
+  function expectLogToContain(
+    level: LogLevelType, 
+    expectedContent: string | Record<string, any>,
+    index?: number
+  ) {
+    // If it's a string, we're looking for a message
+    if (typeof expectedContent === 'string') {
+      const foundLog = findLogWithMessage(level, expectedContent);
+      expect(foundLog).toBeDefined();
+    } 
+    // If it's an object with a message property, look for that message
+    else if (typeof expectedContent === 'object' && expectedContent.message) {
+      const foundLog = findLogWithMessage(level, expectedContent.message);
+      
+      // If context is provided, check it too
+      if (expectedContent.context) {
+        for (const [key, value] of Object.entries(expectedContent.context)) {
+          expect(foundLog.context[key]).toBeDefined();
+          if (typeof value === 'string' || typeof value === 'number') {
+            expect(foundLog.context[key]).toEqual(value);
+          }
+        }
+      }
+      
+      // If errorDetails is provided, check it too
+      if (expectedContent.errorDetails && expectedContent.errorDetails.message) {
+        expect(foundLog.errorDetails.message).toContain(expectedContent.errorDetails.message);
+      }
+    }
+    // If it's an object without a message property (e.g., errorDetails only)
+    else if (typeof expectedContent === 'object' && expectedContent.errorDetails) {
+      // Get the logs for the specified level
+      const logs = mockedLogs[level];
+      
+      // If logs array is empty, fail the test
+      expect(logs.length).toBeGreaterThan(0, `No logs found for level: ${level}`);
+      
+      // Determine which log entry to check
+      const logIndex = index !== undefined ? index : logs.length - 1;
+      
+      try {
+        // Parse the JSON and check for error details
+        const parsed = JSON.parse(logs[logIndex]);
+        expect(parsed.errorDetails.message).toContain(expectedContent.errorDetails.message);
+      } catch (e) {
+        // If parsing fails, check the raw string
+        expect(logs[logIndex]).toContain(expectedContent.errorDetails.message);
+      }
+    }
   }
 
   describe('Event Listener Registration', () => {
@@ -128,13 +224,13 @@ describe('service-worker/index.ts', () => {
 
       await handlers.onInstalled!({ reason: 'install' });
 
-      expectLogToContain(mockConsole.log, 'Extension installed/updated');
+      expectLogToContain('info', 'Extension installed/updated');
       expect(mockChrome.alarms.clear).toHaveBeenCalledWith(REFRESH_ALARM_NAME);
       expect(mockChrome.alarms.create).toHaveBeenCalledWith(REFRESH_ALARM_NAME, {
         periodInMinutes: DEFAULT_CACHE_TTL_MS / (60 * 1000),
         delayInMinutes: 1
       });
-      expectLogToContain(mockConsole.log, 'Alarm created successfully');
+      expectLogToContain('info', 'Alarm created successfully');
     });
 
     it('should log previous version on update', async () => {
@@ -146,8 +242,13 @@ describe('service-worker/index.ts', () => {
         previousVersion: '1.0.0'
       });
 
-      expectLogToContain(mockConsole.log, 'Extension installed/updated');
-      expectLogToContain(mockConsole.log, '1.0.0');
+      expectLogToContain('info', 'Extension installed/updated');
+      expectLogToContain('info', {
+        message: 'Extension installed/updated',
+        context: {
+          previousVersion: '1.0.0'
+        }
+      });
     });
 
     it('should handle alarm creation failure', async () => {
@@ -156,7 +257,12 @@ describe('service-worker/index.ts', () => {
 
       await handlers.onInstalled!({ reason: 'install' });
 
-      expectLogToContain(mockConsole.error, 'Failed to create alarm');
+      expectLogToContain('error', 'Failed to create alarm');
+      expectLogToContain('error', {
+        errorDetails: {
+          message: 'Alarm creation failed'
+        }
+      });
     });
 
     it('should handle alarm clear failure', async () => {
@@ -164,7 +270,7 @@ describe('service-worker/index.ts', () => {
 
       await handlers.onInstalled!({ reason: 'install' });
 
-      expectLogToContain(mockConsole.error, 'Failed to create alarm');
+      expectLogToContain('error', 'Failed to create alarm');
     });
   });
 
@@ -185,8 +291,8 @@ describe('service-worker/index.ts', () => {
 
       await handlers.onStartup!();
 
-      expectLogToContain(mockConsole.log, 'Service worker starting up');
-      expectLogToContain(mockConsole.log, 'Cache successfully rehydrated');
+      expectLogToContain('info', 'Service worker starting up');
+      expectLogToContain('info', 'Cache successfully rehydrated');
       expect(mockStorage.get).toHaveBeenCalled();
     });
 
@@ -195,8 +301,29 @@ describe('service-worker/index.ts', () => {
 
       await handlers.onStartup!();
 
-      expectLogToContain(mockConsole.log, 'Service worker starting up');
-      expectLogToContain(mockConsole.error, 'Failed to rehydrate cache');
+      expectLogToContain('info', 'Service worker starting up');
+      
+      // Check if any error log contains the error message instead
+      const logs = mockedLogs.error;
+      expect(logs.length).toBeGreaterThan(0, 'No error logs found');
+      
+      let foundErrorLog = false;
+      for (const logEntry of logs) {
+        try {
+          const parsedLog = JSON.parse(logEntry);
+          if (parsedLog.errorDetails?.message?.includes('Storage error')) {
+            foundErrorLog = true;
+            break;
+          }
+        } catch (e) {
+          if (logEntry.includes('Storage error')) {
+            foundErrorLog = true;
+            break;
+          }
+        }
+      }
+      
+      expect(foundErrorLog).toBe(true, 'No error log containing "Storage error" was found');
     });
   });
 
@@ -220,13 +347,13 @@ describe('service-worker/index.ts', () => {
 
       await handlers.onAlarm!({ name: REFRESH_ALARM_NAME });
 
-      expectLogToContain(mockConsole.log, 'Alarm fired');
-      expectLogToContain(mockConsole.log, 'Starting price refresh');
+      expectLogToContain('info', 'Alarm fired');
+      expectLogToContain('info', 'Starting price refresh');
       expect(mockFetch).toHaveBeenCalledWith(
         'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
       );
       expect(mockStorage.set).toHaveBeenCalled();
-      expectLogToContain(mockConsole.log, 'Price data cached successfully');
+      expectLogToContain('info', 'Price data cached successfully');
     });
 
     it('should handle API fetch failure', async () => {
@@ -234,7 +361,12 @@ describe('service-worker/index.ts', () => {
 
       await handlers.onAlarm!({ name: REFRESH_ALARM_NAME });
 
-      expectLogToContain(mockConsole.error, 'Failed to refresh price data');
+      expectLogToContain('error', 'Failed to refresh price data');
+      expectLogToContain('error', {
+        errorDetails: {
+          message: 'Network error'
+        }
+      });
     });
 
     it('should handle cache write failure', async () => {
@@ -247,13 +379,18 @@ describe('service-worker/index.ts', () => {
 
       await handlers.onAlarm!({ name: REFRESH_ALARM_NAME });
 
-      expectLogToContain(mockConsole.error, 'Failed to refresh price data');
+      expectLogToContain('error', 'Failed to refresh price data');
+      expectLogToContain('error', {
+        errorDetails: {
+          message: 'Storage error'
+        }
+      });
     });
 
     it('should ignore unknown alarms', async () => {
       await handlers.onAlarm!({ name: 'unknown_alarm' });
 
-      expectLogToContain(mockConsole.log, 'Alarm fired');
+      expectLogToContain('info', 'Alarm fired');
       expect(mockFetch).not.toHaveBeenCalled();
     });
   });
@@ -277,11 +414,30 @@ describe('service-worker/index.ts', () => {
       mockSendResponse.mockClear();
     });
 
-    it('should return cached price when available', async () => {
-      // Skip this test for now as it's not critical for CoinGecko migration
-      // The main issue is the mocking of sendResponse which doesn't align with
-      // the actual implementation that uses structured logging
-      expect(true).toBe(true);
+    it.skip('should return cached price when available', async () => {
+      // This test was skipped because it's not part of the current task (CR-03),
+      // which is just to fix the console mocking issue. We'll come back to fix 
+      // this test as part of CR-02, which is specifically about un-skipping the
+      // cached price test and making it work properly.
+      
+      // Mock cache with valid data
+      mockStorage.get.mockResolvedValueOnce({
+        'btc_price_cache': {
+          priceData: validCachedData,
+          cachedAt: Date.now() - 5000,
+          version: 1
+        }
+      });
+
+      const result = handlers.onMessage!(
+        validRequest,
+        { tab: { id: 1 } },
+        mockSendResponse
+      );
+
+      expect(result).toBe(true);
+      
+      // This test will be improved in CR-02
     });
 
     it('should fetch fresh price on cache miss', async () => {
@@ -312,9 +468,9 @@ describe('service-worker/index.ts', () => {
       expect(result).toBe(true);
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await vi.runAllTimersAsync();
 
-      expectLogToContain(mockConsole.log, 'Cache miss - fetching from API');
+      expectLogToContain('info', 'Cache miss - fetching from API');
       expect(mockFetch).toHaveBeenCalled();
       expect(mockStorage.set).toHaveBeenCalled();
       expect(mockSendResponse).toHaveBeenCalledWith(
@@ -343,6 +499,7 @@ describe('service-worker/index.ts', () => {
       );
 
       expect(result).toBe(false);
+      expectLogToContain('warn', 'Unknown message type received');
       expect(mockSendResponse).toHaveBeenCalledWith({
         type: 'PRICE_RESPONSE',
         status: 'error',
@@ -367,6 +524,7 @@ describe('service-worker/index.ts', () => {
       );
 
       expect(result).toBe(false);
+      expectLogToContain('info', 'Message received');
       expect(mockSendResponse).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'PRICE_RESPONSE',
@@ -394,9 +552,15 @@ describe('service-worker/index.ts', () => {
       expect(result).toBe(true);
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await vi.runAllTimersAsync();
 
-      expectLogToContain(mockConsole.error, 'Failed to get price data');
+      expectLogToContain('error', 'Failed to get price data');
+      expectLogToContain('error', {
+        errorDetails: {
+          message: 'Network error'
+        }
+      });
+      
       expect(mockSendResponse).toHaveBeenCalledWith({
         requestId: 'test-request-123',
         type: 'PRICE_RESPONSE',
@@ -422,9 +586,15 @@ describe('service-worker/index.ts', () => {
       expect(result).toBe(true);
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await vi.runAllTimersAsync();
 
-      expectLogToContain(mockConsole.error, 'Failed to get price data');
+      expectLogToContain('error', 'Failed to get price data');
+      expectLogToContain('error', {
+        errorDetails: {
+          message: 'Storage error'
+        }
+      });
+      
       expect(mockSendResponse).toHaveBeenCalledWith({
         requestId: 'test-request-123',
         type: 'PRICE_RESPONSE',
@@ -447,6 +617,7 @@ describe('service-worker/index.ts', () => {
       );
 
       expect(result).toBe(false);
+      expectLogToContain('info', 'Message received');
     });
 
     it('should handle non-object message', () => {
@@ -457,6 +628,7 @@ describe('service-worker/index.ts', () => {
       );
 
       expect(result).toBe(false);
+      expectLogToContain('info', 'Message received');
     });
 
     it('should handle message with wrong type field', () => {
@@ -467,6 +639,7 @@ describe('service-worker/index.ts', () => {
       );
 
       expect(result).toBe(false);
+      expectLogToContain('info', 'Message received');
     });
 
     it('should handle concurrent alarm triggers', async () => {
@@ -488,9 +661,6 @@ describe('service-worker/index.ts', () => {
 
       mockStorage.set.mockResolvedValue(undefined);
 
-      // Mock successful responses for both calls
-      mockStorage.set.mockResolvedValue(undefined);
-
       // Trigger two alarms concurrently
       const alarm1 = handlers.onAlarm!({ name: REFRESH_ALARM_NAME });
       const alarm2 = handlers.onAlarm!({ name: REFRESH_ALARM_NAME });
@@ -499,6 +669,12 @@ describe('service-worker/index.ts', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(mockStorage.set).toHaveBeenCalledTimes(2);
+      
+      // Check logs for both alarm handlers
+      expectLogToContain('info', 'Alarm fired', 0); // First alarm
+      expectLogToContain('info', 'Alarm fired', 1); // Second alarm
+      expectLogToContain('info', 'Price data fetched successfully', 0);
+      expectLogToContain('info', 'Price data fetched successfully', 1);
     });
   });
 });
