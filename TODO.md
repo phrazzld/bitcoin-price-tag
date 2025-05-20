@@ -181,7 +181,7 @@
         3. Verified the changes are functionally correct by testing the data extraction logic.
     - **Depends‑on:** CL002
 
-- [ ] **T012 · Documentation · P2: Update CLAUDE.md to reference CoinGecko API**
+- [x] **T012 · Documentation · P2: Update CLAUDE.md to reference CoinGecko API**
     - **Context:** Based on CL002 findings - CLAUDE.md contains outdated CoinDesk references
     - **Action:**
         1. Update CLAUDE.md to correctly state that the extension uses CoinGecko API (not CoinDesk).
@@ -189,4 +189,8 @@
     - **Done‑when:**
         1. CLAUDE.md is updated to correctly reference CoinGecko API.
         2. All documentation consistently refers to CoinGecko as the price data source.
+    - **Results:**
+        1. Updated all references to CoinDesk API in CLAUDE.md to correctly state CoinGecko API
+        2. Verified no other CoinDesk references remained in the file
+        3. Confirmed that the documentation is now consistent with the actual implementation
     - **Depends‑on:** CL002
