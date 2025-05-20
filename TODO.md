@@ -178,7 +178,7 @@ This todo list addresses critical and high-severity issues identified in the cod
         5. Kept the @see reference to related files that provides valuable context
     - **Depends‑on:** none
 
-- [ ] **CR-09 · Cleanup · P3: Review source field in PriceData mocks**
+- [x] **CR-09 · Cleanup · P3: Review source field in PriceData mocks**
     - **Context:** The `source` field in `PriceData` mocks may need to be consistently updated to reflect CoinGecko.
     - **Action:**
         1. Search for all instances of `PriceData` creation in test files
@@ -186,6 +186,12 @@ This todo list addresses critical and high-severity issues identified in the cod
     - **Done‑when:**
         1. All `PriceData` mocks consistently use 'CoinGecko' as the source
         2. No references to 'CoinDesk' remain in test data
+    - **Results:**
+        1. Found one instance in `src/content-script/dom.test.ts` where the source field used lowercase 'coingecko'
+        2. Updated the source field to use proper capitalization 'CoinGecko' for consistency
+        3. Verified that all other instances of PriceData mocks already used 'CoinGecko' correctly
+        4. Confirmed no instances of 'CoinDesk' in PriceData source fields (only in an explanatory comment in api.ts)
+        5. Ran tests to ensure the changes didn't break any functionality
     - **Depends‑on:** none
 
 ## Next Steps
