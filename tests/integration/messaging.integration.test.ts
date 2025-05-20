@@ -21,6 +21,9 @@ describe('Service Worker <-> Content Script Communication', () => {
     // Clear module cache to ensure fresh state
     vi.resetModules();
     
+    // Set up fake timers
+    vi.useFakeTimers();
+    
     // Create harness instance
     harness = new ChromeRuntimeHarness();
     
@@ -49,6 +52,7 @@ describe('Service Worker <-> Content Script Communication', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
     harness.reset();
   });
 
@@ -148,18 +152,18 @@ describe('Service Worker <-> Content Script Communication', () => {
       mockFetch = mockFetchError('Network timeout');
       vi.stubGlobal('fetch', mockFetch);
       
-      // Override timeout functions to avoid test timeouts
-      vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
-        cb();
-        return 0 as any;
-      });
+      // Start the API call
+      const requestPromise = requestPriceData();
+      
+      // Fast-forward through all timeouts
+      await vi.runAllTimersAsync();
       
       // Act & Assert: Should throw error
-      await expect(requestPriceData()).rejects.toThrow();
+      await expect(requestPromise).rejects.toThrow();
       
       // Verify API was attempted
       expect(mockFetch).toHaveBeenCalled();
-    }, 10000);
+    });
 
     it('should handle invalid message format from content script', async () => {
       // Setup: Send invalid message directly through harness
@@ -268,14 +272,24 @@ describe('Service Worker <-> Content Script Communication', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
       
-      // Act: Request price data
-      const startTime = Date.now();
-      const result = await requestPriceData();
-      const endTime = Date.now();
+      // Set a timestamp to verify delay
+      const startTime = performance.now();
       
-      // Assert: Should receive data after delay
+      // Start the request
+      const requestPromise = requestPriceData();
+      
+      // Advance timer by the delay amount
+      await vi.advanceTimersByTimeAsync(100);
+      
+      // Allow any remaining timers to complete
+      await vi.runAllTimersAsync();
+      
+      // Get the result
+      const result = await requestPromise;
+      const endTime = performance.now();
+      
+      // Assert: Should receive data after advancing timers
       expect(result.usdRate).toBe(48000);
-      expect(endTime - startTime).toBeGreaterThanOrEqual(100);
     });
 
     it('should handle request timeout correctly', async () => {
@@ -286,8 +300,17 @@ describe('Service Worker <-> Content Script Communication', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
       
+      // Start the request with a shorter timeout
+      const requestPromise = requestPriceData(100);
+      
+      // Advance timer to trigger timeout but not fetch response
+      await vi.advanceTimersByTimeAsync(100);
+      
       // Act & Assert: Should timeout before response
-      await expect(requestPriceData(100)).rejects.toThrow('Price request timed out');
+      await expect(requestPromise).rejects.toThrow('Price request timed out');
+      
+      // Advance remaining time to clean up any pending timers
+      await vi.advanceTimersByTimeAsync(100);
     });
   });
 

@@ -19,10 +19,12 @@ const mockLogger: Logger = {
 describe('api.ts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   describe('ApiError', () => {
@@ -442,11 +444,8 @@ describe('api.ts', () => {
         const domException = new DOMException('The operation was aborted.', 'AbortError');
         mockFetch.mockRejectedValueOnce(domException);
         
-        // Mock the retry logic to not actually wait
-        vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
-          cb();
-          return 0 as any;
-        });
+        // We can advance timers instead of mocking setTimeout directly
+        // This lets us control when timers execute
         
         try {
           await fetchBtcPrice(mockLogger);
@@ -465,7 +464,7 @@ describe('api.ts', () => {
       }, 10000);
       
       it('should handle network timeout errors', async () => {
-        // Create a network timeout error
+        // Create a network timeout error with setTimeout
         global.fetch = vi.fn().mockImplementation(() => {
           return new Promise((_, reject) => {
             const error = new TypeError('Network request failed: timeout');
@@ -473,14 +472,15 @@ describe('api.ts', () => {
           });
         });
         
-        // Mock the retry logic to not actually wait
-        vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
-          cb();
-          return 0 as any;
-        });
+        // Start the API call
+        const fetchPromise = fetchBtcPrice(mockLogger);
+        
+        // Advance timer to trigger the error and handle retries
+        await vi.advanceTimersByTimeAsync(10);
+        await vi.runAllTimersAsync();
         
         try {
-          await fetchBtcPrice(mockLogger);
+          await fetchPromise;
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
@@ -516,14 +516,6 @@ describe('api.ts', () => {
     });
 
     describe('retry logic', () => {
-      beforeEach(() => {
-        // Need to use fake timers for retry tests
-        vi.useFakeTimers();
-      });
-
-      afterEach(() => {
-        vi.useRealTimers();
-      });
 
       it('should retry on HTTP 429 (Too Many Requests)', async () => {
         // First attempt: 429 error
@@ -539,11 +531,13 @@ describe('api.ts', () => {
           json: async () => validApiResponse
         });
 
+        // Start the API call
         const promise = fetchBtcPrice(mockLogger);
         
-        // Advance timer for first retry
+        // Advance timer to process retry delay
         await vi.advanceTimersByTimeAsync(1000);
         
+        // Get the result after the timer has resolved
         const result = await promise;
 
         expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -573,11 +567,13 @@ describe('api.ts', () => {
           json: async () => validApiResponse
         });
 
+        // Start the API call
         const promise = fetchBtcPrice(mockLogger);
         
-        // Advance timer for first retry
+        // Advance timer to process retry delay
         await vi.advanceTimersByTimeAsync(1000);
         
+        // Get the result after the timer has resolved
         const result = await promise;
 
         expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -598,11 +594,13 @@ describe('api.ts', () => {
           json: async () => validApiResponse
         });
 
+        // Start the API call
         const promise = fetchBtcPrice(mockLogger);
         
-        // Advance timer for first retry
+        // Advance timer to process retry delay
         await vi.advanceTimersByTimeAsync(1000);
         
+        // Get the result after the timer has resolved
         const result = await promise;
 
         expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -628,11 +626,13 @@ describe('api.ts', () => {
           json: async () => validApiResponse
         });
 
+        // Start the API call
         const promise = fetchBtcPrice(mockLogger);
         
-        // Advance timer for first retry
+        // Advance timer to process retry delay
         await vi.advanceTimersByTimeAsync(1000);
         
+        // Get the result after the timer has resolved
         const result = await promise;
 
         expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -654,11 +654,13 @@ describe('api.ts', () => {
           json: async () => validApiResponse
         });
 
+        // Start the API call
         const promise = fetchBtcPrice(mockLogger);
         
-        // Advance timer for first retry
+        // Advance timer to process retry delay
         await vi.advanceTimersByTimeAsync(1000);
         
+        // Get the result after the timer has resolved
         const result = await promise;
 
         expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -696,11 +698,13 @@ describe('api.ts', () => {
           json: async () => validApiResponse
         });
 
+        // Start the API call
         const promise = fetchBtcPrice(mockLogger);
         
-        // Advance timer for first retry
+        // Advance timer to process retry delay
         await vi.advanceTimersByTimeAsync(1000);
         
+        // Get the result after the timer has resolved
         const result = await promise;
 
         expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -724,14 +728,15 @@ describe('api.ts', () => {
           statusText: 'Service Unavailable'
         });
 
-        // Skip retry delay by mocking setTimeout
-        vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
-          cb();
-          return 0 as any;
-        });
+        // We can advance timers for each retry attempt
+        // Start the test
+        const fetchPromise = fetchBtcPrice(mockLogger);
+        
+        // Fast-forward through all retries
+        await vi.runAllTimersAsync();
         
         try {
-          await fetchBtcPrice(mockLogger);
+          await fetchPromise;
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
@@ -745,13 +750,16 @@ describe('api.ts', () => {
       }, 10000);
 
       it('should use exponential backoff for retries', async () => {
-        // Mock setTimeout before the test
-        const originalSetTimeout = global.setTimeout;
+        // Spy on setTimeout to capture delay values
+        const timeoutSpy = vi.spyOn(global, 'setTimeout');
         const delays: number[] = [];
-        global.setTimeout = vi.fn((callback: any, delay?: number) => {
+        
+        // Custom mock implementation to track delays but still use vi.advanceTimersByTime
+        timeoutSpy.mockImplementation((callback: Function, delay?: number) => {
           delays.push(delay || 0);
-          return originalSetTimeout(callback, 0);
-        }) as any;
+          // Let Vitest's fake timers handle the actual scheduling
+          return setTimeout(callback, delay);
+        });
 
         // All attempts fail
         mockFetch.mockResolvedValue({
@@ -760,6 +768,7 @@ describe('api.ts', () => {
           statusText: 'Service Unavailable'
         });
 
+        // Start the API call
         const promise = fetchBtcPrice(mockLogger);
         
         // Advance timer for all retries
@@ -774,9 +783,6 @@ describe('api.ts', () => {
 
         // Verify exponential backoff: 1000ms, 2000ms
         expect(delays.slice(0, 2)).toEqual([1000, 2000]);
-        
-        // Restore original setTimeout
-        global.setTimeout = originalSetTimeout;
       });
 
       it('should throw ApiError for network errors after exhausting retries and log properly', async () => {
@@ -786,14 +792,14 @@ describe('api.ts', () => {
         // All attempts fail with network error (TypeError)
         mockFetch.mockRejectedValue(new TypeError('Network failure'));
 
-        // Skip retry delay by mocking setTimeout
-        vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
-          cb();
-          return 0 as any;
-        });
+        // Start the API call
+        const fetchPromise = fetchBtcPrice(mockLogger);
+        
+        // Fast-forward through all retries
+        await vi.runAllTimersAsync();
         
         try {
-          await fetchBtcPrice(mockLogger);
+          await fetchPromise;
           expect.fail('Should have thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(ApiError);
@@ -823,13 +829,14 @@ describe('api.ts', () => {
           json: async () => ({ bitcoin: { usd: 45000 } })
         });
 
-        // Mock the retry logic to not actually wait
-        vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
-          cb();
-          return 0 as any;
-        });
-
-        const result = await fetchBtcPrice(mockLogger);
+        // Start the API call
+        const fetchPromise = fetchBtcPrice(mockLogger);
+        
+        // Advance timer to process the retry delay
+        await vi.advanceTimersByTimeAsync(1000);
+        
+        // Get the result
+        const result = await fetchPromise;
 
         expect(result.usdRate).toBe(45000);
         expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -861,13 +868,15 @@ describe('api.ts', () => {
           json: async () => ({ bitcoin: { usd: 45000 } })
         });
 
-        // Mock the retry logic to not actually wait
-        vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
-          cb();
-          return 0 as any;
-        });
-
-        const result = await fetchBtcPrice(mockLogger);
+        // Start the API call
+        const fetchPromise = fetchBtcPrice(mockLogger);
+        
+        // Advance timers to process both retry delays (1000ms, 2000ms)
+        await vi.advanceTimersByTimeAsync(1000); // First retry
+        await vi.advanceTimersByTimeAsync(2000); // Second retry
+        
+        // Get the result
+        const result = await fetchPromise;
 
         expect(result.usdRate).toBe(45000);
         expect(mockFetch).toHaveBeenCalledTimes(3);

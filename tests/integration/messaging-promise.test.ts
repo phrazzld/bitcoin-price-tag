@@ -13,6 +13,9 @@ describe('Promise-based Messaging Test', () => {
     vi.resetModules();
     messageListeners = [];
     
+    // Set up fake timers for deterministic testing
+    vi.useFakeTimers();
+    
     // Create a mock Chrome runtime that simulates the actual behavior
     mockChrome = {
       runtime: {
@@ -30,6 +33,7 @@ describe('Promise-based Messaging Test', () => {
         sendMessage: vi.fn((message: any) => {
           // Simulate Chrome's behavior: send to all listeners
           return new Promise((resolve, reject) => {
+            // Use setTimeout, but we'll control when it executes with fake timers
             setTimeout(() => {
               let handled = false;
               let response: any;
@@ -89,6 +93,7 @@ describe('Promise-based Messaging Test', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
   
   it('should handle the content script messaging pattern', async () => {
@@ -100,6 +105,7 @@ describe('Promise-based Messaging Test', () => {
     ): boolean => {
       if (message.type === 'PRICE_REQUEST') {
         // Simulate async response
+        // Use setTimeout with fake timers
         setTimeout(() => {
           // Send the response directly instead of through the mock Chrome
           const response = {
@@ -163,6 +169,10 @@ describe('Promise-based Messaging Test', () => {
       });
     });
     
+    // Advance timers to trigger the response
+    await vi.advanceTimersByTimeAsync(10);
+    
+    // Now we should have a response
     const response = await responsePromise;
     expect(response.status).toBe('success');
     expect(response.data?.usdRate).toBe(50000);
