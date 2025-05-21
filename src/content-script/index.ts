@@ -29,7 +29,7 @@ async function initPriceAnnotation(): Promise<void> {
       function_name: 'initPriceAnnotation'
     });
     const priceData = await requestPriceData();
-    logger.info('Price data received', {
+    logger.info('Price data received. Starting initial DOM scan.', {
       function_name: 'initPriceAnnotation',
       rate: priceData.usdRate,
       fetchedAt: priceData.fetchedAt
@@ -46,7 +46,7 @@ async function initPriceAnnotation(): Promise<void> {
       function_name: 'initPriceAnnotation'
     });
     findAndAnnotatePrices(document.body, priceData, processedNodes);
-    logger.info('Price annotation completed', {
+    logger.info('Initial DOM scan complete. Starting DOM observer.', {
       function_name: 'initPriceAnnotation',
       processedNodesCount: processedNodes.size
     });
@@ -73,26 +73,15 @@ async function initPriceAnnotation(): Promise<void> {
     // This ensures a non-intrusive browsing experience even when price data is unavailable
     // See docs/ERROR_HANDLING.md for the rationale behind this design decision
     
-    if (error instanceof Error) {
-      if (error.name === 'PriceRequestTimeoutError') {
-        logger.error('Request timed out', error, {
-          function_name: 'initPriceAnnotation'
-        });
-      } else if (error.name === 'PriceRequestError') {
-        logger.error('Request failed', error, {
-          function_name: 'initPriceAnnotation'
-        });
-      } else {
-        logger.error('Unexpected error', error, {
-          function_name: 'initPriceAnnotation'
-        });
-      }
-    } else {
-      logger.error('Unknown error', new Error(String(error)), {
-        function_name: 'initPriceAnnotation',
-        context: { error }
-      });
-    }
+    // Log failure with standardized message format as specified in PLAN.md
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    const errorContext = {
+      function_name: 'initPriceAnnotation',
+      errorType: error instanceof Error ? error.name : 'UnknownError',
+      errorMessage: error instanceof Error ? error.message : String(error)
+    };
+    
+    logger.error('Failed to fetch price data.', errorObj, errorContext);
     
     // Continue normal operation - page displays without price annotations
   }
@@ -124,7 +113,7 @@ function initialize(): void {
 }
 
 // Start initialization
-logger.info('Content script loaded', {
+logger.info('Content script initialization started.', {
   url: window.location.href
 });
 initialize();

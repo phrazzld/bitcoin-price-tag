@@ -277,13 +277,20 @@
         4. Added detailed logging before and after observer instantiation
         5. Ensured correct placement within existing try/catch block for error handling
 
-- [ ] **T017 · Feature · P2: implement logging for `index.ts` (initialization, errors)**
+- [x] **T017 · Feature · P2: implement logging for `index.ts` (initialization, errors)**
     - **Context:** PLAN.md > Detailed Build Steps > Step 1; Logging & Observability > `src/content-script/index.ts`
     - **Action:**
         1. Implement all `INFO` and `ERROR` log events as specified in PLAN.md for `index.ts`.
     - **Done‑when:**
         1. All specified logs related to initialization and price data fetching (success/failure) are implemented.
     - **Depends‑on:** [T014, T015, T016]
+    - **Results:**
+        1. Updated startup log message to "Content script initialization started."
+        2. Updated price data received log to include "Starting initial DOM scan"
+        3. Updated DOM scan completion log to "Initial DOM scan complete. Starting DOM observer"
+        4. Standardized error handling with consistent message format: "Failed to fetch price data."
+        5. Enhanced error context with structured field information (errorType, errorMessage)
+        6. Verified implementation with tests and build
 
 ## Testing
 - [x] **T018 · Test · P1: write unit tests for `processedNodes` logic in `findAndAnnotatePrices` (`dom.ts`)**
