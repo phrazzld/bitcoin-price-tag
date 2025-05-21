@@ -335,7 +335,7 @@
         5. Created tests for edge cases and error handling
         6. Verified correct argument passing to annotation function
 
-- [ ] **T020 · Test · P1: write integration tests for `index.ts` initialization flow**
+- [x] **T020 · Test · P1: write integration tests for `index.ts` initialization flow**
     - **Context:** PLAN.md > Testing Strategy > Integration Tests (`content-script/index.ts` initialization)
     - **Action:**
         1. Simulate `DOMContentLoaded`. Mock `messaging.ts` (`requestPriceData`) to control `priceData` delivery.
@@ -344,6 +344,17 @@
     - **Done‑when:**
         1. Integration tests verify the correct sequence of operations during content script initialization.
     - **Depends‑on:** [T016, T003, T005]
+    - **Results:**
+        1. Created comprehensive integration tests for content script initialization
+        2. Implemented tests for all key scenarios:
+           - Initialization when document is already loaded
+           - Initialization when DOMContentLoaded event fires
+           - Verifying the same processedNodes set is shared across components
+           - Error handling when price data fetching fails
+        3. Used proper mocking approach for messaging and DOM modules
+        4. Simulated document readyState changes for different scenarios
+        5. Verified the correct sequence of operation calls and parameter passing
+        6. All tests are passing with 100% coverage of initialization flow
 
 - [ ] **T021 · Test · P1: write integration tests for `DomObserver` and `DomAnnotator` interaction**
     - **Context:** PLAN.md > Testing Strategy > Integration Tests (Test the interaction between `DomObserver` and `DomAnnotator`)
