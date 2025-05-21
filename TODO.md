@@ -247,13 +247,19 @@
         4. Updated JSDoc comments to document the changes
         5. Verified implementation with TypeScript type checking
 
-- [ ] **T015 · Feature · P1: implement initial full-DOM scan using `findAndAnnotatePrices`**
+- [x] **T015 · Feature · P1: implement initial full-DOM scan using `findAndAnnotatePrices`**
     - **Context:** PLAN.md > Detailed Build Steps > Step 1
     - **Action:**
         1. After `priceData` is successfully retrieved and `processedNodes` is created, call `findAndAnnotatePrices(document.body, priceData, processedNodes)`.
     - **Done‑when:**
         1. The initial full-DOM scan is performed using the shared `processedNodes` set.
     - **Depends‑on:** [T014, T003]
+    - **Results:**
+        1. Verified that the initial full-DOM scan is already implemented correctly in the code
+        2. The `findAndAnnotatePrices` function is called with document.body, priceData, and processedNodes
+        3. Confirmed that proper logging is in place for the annotation process
+        4. No code changes needed as the requirement was already fulfilled during T014 implementation
+        5. The implementation aligns with the architecture plan for sharing the processedNodes set
 
 - [ ] **T016 · Feature · P1: instantiate and start `DomObserver` after initial scan**
     - **Context:** PLAN.md > Detailed Build Steps > Step 1
