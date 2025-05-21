@@ -24,3 +24,16 @@ export const REFRESH_ALARM_NAME = 'btc_price_refresh';
  * @see src/service-worker/cache.ts
  */
 export const DEFAULT_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+/**
+ * Debounce delay for DOM mutation observer (250ms)
+ * 
+ * Controls how frequently price annotation occurs when detecting DOM changes.
+ * 
+ * Trade-offs:
+ * - Shorter delay: More responsive price annotations but higher CPU usage
+ * - Longer delay: Better performance by batching updates but delayed annotations
+ * 
+ * @see src/content-script/dom-observer.ts
+ */
+export const DOM_OBSERVER_DEBOUNCE_MS = 250;

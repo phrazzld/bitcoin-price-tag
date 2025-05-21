@@ -30,7 +30,7 @@ describe('dom.ts', () => {
         const parent = document.createElement('div');
         parent.appendChild(textNode);
 
-        findAndAnnotatePrices(parent, mockPriceData);
+        findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
         
         // Check that the pattern was annotated (now contains parentheses)
         expect(textNode.nodeValue).toContain('(');
@@ -57,7 +57,7 @@ describe('dom.ts', () => {
         const parent = document.createElement('div');
         parent.appendChild(textNode);
 
-        findAndAnnotatePrices(parent, mockPriceData);
+        findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
         
         // Check that the pattern was annotated
         expect(textNode.nodeValue).toContain('(');
@@ -81,7 +81,7 @@ describe('dom.ts', () => {
         const parent = document.createElement('div');
         parent.appendChild(textNode);
 
-        findAndAnnotatePrices(parent, mockPriceData);
+        findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
         
         expect(textNode.nodeValue).toBe(pattern);
       });
@@ -94,7 +94,7 @@ describe('dom.ts', () => {
       const parent = document.createElement('div');
       parent.appendChild(textNode);
 
-      findAndAnnotatePrices(parent, mockPriceData);
+      findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
       
       expect(textNode.nodeValue).toContain('sats');
       expect(textNode.nodeValue).not.toContain('BTC');
@@ -113,7 +113,7 @@ describe('dom.ts', () => {
         const parent = document.createElement('div');
         parent.appendChild(textNode);
 
-        findAndAnnotatePrices(parent, mockPriceData);
+        findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
         
         expect(textNode.nodeValue).toContain(expected);
       });
@@ -139,7 +139,7 @@ describe('dom.ts', () => {
         const inputEscaped = input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const expectedPattern = new RegExp(`${inputEscaped}\\s*\\(`);
 
-        findAndAnnotatePrices(parent, mockPriceData);
+        findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
         
         expect(textNode.nodeValue).toMatch(expectedPattern);
       });
@@ -150,7 +150,7 @@ describe('dom.ts', () => {
       const parent = document.createElement('div');
       parent.appendChild(textNode);
 
-      findAndAnnotatePrices(parent, mockPriceData);
+      findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
       
       // Should have annotation with proper formatting
       expect(textNode.nodeValue).toContain('$123.456');
@@ -172,7 +172,7 @@ describe('dom.ts', () => {
       parent.appendChild(child1);
       parent.appendChild(child2);
 
-      findAndAnnotatePrices(parent, mockPriceData);
+      findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
       
       expect(child1.textContent).toContain('(');
       expect(child1.textContent).toContain(')');
@@ -188,7 +188,7 @@ describe('dom.ts', () => {
       parent.appendChild(img);
       parent.appendChild(text);
 
-      findAndAnnotatePrices(parent, mockPriceData);
+      findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
       
       expect(text.nodeValue).toContain('(');
       expect(text.nodeValue).toContain(')');
@@ -208,7 +208,7 @@ describe('dom.ts', () => {
       
       current.appendChild(document.createTextNode('Deep price: $999'));
 
-      findAndAnnotatePrices(root, mockPriceData);
+      findAndAnnotatePrices(root, mockPriceData, new Set<Node>());
       
       expect(current.textContent).toContain('(');
       expect(current.textContent).toContain(')');
@@ -231,7 +231,7 @@ describe('dom.ts', () => {
       parent.appendChild(currency1);
       parent.appendChild(currency2);
 
-      findAndAnnotatePrices(parent, mockPriceData);
+      findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
       
       // nodeValue is set to null, but depending on JSDOM version, may return differently
       const value1 = currency1.firstChild?.nodeValue;
@@ -255,7 +255,7 @@ describe('dom.ts', () => {
       parent.appendChild(whole1);
       parent.appendChild(fraction1);
 
-      findAndAnnotatePrices(parent, mockPriceData);
+      findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
       
       expect(whole1.textContent).toContain('$29.99');
       expect(whole1.textContent).toContain('(');
@@ -279,7 +279,7 @@ describe('dom.ts', () => {
       parent.appendChild(whole);
       parent.appendChild(fraction);
 
-      findAndAnnotatePrices(parent, mockPriceData);
+      findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
       
       expect(whole.textContent).toContain('$49.95');
       expect(whole.textContent).toContain('(');
@@ -299,7 +299,7 @@ describe('dom.ts', () => {
       
       const originalContent = fraction.textContent;
 
-      findAndAnnotatePrices(parent, mockPriceData);
+      findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
       
       // Should remain unchanged
       expect(fraction.textContent).toBe(originalContent);
@@ -313,14 +313,14 @@ describe('dom.ts', () => {
       textNode.nodeValue = null;
       parent.appendChild(textNode);
 
-      expect(() => findAndAnnotatePrices(parent, mockPriceData)).not.toThrow();
+      expect(() => findAndAnnotatePrices(parent, mockPriceData, new Set<Node>())).not.toThrow();
     });
 
     it('should handle empty strings', () => {
       const parent = document.createElement('div');
       parent.appendChild(document.createTextNode(''));
 
-      expect(() => findAndAnnotatePrices(parent, mockPriceData)).not.toThrow();
+      expect(() => findAndAnnotatePrices(parent, mockPriceData, new Set<Node>())).not.toThrow();
     });
 
     it('should handle multiple prices in one text node', () => {
@@ -328,7 +328,7 @@ describe('dom.ts', () => {
       const parent = document.createElement('div');
       parent.appendChild(textNode);
 
-      findAndAnnotatePrices(parent, mockPriceData);
+      findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
       
       const content = textNode.nodeValue || '';
       const matches = content.match(/\(/g);
@@ -348,7 +348,7 @@ describe('dom.ts', () => {
         const parent = document.createElement('div');
         parent.appendChild(textNode);
 
-        findAndAnnotatePrices(parent, mockPriceData);
+        findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
         
         expect(textNode.nodeValue).toContain('(');
         expect(textNode.nodeValue).toContain(')');
@@ -361,7 +361,7 @@ describe('dom.ts', () => {
       const parent = document.createElement('div');
       parent.appendChild(textNode);
 
-      findAndAnnotatePrices(parent, mockPriceData);
+      findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
       
       expect(textNode.nodeValue).toContain('(');
       expect(textNode.nodeValue).toContain(')');
@@ -375,9 +375,83 @@ describe('dom.ts', () => {
 
       const originalValue = textNode.nodeValue;
 
-      findAndAnnotatePrices(parent, mockPriceData);
+      findAndAnnotatePrices(parent, mockPriceData, new Set<Node>());
       
       expect(textNode.nodeValue).toBe(originalValue);
+    });
+  });
+  
+  describe('processedNodes functionality', () => {
+    it('should skip nodes that are already in the processedNodes set', () => {
+      // Setup a DOM structure with price
+      const parent = document.createElement('div');
+      const textNode = document.createTextNode('$100');
+      parent.appendChild(textNode);
+      
+      // Create a processedNodes set with the parent already in it
+      const processedNodes = new Set<Node>([parent]);
+      
+      // Annotate prices - should skip the parent node
+      findAndAnnotatePrices(parent, mockPriceData, processedNodes);
+      
+      // Text node should not be modified since parent was already in processedNodes
+      expect(textNode.nodeValue).toBe('$100');
+    });
+    
+    it('should add processed nodes to the processedNodes set', () => {
+      // Setup a DOM structure
+      const parent = document.createElement('div');
+      const child = document.createElement('span');
+      parent.appendChild(child);
+      
+      // Create an empty processedNodes set
+      const processedNodes = new Set<Node>();
+      
+      // Process the DOM tree
+      findAndAnnotatePrices(parent, mockPriceData, processedNodes);
+      
+      // Both parent and child should be in the set
+      expect(processedNodes.has(parent)).toBe(true);
+      expect(processedNodes.has(child)).toBe(true);
+    });
+    
+    it('should process new nodes but skip previously processed ones', () => {
+      // Setup first node with price
+      const div1 = document.createElement('div');
+      const text1 = document.createTextNode('$50');
+      div1.appendChild(text1);
+      
+      // Setup second node with price
+      const div2 = document.createElement('div');
+      const text2 = document.createTextNode('$75');
+      div2.appendChild(text2);
+      
+      // Create a container with both nodes
+      const container = document.createElement('div');
+      container.appendChild(div1);
+      container.appendChild(div2);
+      
+      // Shared processedNodes set
+      const processedNodes = new Set<Node>();
+      
+      // Process the first div
+      findAndAnnotatePrices(div1, mockPriceData, processedNodes);
+      
+      // First text should be annotated
+      expect(text1.nodeValue).toContain('(');
+      expect(text1.nodeValue).toContain(')');
+      
+      // Process the entire container - should skip div1 since it's already processed
+      findAndAnnotatePrices(container, mockPriceData, processedNodes);
+      
+      // Second text should now be annotated
+      expect(text2.nodeValue).toContain('(');
+      expect(text2.nodeValue).toContain(')');
+      
+      // The container and all nodes should be in processedNodes
+      expect(processedNodes.has(container)).toBe(true);
+      expect(processedNodes.has(div1)).toBe(true);
+      expect(processedNodes.has(div2)).toBe(true);
     });
   });
 });

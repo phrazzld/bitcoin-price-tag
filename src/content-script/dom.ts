@@ -3,6 +3,12 @@
  */
 
 import { PriceData } from '../common/types';
+import { createLogger } from '../shared/logger';
+
+/**
+ * Module logger
+ */
+const logger = createLogger('content-script:dom');
 
 /** 
  * Currency pattern for USD symbols and text
@@ -182,8 +188,17 @@ function processTextNode(textNode: Text, priceData: PriceData): void {
  * Recursively traverses the DOM tree
  * @param node The DOM node to process
  * @param priceData Current Bitcoin price data
+ * @param processedNodes Set of nodes that have already been processed, used to avoid redundant work
  */
-function walkNodes(node: Node, priceData: PriceData): void {
+function walkNodes(node: Node, priceData: PriceData, processedNodes: Set<Node>): void {
+  // Skip already processed nodes
+  if (processedNodes.has(node)) {
+    logger.debug('Node skipped (already processed).', {
+      nodeName: node.nodeName,
+      nodeType: node.nodeType
+    });
+    return;
+  }
   // Handle special cases for Amazon price elements
   if (node.nodeType === Node.ELEMENT_NODE) {
     const element = node as Element;
@@ -236,16 +251,29 @@ function walkNodes(node: Node, priceData: PriceData): void {
   let child = node.firstChild;
   while (child) {
     const next = child.nextSibling;
-    walkNodes(child, priceData);
+    walkNodes(child, priceData, processedNodes);
     child = next;
   }
+  
+  // Mark node as processed
+  processedNodes.add(node);
+  logger.debug('Node added to processed set.', {
+    nodeName: node.nodeName,
+    nodeType: node.nodeType
+  });
 }
 
 /**
  * Main function to find and annotate prices in the DOM
- * @param rootElement The root element to search within
+ * @param rootNode The root node to search within
  * @param priceData Current Bitcoin price data
+ * @param processedNodes Set of nodes that have already been processed, used to avoid redundant work
+ *                      when handling dynamically added content and mutation events
  */
-export function findAndAnnotatePrices(rootElement: Element, priceData: PriceData): void {
-  walkNodes(rootElement, priceData);
+export function findAndAnnotatePrices(
+  rootNode: Node, 
+  priceData: PriceData, 
+  processedNodes: Set<Node>
+): void {
+  walkNodes(rootNode, priceData, processedNodes);
 }
