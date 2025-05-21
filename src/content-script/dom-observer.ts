@@ -111,22 +111,48 @@ export function createDomObserver(
   }
   
   /**
-   * Mutation callback function - currently a partial implementation
-   * Will be fully implemented in T008
+   * Mutation callback function that extracts added nodes from mutations
+   * and schedules them for processing with debouncing
    * @param mutations Array of mutation records from MutationObserver
    */
   function handleMutationsCallback(mutations: MutationRecord[]): void {
+    // Log the callback trigger with mutation count
     logger.debug('MutationObserver callback triggered.', {
       mutationCount: mutations.length
     });
     
-    // This is just a minimal implementation to satisfy TypeScript
-    // The full implementation will be done in T008
-    // We're creating an empty array as a placeholder until T008 is implemented
-    const dummyNodes: Node[] = [];
+    // Exit early if there are no mutations
+    if (mutations.length === 0) {
+      logger.debug('No mutations to process.');
+      return;
+    }
     
-    // Schedule processing of the nodes (will be populated in T008)
-    scheduleProcessing(dummyNodes);
+    // Collect all added nodes from all mutations
+    const addedNodes: Node[] = [];
+    
+    for (const mutation of mutations) {
+      // Check if this mutation has added nodes
+      if (mutation.addedNodes.length > 0) {
+        // Convert NodeList to array and add to our collection
+        const nodes = Array.from(mutation.addedNodes);
+        nodes.forEach(node => addedNodes.push(node));
+      }
+    }
+    
+    // Log the number of added nodes found
+    logger.debug('Collected added nodes from mutations.', {
+      addedNodesCount: addedNodes.length
+    });
+    
+    // Exit early if no added nodes were found
+    if (addedNodes.length === 0) {
+      logger.debug('No added nodes to process.');
+      return;
+    }
+    
+    // Schedule the collected nodes for processing
+    // This uses the debouncing mechanism implemented in T009
+    scheduleProcessing(addedNodes);
   }
   
   return {
