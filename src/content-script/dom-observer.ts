@@ -38,13 +38,15 @@ export interface DomObserverController {
  * @param annotationFunction Function to call for annotating prices in new DOM nodes
  * @param debounceMilliseconds Milliseconds to debounce rapid DOM changes
  * @param initialProcessedNodes Set of nodes that have already been processed
+ * @param mutationObserverConstructor Constructor for MutationObserver (defaults to global MutationObserver)
  * @returns A controller object for starting and stopping the observer
  */
 export function createDomObserver(
   rootElementToObserve: HTMLElement,
   annotationFunction: (targetNode: Node, priceData: PriceData, processedNodes: Set<Node>) => void,
   debounceMilliseconds: number,
-  initialProcessedNodes: Set<Node>
+  initialProcessedNodes: Set<Node>,
+  mutationObserverConstructor: typeof MutationObserver = MutationObserver
 ): DomObserverController {
   // Log creation with debounce value
   logger.info('DOM Observer created.', { debounceMilliseconds });
@@ -260,7 +262,7 @@ export function createDomObserver(
         currentPriceData = priceData;
       
       // Create the MutationObserver with the callback
-      observer = new MutationObserver(handleMutationsCallback);
+      observer = new mutationObserverConstructor(handleMutationsCallback);
       
       // Start observing with specified configuration
       observer.observe(rootElementToObserve, {
