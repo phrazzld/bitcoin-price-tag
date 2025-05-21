@@ -3,6 +3,12 @@
  */
 
 import { PriceData } from '../common/types';
+import { createLogger } from '../shared/logger';
+
+/**
+ * Module logger
+ */
+const logger = createLogger('content-script:dom');
 
 /** 
  * Currency pattern for USD symbols and text
@@ -187,6 +193,10 @@ function processTextNode(textNode: Text, priceData: PriceData): void {
 function walkNodes(node: Node, priceData: PriceData, processedNodes: Set<Node>): void {
   // Skip already processed nodes
   if (processedNodes.has(node)) {
+    logger.debug('Node skipped (already processed).', {
+      nodeName: node.nodeName,
+      nodeType: node.nodeType
+    });
     return;
   }
   // Handle special cases for Amazon price elements
@@ -247,6 +257,10 @@ function walkNodes(node: Node, priceData: PriceData, processedNodes: Set<Node>):
   
   // Mark node as processed
   processedNodes.add(node);
+  logger.debug('Node added to processed set.', {
+    nodeName: node.nodeName,
+    nodeType: node.nodeType
+  });
 }
 
 /**

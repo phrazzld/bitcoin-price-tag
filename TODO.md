@@ -52,7 +52,7 @@
            - Nodes are added to processedNodes after processing
            - New nodes are processed while previously processed nodes are skipped when using the same set
 
-- [ ] **T004 · Feature · P2: add logging for `processedNodes` handling in `findAndAnnotatePrices`**
+- [x] **T004 · Feature · P2: add logging for `processedNodes` handling in `findAndAnnotatePrices`**
     - **Context:** PLAN.md > Logging & Observability > `src/content-script/dom.ts`
     - **Action:**
         1. Add `DEBUG` log: `Node skipped (already processed). {nodeName, nodeType}` when a node is skipped.
@@ -60,6 +60,12 @@
     - **Done‑when:**
         1. Specified debug logs are implemented and appear correctly during annotation.
     - **Depends‑on:** [T003]
+    - **Results:**
+        1. Imported createLogger from shared/logger module
+        2. Created a module logger with name 'content-script:dom'
+        3. Added DEBUG level log with node details when a node is skipped due to being already processed
+        4. Added DEBUG level log with node details when a node is added to the processedNodes set
+        5. Verified through unit tests that functionality is preserved
 
 ## DOM Observer (`src/content-script/dom-observer.ts` - New Module)
 - [ ] **T005 · Feature · P1: define `DomObserverController` interface and `createDomObserver` factory skeleton**
