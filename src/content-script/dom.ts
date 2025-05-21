@@ -243,9 +243,15 @@ function walkNodes(node: Node, priceData: PriceData): void {
 
 /**
  * Main function to find and annotate prices in the DOM
- * @param rootElement The root element to search within
+ * @param rootNode The root node to search within
  * @param priceData Current Bitcoin price data
+ * @param processedNodes Set of nodes that have already been processed, used to avoid redundant work
+ *                      when handling dynamically added content and mutation events
  */
-export function findAndAnnotatePrices(rootElement: Element, priceData: PriceData): void {
-  walkNodes(rootElement, priceData);
+export function findAndAnnotatePrices(
+  rootNode: Node, 
+  priceData: PriceData, 
+  processedNodes: Set<Node>
+): void {
+  walkNodes(rootNode, priceData);
 }

@@ -15,7 +15,7 @@
         4. Unit tests still pass
 
 ## DOM Annotation (`src/content-script/dom.ts`)
-- [ ] **T002 · Refactor · P1: modify `findAndAnnotatePrices` signature to accept `processedNodes`**
+- [x] **T002 · Refactor · P1: modify `findAndAnnotatePrices` signature to accept `processedNodes`**
     - **Context:** PLAN.md > Detailed Build Steps > Step 3; Public Interfaces / Contracts
     - **Action:**
         1. Change the signature of `findAndAnnotatePrices` to `export function findAndAnnotatePrices(rootNode: Node, priceData: PriceData, processedNodes: Set<Node>): void;`.
@@ -23,6 +23,12 @@
         1. The function signature is updated in `src/content-script/dom.ts`.
         2. TSDoc for the function is updated to reflect the new signature.
     - **Depends‑on:** none
+    - **Results:**
+        1. Updated function signature to include the new processedNodes parameter
+        2. Changed the parameter name from `rootElement` to `rootNode` to better represent the type
+        3. Added detailed TSDoc comment explaining the purpose of the processedNodes parameter
+        4. Updated all test cases to pass the new Set<Node>() parameter
+        5. All tests are passing
 
 - [ ] **T003 · Feature · P1: implement `processedNodes` check and update logic in `findAndAnnotatePrices`**
     - **Context:** PLAN.md > Detailed Build Steps > Step 3; Error & Edge‑Case Strategy > Redundant Processing
