@@ -88,8 +88,8 @@ export function createDomObserver(
    */
   function processDebouncedNodes(): void {
     // Log the start of processing with node count
-    logger.debug('Processing debounced nodes.', {
-      pendingNodesCount: pendingNodes.size
+    logger.debug('Processing debounced node batch.', {
+      nodeCount: pendingNodes.size
     });
     
     // Safety check: we need price data to annotate prices
@@ -146,8 +146,8 @@ export function createDomObserver(
       const duration = performance.now() - startTime;
       
       // Log completion with performance metrics
-      logger.debug('Finished processing debounced nodes.', {
-        totalNodes: nodesToProcess.length,
+      logger.debug('Finished processing debounced node batch.', {
+        nodeCount: nodesToProcess.length,
         processedCount,
         filteredCount,
         durationMs: Math.round(duration),
@@ -172,8 +172,9 @@ export function createDomObserver(
    * @param newNodes New nodes to process
    */
   function scheduleProcessing(newNodes: Node[]): void {
-    // Add new nodes to the pending set
-    newNodes.forEach(node => pendingNodes.add(node));
+    try {
+      // Add new nodes to the pending set
+      newNodes.forEach(node => pendingNodes.add(node));
     
     // Log the scheduling of processing
     logger.debug('Scheduling debounced processing.', {
@@ -190,6 +191,13 @@ export function createDomObserver(
     
     // Set a new timeout (cast to number to satisfy TypeScript in browser environment)
     timeoutId = window.setTimeout(processDebouncedNodes, debounceMilliseconds) as unknown as number;
+    } catch (error) {
+      // Log any errors in the scheduling process
+      logger.error('Error scheduling debounced processing.', {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined
+      });
+    }
   }
   
   /**
@@ -198,10 +206,11 @@ export function createDomObserver(
    * @param mutations Array of mutation records from MutationObserver
    */
   function handleMutationsCallback(mutations: MutationRecord[]): void {
-    // Log the callback trigger with mutation count
-    logger.debug('MutationObserver callback triggered.', {
-      mutationCount: mutations.length
-    });
+    try {
+      // Log the callback trigger with mutation count
+      logger.debug('MutationObserver callback triggered.', {
+        mutationCount: mutations.length
+      });
     
     // Exit early if there are no mutations
     if (mutations.length === 0) {
@@ -222,8 +231,8 @@ export function createDomObserver(
     }
     
     // Log the number of added nodes found
-    logger.debug('Collected added nodes from mutations.', {
-      addedNodesCount: addedNodes.length
+    logger.debug('Collected added nodes for debounced processing.', {
+      addedNodeCount: addedNodes.length
     });
     
     // Exit early if no added nodes were found
@@ -235,12 +244,20 @@ export function createDomObserver(
     // Schedule the collected nodes for processing
     // This uses the debouncing mechanism implemented in T009
     scheduleProcessing(addedNodes);
+    } catch (error) {
+      // Log any errors in the mutation observer callback
+      logger.error('Error in MutationObserver callback.', {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined
+      });
+    }
   }
   
   return {
     start(priceData: PriceData): void {
-      // Store the price data for future use
-      currentPriceData = priceData;
+      try {
+        // Store the price data for future use
+        currentPriceData = priceData;
       
       // Create the MutationObserver with the callback
       observer = new MutationObserver(handleMutationsCallback);
@@ -251,14 +268,23 @@ export function createDomObserver(
         subtree: true    // Watch the entire subtree
       });
       
-      // Log the observer start
-      logger.info('DOM Observer started on element:', {
-        rootElementNodeName: rootElementToObserve.nodeName
-      });
+        // Log the observer start
+        logger.info('DOM Observer started on element:', {
+          rootElementNodeName: rootElementToObserve.nodeName
+        });
+      } catch (error) {
+        // Log any errors during observer start
+        logger.error('Error starting DOM Observer.', {
+          errorMessage: error instanceof Error ? error.message : String(error),
+          errorStack: error instanceof Error ? error.stack : undefined
+        });
+        throw error; // Re-throw to notify caller of the failure
+      }
     },
     
     stop(): void {
-      // Disconnect the MutationObserver if it exists
+      try {
+        // Disconnect the MutationObserver if it exists
       if (observer !== null) {
         observer.disconnect();
         logger.debug('MutationObserver disconnected.');
@@ -272,8 +298,15 @@ export function createDomObserver(
         logger.debug('Cleared debounce timeout during stop.');
       }
       
-      // Log that the observer has been fully stopped
-      logger.info('DOM Observer stopped.');
+        // Log that the observer has been fully stopped
+        logger.info('DOM Observer stopped.');
+      } catch (error) {
+        // Log any errors during observer stop
+        logger.error('Error stopping DOM Observer.', {
+          errorMessage: error instanceof Error ? error.message : String(error),
+          errorStack: error instanceof Error ? error.stack : undefined
+        });
+      }
     }
   };
 }

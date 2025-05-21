@@ -200,13 +200,19 @@
         5. Updated completion logging with additional metrics (processed vs filtered counts)
         6. Ensured clean, maintainable code following the development philosophy
 
-- [ ] **T012 · Feature · P2: add logging for `dom-observer.ts` lifecycle and processing**
+- [x] **T012 · Feature · P2: add logging for `dom-observer.ts` lifecycle and processing**
     - **Context:** PLAN.md > Logging & Observability > `src/content-script/dom-observer.ts`
     - **Action:**
         1. Implement all `INFO`, `DEBUG`, and `ERROR` log events as specified in the PLAN.md for `dom-observer.ts`.
     - **Done‑when:**
         1. All specified logs are implemented and appear correctly with structured fields.
     - **Depends‑on:** [T005, T006, T007, T008, T010]
+    - **Results:**
+        1. Added or updated all required log statements from PLAN.md
+        2. Standardized log message format and field names to match plan
+        3. Implemented error handling with appropriate ERROR logs for all key functions
+        4. Added detailed error information (message and stack) for all error logs
+        5. Ensured consistent structured fields for all logs
 
 ## Content Script Core (`src/content-script/index.ts`)
 - [ ] **T013 · Refactor · P1: remove fixed `setTimeout` for initialization in `index.ts`**
