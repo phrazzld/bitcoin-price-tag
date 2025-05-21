@@ -215,7 +215,7 @@
         5. Ensured consistent structured fields for all logs
 
 ## Content Script Core (`src/content-script/index.ts`)
-- [ ] **T013 · Refactor · P1: remove fixed `setTimeout` for initialization in `index.ts`**
+- [x] **T013 · Refactor · P1: remove fixed `setTimeout` for initialization in `index.ts`**
     - **Context:** PLAN.md > Detailed Build Steps > Step 1
     - **Action:**
         1. Remove the `setTimeout(initPriceAnnotation, INITIAL_REQUEST_DELAY)` call.
@@ -224,6 +224,12 @@
         1. The fixed `setTimeout` is removed.
         2. Initialization sequence is correctly tied to DOM readiness.
     - **Depends‑on:** none
+    - **Results:**
+        1. Removed the `INITIAL_REQUEST_DELAY` constant as it's no longer needed
+        2. Removed the `runWithDelay` function that used setTimeout
+        3. Modified initialization logic to call `initPriceAnnotation` directly after DOM is ready
+        4. Maintained existing DOM readiness checks (document.readyState and DOMContentLoaded)
+        5. Improved JSDoc documentation for the initialize function
 
 - [ ] **T014 · Feature · P1: implement `DOMContentLoaded` logic for price data fetching and `processedNodes` creation**
     - **Context:** PLAN.md > Detailed Build Steps > Step 1

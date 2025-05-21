@@ -10,9 +10,6 @@ import { createLogger } from '../shared/logger';
 /** Logger instance for this module */
 const logger = createLogger('content-script');
 
-/** Delay before initial price request (in milliseconds) */
-const INITIAL_REQUEST_DELAY = 2500;
-
 /**
  * Main function that will be called when the page is ready
  * Requests price data and annotates the DOM
@@ -75,22 +72,17 @@ async function initPriceAnnotation(): Promise<void> {
 
 /**
  * Initialize when DOM is ready
+ * This function ensures price annotation only happens after the DOM is available
  */
 function initialize(): void {
-  const runWithDelay = () => {
-    // Add delay before initial request, matching original behavior
-    setTimeout(() => {
-      initPriceAnnotation();
-    }, INITIAL_REQUEST_DELAY);
-  };
-
   if (document.readyState === 'loading') {
     // If DOM is still loading, wait for it to complete
     document.addEventListener('DOMContentLoaded', () => {
       logger.info('DOM content loaded', {
         function_name: 'initialize'
       });
-      runWithDelay();
+      // Start annotation directly when DOM is ready
+      initPriceAnnotation();
     });
   } else {
     // DOM is already loaded
@@ -98,7 +90,8 @@ function initialize(): void {
       function_name: 'initialize',
       readyState: document.readyState
     });
-    runWithDelay();
+    // Start annotation immediately as DOM is already available
+    initPriceAnnotation();
   }
 }
 
