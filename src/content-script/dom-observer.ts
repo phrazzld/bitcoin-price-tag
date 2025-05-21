@@ -57,11 +57,34 @@ export function createDomObserver(
   let pendingNodes: Set<Node> = new Set<Node>();
   
   /**
+   * Determines if a node should be processed for price annotation
+   * 
+   * @param node The DOM node to check
+   * @returns true if the node should be processed, false otherwise
+   */
+  function shouldProcessNode(node: Node): boolean {
+    // Skip non-Element nodes (like text nodes, comments, etc.)
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return false;
+    }
+    
+    // Skip script and style elements (they never contain visible prices)
+    const nodeName = node.nodeName.toUpperCase();
+    if (nodeName === 'SCRIPT' || nodeName === 'STYLE') {
+      return false;
+    }
+    
+    // All other Element nodes should be processed
+    return true;
+  }
+  
+  /**
    * Process collected nodes from DOM mutations
    * 
    * This function processes all the nodes that have been collected from 
    * MutationObserver notifications. It's called after the debounce period
-   * to efficiently handle rapid DOM changes.
+   * to efficiently handle rapid DOM changes. It filters out irrelevant nodes
+   * before passing them to the annotation function.
    */
   function processDebouncedNodes(): void {
     // Log the start of processing with node count
@@ -90,12 +113,25 @@ export function createDomObserver(
       
       // Convert set to array for iteration
       const nodesToProcess = Array.from(pendingNodes);
+      let processedCount = 0;
+      let filteredCount = 0;
       
-      // Process each node using the annotation function
+      // Process each node using the annotation function, filtering irrelevant nodes
       for (const node of nodesToProcess) {
         try {
+          // Filter out irrelevant nodes before processing
+          if (!shouldProcessNode(node)) {
+            filteredCount++;
+            logger.debug('Node filtered out (irrelevant type):', {
+              nodeName: node.nodeName,
+              nodeType: node.nodeType
+            });
+            continue;
+          }
+          
           // Call the annotation function with the node, priceData, and shared processedNodes set
           annotationFunction(node, currentPriceData, processedNodes);
+          processedCount++;
         } catch (error) {
           // Log errors for individual nodes but continue processing others
           logger.error('Error processing individual node:', {
@@ -111,7 +147,9 @@ export function createDomObserver(
       
       // Log completion with performance metrics
       logger.debug('Finished processing debounced nodes.', {
-        nodesProcessed: nodesToProcess.length,
+        totalNodes: nodesToProcess.length,
+        processedCount,
+        filteredCount,
         durationMs: Math.round(duration),
         processedNodesSize: processedNodes.size
       });

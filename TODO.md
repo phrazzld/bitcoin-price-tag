@@ -181,7 +181,7 @@
         6. Added performance tracking and logging for monitoring and debugging
         7. Ensured cleanup of internal state in all code paths with try/finally
 
-- [ ] **T011 · Feature · P2: filter irrelevant nodes in `dom-observer.ts` before annotation**
+- [x] **T011 · Feature · P2: filter irrelevant nodes in `dom-observer.ts` before annotation**
     - **Context:** PLAN.md > Error & Edge‑Case Strategy > Ignoring Irrelevant Mutations
     - **Action:**
         1. In `handleMutationsCallback` or at the start of `processDebouncedNodes`, filter the list of `addedNodes`.
@@ -190,6 +190,15 @@
     - **Done‑when:**
         1. The `annotationFunction` is not called for non-Element nodes or for `<script>`/`<style>` elements originating from `addedNodes`.
     - **Depends‑on:** [T008, T010]
+    - **Results:**
+        1. Implemented `shouldProcessNode` utility function to filter DOM nodes
+        2. Added filtering inside `processDebouncedNodes` before calling the annotation function
+        3. Added filtering rules to:
+           - Skip non-Element nodes (nodeType !== Node.ELEMENT_NODE)
+           - Skip script and style elements (nodeName === 'SCRIPT' || nodeName === 'STYLE')
+        4. Added detailed logging for filtered nodes with count tracking
+        5. Updated completion logging with additional metrics (processed vs filtered counts)
+        6. Ensured clean, maintainable code following the development philosophy
 
 - [ ] **T012 · Feature · P2: add logging for `dom-observer.ts` lifecycle and processing**
     - **Context:** PLAN.md > Logging & Observability > `src/content-script/dom-observer.ts`
