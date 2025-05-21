@@ -380,4 +380,78 @@ describe('dom.ts', () => {
       expect(textNode.nodeValue).toBe(originalValue);
     });
   });
+  
+  describe('processedNodes functionality', () => {
+    it('should skip nodes that are already in the processedNodes set', () => {
+      // Setup a DOM structure with price
+      const parent = document.createElement('div');
+      const textNode = document.createTextNode('$100');
+      parent.appendChild(textNode);
+      
+      // Create a processedNodes set with the parent already in it
+      const processedNodes = new Set<Node>([parent]);
+      
+      // Annotate prices - should skip the parent node
+      findAndAnnotatePrices(parent, mockPriceData, processedNodes);
+      
+      // Text node should not be modified since parent was already in processedNodes
+      expect(textNode.nodeValue).toBe('$100');
+    });
+    
+    it('should add processed nodes to the processedNodes set', () => {
+      // Setup a DOM structure
+      const parent = document.createElement('div');
+      const child = document.createElement('span');
+      parent.appendChild(child);
+      
+      // Create an empty processedNodes set
+      const processedNodes = new Set<Node>();
+      
+      // Process the DOM tree
+      findAndAnnotatePrices(parent, mockPriceData, processedNodes);
+      
+      // Both parent and child should be in the set
+      expect(processedNodes.has(parent)).toBe(true);
+      expect(processedNodes.has(child)).toBe(true);
+    });
+    
+    it('should process new nodes but skip previously processed ones', () => {
+      // Setup first node with price
+      const div1 = document.createElement('div');
+      const text1 = document.createTextNode('$50');
+      div1.appendChild(text1);
+      
+      // Setup second node with price
+      const div2 = document.createElement('div');
+      const text2 = document.createTextNode('$75');
+      div2.appendChild(text2);
+      
+      // Create a container with both nodes
+      const container = document.createElement('div');
+      container.appendChild(div1);
+      container.appendChild(div2);
+      
+      // Shared processedNodes set
+      const processedNodes = new Set<Node>();
+      
+      // Process the first div
+      findAndAnnotatePrices(div1, mockPriceData, processedNodes);
+      
+      // First text should be annotated
+      expect(text1.nodeValue).toContain('(');
+      expect(text1.nodeValue).toContain(')');
+      
+      // Process the entire container - should skip div1 since it's already processed
+      findAndAnnotatePrices(container, mockPriceData, processedNodes);
+      
+      // Second text should now be annotated
+      expect(text2.nodeValue).toContain('(');
+      expect(text2.nodeValue).toContain(')');
+      
+      // The container and all nodes should be in processedNodes
+      expect(processedNodes.has(container)).toBe(true);
+      expect(processedNodes.has(div1)).toBe(true);
+      expect(processedNodes.has(div2)).toBe(true);
+    });
+  });
 });

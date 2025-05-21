@@ -182,8 +182,13 @@ function processTextNode(textNode: Text, priceData: PriceData): void {
  * Recursively traverses the DOM tree
  * @param node The DOM node to process
  * @param priceData Current Bitcoin price data
+ * @param processedNodes Set of nodes that have already been processed, used to avoid redundant work
  */
-function walkNodes(node: Node, priceData: PriceData): void {
+function walkNodes(node: Node, priceData: PriceData, processedNodes: Set<Node>): void {
+  // Skip already processed nodes
+  if (processedNodes.has(node)) {
+    return;
+  }
   // Handle special cases for Amazon price elements
   if (node.nodeType === Node.ELEMENT_NODE) {
     const element = node as Element;
@@ -236,9 +241,12 @@ function walkNodes(node: Node, priceData: PriceData): void {
   let child = node.firstChild;
   while (child) {
     const next = child.nextSibling;
-    walkNodes(child, priceData);
+    walkNodes(child, priceData, processedNodes);
     child = next;
   }
+  
+  // Mark node as processed
+  processedNodes.add(node);
 }
 
 /**
@@ -253,5 +261,5 @@ export function findAndAnnotatePrices(
   priceData: PriceData, 
   processedNodes: Set<Node>
 ): void {
-  walkNodes(rootNode, priceData);
+  walkNodes(rootNode, priceData, processedNodes);
 }

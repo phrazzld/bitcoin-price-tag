@@ -30,7 +30,7 @@
         4. Updated all test cases to pass the new Set<Node>() parameter
         5. All tests are passing
 
-- [ ] **T003 · Feature · P1: implement `processedNodes` check and update logic in `findAndAnnotatePrices`**
+- [x] **T003 · Feature · P1: implement `processedNodes` check and update logic in `findAndAnnotatePrices`**
     - **Context:** PLAN.md > Detailed Build Steps > Step 3; Error & Edge‑Case Strategy > Redundant Processing
     - **Action:**
         1. In the DOM traversal logic within `findAndAnnotatePrices` (e.g., `walkNodes`):
@@ -42,6 +42,15 @@
     - **Verification:**
         1. Unit tests (T018) confirm that nodes are skipped and added correctly.
     - **Depends‑on:** [T002]
+    - **Results:**
+        1. Added processedNodes check at the beginning of walkNodes function: `if (processedNodes.has(node)) { return; }`
+        2. Added code to add the node to processedNodes after it's processed: `processedNodes.add(node);`
+        3. Modified the walkNodes function signature to accept processedNodes
+        4. Updated the findAndAnnotatePrices function to pass processedNodes to walkNodes
+        5. Added unit tests to verify:
+           - Nodes in processedNodes set are skipped
+           - Nodes are added to processedNodes after processing
+           - New nodes are processed while previously processed nodes are skipped when using the same set
 
 - [ ] **T004 · Feature · P2: add logging for `processedNodes` handling in `findAndAnnotatePrices`**
     - **Context:** PLAN.md > Logging & Observability > `src/content-script/dom.ts`
@@ -183,7 +192,7 @@
     - **Depends‑on:** [T014, T015, T016]
 
 ## Testing
-- [ ] **T018 · Test · P1: write unit tests for `processedNodes` logic in `findAndAnnotatePrices` (`dom.ts`)**
+- [x] **T018 · Test · P1: write unit tests for `processedNodes` logic in `findAndAnnotatePrices` (`dom.ts`)**
     - **Context:** PLAN.md > Testing Strategy > Unit Tests (`dom.ts`)
     - **Action:**
         1. Test that nodes in the `processedNodes` set are skipped by `findAndAnnotatePrices`.
@@ -191,6 +200,12 @@
     - **Done‑when:**
         1. Unit tests achieve >90% coverage for the `processedNodes` related logic in `dom.ts`.
     - **Depends‑on:** [T003]
+    - **Results:**
+        1. Added three comprehensive unit tests in a new "processedNodes functionality" describe block:
+           - Test to verify nodes already in processedNodes are skipped
+           - Test to verify processed nodes are added to the set
+           - Test to verify partial processing works (some nodes processed, others skipped)
+        2. All tests pass, demonstrating the functionality works correctly
 
 - [ ] **T019 · Test · P1: write unit tests for `dom-observer.ts`**
     - **Context:** PLAN.md > Testing Strategy > Unit Tests (`dom-observer.ts`)
