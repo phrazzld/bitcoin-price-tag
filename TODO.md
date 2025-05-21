@@ -261,7 +261,7 @@
         4. No code changes needed as the requirement was already fulfilled during T014 implementation
         5. The implementation aligns with the architecture plan for sharing the processedNodes set
 
-- [ ] **T016 · Feature · P1: instantiate and start `DomObserver` after initial scan**
+- [x] **T016 · Feature · P1: instantiate and start `DomObserver` after initial scan**
     - **Context:** PLAN.md > Detailed Build Steps > Step 1
     - **Action:**
         1. After the initial scan, instantiate the DOM observer: `const domObserver = createDomObserver(document.body, findAndAnnotatePrices, DOM_OBSERVER_DEBOUNCE_MS, processedNodes)`.
@@ -270,6 +270,12 @@
         1. `createDomObserver` is called with `document.body`, `findAndAnnotatePrices`, the debounce constant, and the shared `processedNodes` set.
         2. `domObserver.start(priceData)` is called.
     - **Depends‑on:** [T015, T005, T001]
+    - **Results:**
+        1. Added imports for createDomObserver and DOM_OBSERVER_DEBOUNCE_MS
+        2. Instantiated DOM observer after the initial scan with all required parameters
+        3. Called start() on the observer with priceData
+        4. Added detailed logging before and after observer instantiation
+        5. Ensured correct placement within existing try/catch block for error handling
 
 - [ ] **T017 · Feature · P2: implement logging for `index.ts` (initialization, errors)**
     - **Context:** PLAN.md > Detailed Build Steps > Step 1; Logging & Observability > `src/content-script/index.ts`

@@ -6,6 +6,8 @@
 import { requestPriceData } from './messaging';
 import { findAndAnnotatePrices } from './dom';
 import { createLogger } from '../shared/logger';
+import { createDomObserver } from './dom-observer';
+import { DOM_OBSERVER_DEBOUNCE_MS } from '../common/constants';
 
 /** Logger instance for this module */
 const logger = createLogger('content-script');
@@ -47,6 +49,24 @@ async function initPriceAnnotation(): Promise<void> {
     logger.info('Price annotation completed', {
       function_name: 'initPriceAnnotation',
       processedNodesCount: processedNodes.size
+    });
+    
+    // Create and start DOM observer to handle dynamically loaded content
+    logger.info('Creating DOM observer for dynamic content', {
+      function_name: 'initPriceAnnotation'
+    });
+    const domObserver = createDomObserver(
+      document.body,
+      findAndAnnotatePrices,
+      DOM_OBSERVER_DEBOUNCE_MS,
+      processedNodes
+    );
+    
+    // Start observing DOM changes with the current price data
+    domObserver.start(priceData);
+    logger.info('DOM observer started', {
+      function_name: 'initPriceAnnotation',
+      debounceMs: DOM_OBSERVER_DEBOUNCE_MS
     });
   } catch (error) {
     // Silent failure approach: Log errors without showing visual indicators to users
