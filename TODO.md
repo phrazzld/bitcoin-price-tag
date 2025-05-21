@@ -231,7 +231,7 @@
         4. Maintained existing DOM readiness checks (document.readyState and DOMContentLoaded)
         5. Improved JSDoc documentation for the initialize function
 
-- [ ] **T014 · Feature · P1: implement `DOMContentLoaded` logic for price data fetching and `processedNodes` creation**
+- [x] **T014 · Feature · P1: implement `DOMContentLoaded` logic for price data fetching and `processedNodes` creation**
     - **Context:** PLAN.md > Detailed Build Steps > Step 1
     - **Action:**
         1. After DOM readiness, call `requestPriceData()` from `messaging.ts`.
@@ -240,6 +240,12 @@
         1. `requestPriceData` is called upon DOM readiness.
         2. `processedNodes` set is created on successful data retrieval.
     - **Depends‑on:** [T013]
+    - **Results:**
+        1. Created a Set<Node> instance after successful price data retrieval
+        2. Updated the findAndAnnotatePrices call to pass the processedNodes set
+        3. Added logging for processedNodes creation and tracking
+        4. Updated JSDoc comments to document the changes
+        5. Verified implementation with TypeScript type checking
 
 - [ ] **T015 · Feature · P1: implement initial full-DOM scan using `findAndAnnotatePrices`**
     - **Context:** PLAN.md > Detailed Build Steps > Step 1

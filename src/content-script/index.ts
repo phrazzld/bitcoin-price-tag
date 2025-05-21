@@ -12,7 +12,8 @@ const logger = createLogger('content-script');
 
 /**
  * Main function that will be called when the page is ready
- * Requests price data and annotates the DOM
+ * Requests price data, creates a processedNodes set to track annotated nodes,
+ * and initiates the price annotation process
  */
 async function initPriceAnnotation(): Promise<void> {
   logger.info('Initializing price annotation', {
@@ -32,13 +33,20 @@ async function initPriceAnnotation(): Promise<void> {
       fetchedAt: priceData.fetchedAt
     });
 
+    // Create a set to track processed nodes and avoid redundant work
+    const processedNodes = new Set<Node>();
+    logger.info('Created processedNodes set for tracking annotated nodes', {
+      function_name: 'initPriceAnnotation'
+    });
+
     // Annotate prices in the DOM
     logger.info('Annotating prices in DOM', {
       function_name: 'initPriceAnnotation'
     });
-    findAndAnnotatePrices(document.body, priceData);
+    findAndAnnotatePrices(document.body, priceData, processedNodes);
     logger.info('Price annotation completed', {
-      function_name: 'initPriceAnnotation'
+      function_name: 'initPriceAnnotation',
+      processedNodesCount: processedNodes.size
     });
   } catch (error) {
     // Silent failure approach: Log errors without showing visual indicators to users
