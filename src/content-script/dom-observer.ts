@@ -49,24 +49,45 @@ export function createDomObserver(
   // Log creation with debounce value
   logger.info('DOM Observer created.', { debounceMilliseconds });
   
-  /* 
-   * Variables are intentionally unused in this skeleton implementation
-   * They will be used in subsequent tasks (T006-T010)
-   */
+  // Internal state variables
+  let currentPriceData: PriceData | null = null;
+  let processedNodes: Set<Node> = initialProcessedNodes;
+  let observer: MutationObserver | null = null;
   
-  // Basic implementation skeleton - will be expanded in subsequent tasks
+  /**
+   * Placeholder for the mutation callback function
+   * Will be fully implemented in T008
+   * @param mutations Array of mutation records from MutationObserver
+   */
+  function handleMutationsCallback(mutations: MutationRecord[]): void {
+    // This will be implemented in T008
+    logger.debug('MutationObserver callback triggered.', {
+      mutationCount: mutations.length
+    });
+  }
+  
   return {
     start(priceData: PriceData): void {
-      // These parameters will be used in T006 implementation
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const _ = { priceData, annotationFunction, initialProcessedNodes };
+      // Store the price data for future use
+      currentPriceData = priceData;
       
+      // Create the MutationObserver with the callback
+      observer = new MutationObserver(handleMutationsCallback);
+      
+      // Start observing with specified configuration
+      observer.observe(rootElementToObserve, {
+        childList: true, // Watch for added/removed children
+        subtree: true    // Watch the entire subtree
+      });
+      
+      // Log the observer start
       logger.info('DOM Observer started on element:', {
         rootElementNodeName: rootElementToObserve.nodeName
       });
     },
     
     stop(): void {
+      // Will be implemented in T007
       logger.info('DOM Observer stopped.');
     }
   };

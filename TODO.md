@@ -89,7 +89,7 @@
         4. Implemented a minimal skeleton with basic logging
         5. Verified that TypeScript compiles without errors for the new file
 
-- [ ] **T006 · Feature · P1: implement `createDomObserver`: `start()` method**
+- [x] **T006 · Feature · P1: implement `createDomObserver`: `start()` method**
     - **Context:** PLAN.md > Detailed Build Steps > Step 2
     - **Action:**
         1. Implement the `start(priceData: PriceData)` method within the controller returned by `createDomObserver`.
@@ -99,6 +99,14 @@
         1. `start()` method correctly stores `priceData` and uses the passed `initialProcessedNodes`.
         2. `MutationObserver` is instantiated and `observe()` is called with correct configuration.
     - **Depends‑on:** [T005]
+    - **Results:**
+        1. Implemented the start() method to store the provided priceData in a closure variable
+        2. Reused the initialProcessedNodes set from the factory function
+        3. Created a MutationObserver instance with a handleMutationsCallback function
+        4. Configured the observer with childList and subtree options and started it
+        5. Added a placeholder for the handleMutationsCallback function (to be implemented in T008)
+        6. Added detailed comments and maintained the existing logging
+        7. Verified the implementation with TypeScript checks
 
 - [ ] **T007 · Feature · P1: implement `createDomObserver`: `stop()` method**
     - **Context:** PLAN.md > Detailed Build Steps > Step 2
