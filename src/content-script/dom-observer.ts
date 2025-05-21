@@ -53,17 +53,80 @@ export function createDomObserver(
   let currentPriceData: PriceData | null = null;
   let processedNodes: Set<Node> = initialProcessedNodes;
   let observer: MutationObserver | null = null;
+  let timeoutId: number | null = null;
+  let pendingNodes: Set<Node> = new Set<Node>();
   
   /**
-   * Placeholder for the mutation callback function
+   * Process collected nodes with debouncing
+   * Will be fully implemented in T010
+   */
+  function processDebouncedNodes(): void {
+    // This is a placeholder that will be fully implemented in T010
+    // We're adding the bare minimum to satisfy TypeScript
+    
+    logger.debug('Processing debounced nodes.', {
+      pendingNodesCount: pendingNodes.size
+    });
+    
+    // Reference the variables to satisfy TypeScript unused variable warnings
+    // The actual implementation will be completed in T010
+    if (currentPriceData && pendingNodes.size > 0) {
+      logger.debug('Would process nodes with:', {
+        priceDataAvailable: !!currentPriceData,
+        processedNodesSize: processedNodes.size,
+        annotationFunctionAvailable: !!annotationFunction
+      });
+      
+      // Actual processing will happen here in T010
+    }
+    
+    // Clear the internal collections after processing
+    pendingNodes.clear();
+    timeoutId = null;
+  }
+  
+  /**
+   * Schedule processing with debouncing to handle rapid DOM changes efficiently
+   * @param newNodes New nodes to process
+   */
+  function scheduleProcessing(newNodes: Node[]): void {
+    // Add new nodes to the pending set
+    newNodes.forEach(node => pendingNodes.add(node));
+    
+    // Log the scheduling of processing
+    logger.debug('Scheduling debounced processing.', {
+      newNodesCount: newNodes.length,
+      totalPendingCount: pendingNodes.size,
+      debounceMs: debounceMilliseconds
+    });
+    
+    // Clear any existing timeout to implement debouncing
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+      logger.debug('Cleared previous debounce timeout.');
+    }
+    
+    // Set a new timeout (cast to number to satisfy TypeScript in browser environment)
+    timeoutId = window.setTimeout(processDebouncedNodes, debounceMilliseconds) as unknown as number;
+  }
+  
+  /**
+   * Mutation callback function - currently a partial implementation
    * Will be fully implemented in T008
    * @param mutations Array of mutation records from MutationObserver
    */
   function handleMutationsCallback(mutations: MutationRecord[]): void {
-    // This will be implemented in T008
     logger.debug('MutationObserver callback triggered.', {
       mutationCount: mutations.length
     });
+    
+    // This is just a minimal implementation to satisfy TypeScript
+    // The full implementation will be done in T008
+    // We're creating an empty array as a placeholder until T008 is implemented
+    const dummyNodes: Node[] = [];
+    
+    // Schedule processing of the nodes (will be populated in T008)
+    scheduleProcessing(dummyNodes);
   }
   
   return {
@@ -87,7 +150,14 @@ export function createDomObserver(
     },
     
     stop(): void {
-      // Will be implemented in T007
+      // Will be implemented in T007, but we can add the timeout clearing here
+      // as it's part of the debouncing mechanism
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+        logger.debug('Cleared debounce timeout during stop.');
+      }
+      
       logger.info('DOM Observer stopped.');
     }
   };
