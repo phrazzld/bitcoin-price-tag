@@ -1,22 +1,5 @@
 # BACKLOG
 
-## Critical Priority
-
-### 🚨 Immediate Fixes & Blockers
-
-- **[Fix] Update Tests and Mocks to Use CoinGecko API Instead of CoinDesk**
-  - **Type**: Fix
-  - **Complexity**: Medium
-  - **Rationale**: CRITICAL - Tests and mocks currently use outdated CoinDesk API structures, while production code uses CoinGecko. This misalignment creates a false sense of security, risks undetected bugs, and hinders reliable verification of the V3 extension.
-  - **Expected Outcome**: All test suites (unit, integration, E2E), mock implementations (`tests/mocks/fetch.ts`), and related documentation (`README.md`, `MANIFEST_V3_APPROACHES.md`) are updated to use the correct CoinGecko API URL and its corresponding response format. All tests pass reliably using CoinGecko data structures.
-  - **Affected Files**: `src/service-worker/api.test.ts`, `tests/mocks/fetch.ts`, `README.md` (line 160), `verify-build.js` (line 69), `MANIFEST_V3_APPROACHES.md`
-
-- **[Fix] Correct Manifest Host Permissions Check in Build Script**
-  - **Type**: Fix
-  - **Complexity**: Simple
-  - **Rationale**: BLOCKER - The build verification script (`verify-build.js`) incorrectly checks for CoinDesk host permissions, while the Manifest V3 `manifest.json` correctly uses CoinGecko. This causes false negatives in the build process, preventing reliable build verification and deployment.
-  - **Expected Outcome**: `verify-build.js` (line 69) is updated to correctly validate `*://api.coingecko.com/*` host permissions as defined in `src/manifest.json`. The build verification script passes when host permissions are correctly configured for CoinGecko.
-
 ## High Priority
 
 ### 🐛 Core Functionality & Reliability

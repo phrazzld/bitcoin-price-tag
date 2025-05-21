@@ -28,3 +28,6 @@ T[0-9]*-task.md
 
 # Temporary files
 *.tmp
+
+# Build artifacts
+*.zip

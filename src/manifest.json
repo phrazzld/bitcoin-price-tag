@@ -4,7 +4,7 @@
   "name": "Bitcoin Price Tag",
   "short_name": "btc-price-tag",
   "description": "See prices in bitcoin, not fiat.",
-  "version": "0.6",
+  "version": "0.7",
 
   "action": {
     "default_title": "Bitcoin Price Tag",
