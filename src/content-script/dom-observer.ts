@@ -150,14 +150,21 @@ export function createDomObserver(
     },
     
     stop(): void {
-      // Will be implemented in T007, but we can add the timeout clearing here
-      // as it's part of the debouncing mechanism
+      // Disconnect the MutationObserver if it exists
+      if (observer !== null) {
+        observer.disconnect();
+        logger.debug('MutationObserver disconnected.');
+        observer = null;
+      }
+      
+      // Clear any pending debounce timeout
       if (timeoutId !== null) {
         clearTimeout(timeoutId);
         timeoutId = null;
         logger.debug('Cleared debounce timeout during stop.');
       }
       
+      // Log that the observer has been fully stopped
       logger.info('DOM Observer stopped.');
     }
   };
