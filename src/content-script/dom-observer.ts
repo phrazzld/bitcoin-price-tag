@@ -57,32 +57,76 @@ export function createDomObserver(
   let pendingNodes: Set<Node> = new Set<Node>();
   
   /**
-   * Process collected nodes with debouncing
-   * Will be fully implemented in T010
+   * Process collected nodes from DOM mutations
+   * 
+   * This function processes all the nodes that have been collected from 
+   * MutationObserver notifications. It's called after the debounce period
+   * to efficiently handle rapid DOM changes.
    */
   function processDebouncedNodes(): void {
-    // This is a placeholder that will be fully implemented in T010
-    // We're adding the bare minimum to satisfy TypeScript
-    
+    // Log the start of processing with node count
     logger.debug('Processing debounced nodes.', {
       pendingNodesCount: pendingNodes.size
     });
     
-    // Reference the variables to satisfy TypeScript unused variable warnings
-    // The actual implementation will be completed in T010
-    if (currentPriceData && pendingNodes.size > 0) {
-      logger.debug('Would process nodes with:', {
-        priceDataAvailable: !!currentPriceData,
-        processedNodesSize: processedNodes.size,
-        annotationFunctionAvailable: !!annotationFunction
-      });
-      
-      // Actual processing will happen here in T010
+    // Safety check: we need price data to annotate prices
+    if (!currentPriceData) {
+      logger.warn('Cannot process nodes: No price data available.');
+      pendingNodes.clear();
+      timeoutId = null;
+      return;
     }
     
-    // Clear the internal collections after processing
-    pendingNodes.clear();
-    timeoutId = null;
+    // Exit early if there are no nodes to process
+    if (pendingNodes.size === 0) {
+      logger.debug('No nodes to process.');
+      timeoutId = null;
+      return;
+    }
+    
+    try {
+      // Track start time for performance logging
+      const startTime = performance.now();
+      
+      // Convert set to array for iteration
+      const nodesToProcess = Array.from(pendingNodes);
+      
+      // Process each node using the annotation function
+      for (const node of nodesToProcess) {
+        try {
+          // Call the annotation function with the node, priceData, and shared processedNodes set
+          annotationFunction(node, currentPriceData, processedNodes);
+        } catch (error) {
+          // Log errors for individual nodes but continue processing others
+          logger.error('Error processing individual node:', {
+            nodeName: node.nodeName,
+            nodeType: node.nodeType,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+      
+      // Calculate processing duration for performance monitoring
+      const duration = performance.now() - startTime;
+      
+      // Log completion with performance metrics
+      logger.debug('Finished processing debounced nodes.', {
+        nodesProcessed: nodesToProcess.length,
+        durationMs: Math.round(duration),
+        processedNodesSize: processedNodes.size
+      });
+    } catch (error) {
+      // Log any unexpected errors during processing
+      logger.error('Error in processDebouncedNodes:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+    } finally {
+      // Always clear the pendingNodes set and reset timeoutId
+      // regardless of success or failure
+      pendingNodes.clear();
+      timeoutId = null;
+    }
   }
   
   /**
