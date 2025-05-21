@@ -68,7 +68,7 @@
         5. Verified through unit tests that functionality is preserved
 
 ## DOM Observer (`src/content-script/dom-observer.ts` - New Module)
-- [ ] **T005 · Feature · P1: define `DomObserverController` interface and `createDomObserver` factory skeleton**
+- [x] **T005 · Feature · P1: define `DomObserverController` interface and `createDomObserver` factory skeleton**
     - **Context:** PLAN.md > Detailed Build Steps > Step 2; Public Interfaces / Contracts
     - **Action:**
         1. Create the new file `src/content-script/dom-observer.ts`.
@@ -78,6 +78,16 @@
         1. `src/content-script/dom-observer.ts` file is created.
         2. `DomObserverController` interface and `createDomObserver` function signature are defined and exported as per plan (with `initialProcessedNodes` added to factory).
     - **Depends‑on:** none
+    - **Results:**
+        1. Created `src/content-script/dom-observer.ts` file with proper documentation
+        2. Defined and exported `DomObserverController` interface with `start()` and `stop()` methods
+        3. Defined and exported `createDomObserver` factory function with all required parameters:
+            - `rootElementToObserve: HTMLElement`
+            - `annotationFunction: (targetNode: Node, priceData: PriceData, processedNodes: Set<Node>) => void`
+            - `debounceMilliseconds: number`
+            - `initialProcessedNodes: Set<Node>`
+        4. Implemented a minimal skeleton with basic logging
+        5. Verified that TypeScript compiles without errors for the new file
 
 - [ ] **T006 · Feature · P1: implement `createDomObserver`: `start()` method**
     - **Context:** PLAN.md > Detailed Build Steps > Step 2
