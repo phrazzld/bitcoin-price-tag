@@ -12,6 +12,51 @@ vi.mock('../shared/logger', () => ({
   }),
 }));
 
+/**
+ * Helper function to create mock MutationRecord objects with proper typing
+ * This eliminates the need for 'as any' casts when creating test data
+ */
+function createMockMutationRecord(options: Partial<MutationRecord> = {}): MutationRecord {
+  const defaultNodeList = { 
+    length: 0, 
+    [Symbol.iterator]: function* () {} 
+  } as NodeListOf<Node>;
+  
+  return {
+    type: 'childList',
+    target: document.createElement('div'),
+    addedNodes: defaultNodeList,
+    removedNodes: defaultNodeList,
+    previousSibling: null,
+    nextSibling: null,
+    attributeName: null,
+    attributeNamespace: null,
+    oldValue: null,
+    ...options,
+  } as MutationRecord;
+}
+
+/**
+ * Helper function to create a mock NodeListOf<Node> for MutationRecord testing
+ */
+function createMockNodeList(nodes: Node[]): NodeListOf<Node> {
+  const mockNodeList = {
+    length: nodes.length,
+    [Symbol.iterator]: function* () {
+      for (let i = 0; i < nodes.length; i++) {
+        yield this[i];
+      }
+    }
+  } as any;
+  
+  // Add indexed properties
+  nodes.forEach((node, index) => {
+    mockNodeList[index] = node;
+  });
+  
+  return mockNodeList as NodeListOf<Node>;
+}
+
 // Mock price data for testing
 const mockPriceData: PriceData = {
   usdRate: 30000,
@@ -140,24 +185,10 @@ describe('dom-observer.ts', () => {
         controller.start(mockPriceData);
         
         // Create mutation records
-        const records: MutationRecord[] = [{
-          type: 'childList',
+        const records: MutationRecord[] = [createMockMutationRecord({
           target: rootElement,
-          addedNodes: { 
-            length: 1, 
-            0: testNode, 
-            [Symbol.iterator]: function* () { yield this[0]; } 
-          } as any,
-          removedNodes: { 
-            length: 0, 
-            [Symbol.iterator]: function* () {} 
-          } as any,
-          previousSibling: null,
-          nextSibling: null,
-          attributeName: null,
-          attributeNamespace: null,
-          oldValue: null
-        }];
+          addedNodes: createMockNodeList([testNode])
+        })];
         
         // Verify callback was captured
         expect(mutationCallback).not.toBeNull();
@@ -230,24 +261,10 @@ describe('dom-observer.ts', () => {
         // Trigger a mutation to set up a timeout
         if (capturedCallback) {
           const testNode = document.createElement('div');
-          const records: MutationRecord[] = [{
-            type: 'childList',
+          const records: MutationRecord[] = [createMockMutationRecord({
             target: rootElement,
-            addedNodes: { 
-              length: 1, 
-              0: testNode, 
-              [Symbol.iterator]: function* () { yield this[0]; } 
-            } as any,
-            removedNodes: { 
-              length: 0, 
-              [Symbol.iterator]: function* () {} 
-            } as any,
-            previousSibling: null,
-            nextSibling: null,
-            attributeName: null,
-            attributeNamespace: null,
-            oldValue: null
-          }];
+            addedNodes: createMockNodeList([testNode])
+          })];
           
           // Call the callback to trigger setTimeout
           capturedCallback(records);
@@ -302,24 +319,10 @@ describe('dom-observer.ts', () => {
       const addedNode1 = document.createElement('span');
       const addedNode2 = document.createElement('div');
       
-      const records: MutationRecord[] = [
-        {
-          type: 'childList',
-          target: rootElement,
-          addedNodes: {
-            length: 2,
-            0: addedNode1,
-            1: addedNode2,
-            [Symbol.iterator]: function* () { yield this[0]; yield this[1]; }
-          } as any,
-          removedNodes: { length: 0, [Symbol.iterator]: function* () {} } as any,
-          previousSibling: null,
-          nextSibling: null,
-          attributeName: null,
-          attributeNamespace: null,
-          oldValue: null
-        }
-      ];
+      const records: MutationRecord[] = [createMockMutationRecord({
+        target: rootElement,
+        addedNodes: createMockNodeList([addedNode1, addedNode2])
+      })];
       
       // Get the MutationObserver callback directly
       const callback = (new MutationObserver(() => {}) as any)._callback;
@@ -359,19 +362,9 @@ describe('dom-observer.ts', () => {
       controller.start(mockPriceData);
       
       // Create empty mutation records
-      const records: MutationRecord[] = [
-        {
-          type: 'childList',
-          target: rootElement,
-          addedNodes: { length: 0, [Symbol.iterator]: function* () {} } as any,
-          removedNodes: { length: 0, [Symbol.iterator]: function* () {} } as any,
-          previousSibling: null,
-          nextSibling: null,
-          attributeName: null,
-          attributeNamespace: null,
-          oldValue: null
-        }
-      ];
+      const records: MutationRecord[] = [createMockMutationRecord({
+        target: rootElement
+      })];
       
       // Get the MutationObserver callback directly
       const callback = (new MutationObserver(() => {}) as any)._callback;
@@ -781,17 +774,10 @@ describe('dom-observer.ts', () => {
         expect(mutationCallback).not.toBeNull();
         
         // Create invalid mutation records that will cause forEach to throw
-        const invalidRecords = [{
-          type: 'childList',
+        const invalidRecords = [createMockMutationRecord({
           target: rootElement,
           addedNodes: null as any, // This will cause an error when trying to access forEach
-          removedNodes: { length: 0, [Symbol.iterator]: function* () {} } as any,
-          previousSibling: null,
-          nextSibling: null,
-          attributeName: null,
-          attributeNamespace: null,
-          oldValue: null
-        }];
+        })];
         
         if (mutationCallback) {
           // Call should not throw despite the error

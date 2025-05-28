@@ -138,7 +138,7 @@
     - **Depends‑on:** none
 
 ## Type Safety (CR-06)
-- [ ] **T012 · Refactor · P2: create and use typed helper for `MutationRecord` mocks in `dom-observer.test.ts`**
+- [x] **T012 · Refactor · P2: create and use typed helper for `MutationRecord` mocks in `dom-observer.test.ts`**
     - **Context:** PLAN.md · cr-06 · Steps 1-2
     - **Action:**
         1. In `src/content-script/dom-observer.test.ts`, define and use a helper function: `const createMockMutationRecord = (options: Partial<MutationRecord>): MutationRecord => ({ type: 'childList', addedNodes: [] as Node[], removedNodes: [] as Node[], ...options } as MutationRecord);`. (Ensure `Node[]` is castable to `NodeListOf<Node>` if JSDOM/TS requires it for the mock).
