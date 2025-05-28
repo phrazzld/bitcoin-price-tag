@@ -119,35 +119,27 @@ describe('dom-observer.ts', () => {
         disconnect: vi.fn()
       }));
       
-      // Replace global MutationObserver
-      const originalMutationObserver = global.MutationObserver;
-      global.MutationObserver = mockMutationObserver as any;
+      // Create observer controller with injected mock constructor
+      const controller = createDomObserver(
+        rootElement,
+        mockAnnotationFunction,
+        TEST_DEBOUNCE_MS,
+        processedNodes,
+        mockMutationObserver as any
+      );
       
-      try {
-        // Create observer controller
-        const controller = createDomObserver(
-          rootElement,
-          mockAnnotationFunction,
-          TEST_DEBOUNCE_MS,
-          processedNodes
-        );
-        
-        // Start observing
-        controller.start(mockPriceData);
-        
-        // Verify MutationObserver was created
-        expect(mockMutationObserver).toHaveBeenCalledTimes(1);
-        
-        // Verify observe was called with correct parameters
-        expect(mockObserve).toHaveBeenCalledTimes(1);
-        expect(mockObserve).toHaveBeenCalledWith(rootElement, {
-          childList: true,
-          subtree: true
-        });
-      } finally {
-        // Restore original MutationObserver
-        global.MutationObserver = originalMutationObserver;
-      }
+      // Start observing
+      controller.start(mockPriceData);
+      
+      // Verify MutationObserver was created
+      expect(mockMutationObserver).toHaveBeenCalledTimes(1);
+      
+      // Verify observe was called with correct parameters
+      expect(mockObserve).toHaveBeenCalledTimes(1);
+      expect(mockObserve).toHaveBeenCalledWith(rootElement, {
+        childList: true,
+        subtree: true
+      });
     });
     
     it('should store price data for later use', () => {
@@ -168,27 +160,23 @@ describe('dom-observer.ts', () => {
         };
       });
       
-      // Replace global MutationObserver
-      const originalMutationObserver = global.MutationObserver;
-      global.MutationObserver = mockMutationObserver as any;
+      // Create observer controller with injected mock constructor
+      const controller = createDomObserver(
+        rootElement,
+        mockAnnotationFunction,
+        TEST_DEBOUNCE_MS,
+        processedNodes,
+        mockMutationObserver as any
+      );
       
-      try {
-        // Create observer controller
-        const controller = createDomObserver(
-          rootElement,
-          mockAnnotationFunction,
-          TEST_DEBOUNCE_MS,
-          processedNodes
-        );
-        
-        // Start observing
-        controller.start(mockPriceData);
-        
-        // Create mutation records
-        const records: MutationRecord[] = [createMockMutationRecord({
-          target: rootElement,
-          addedNodes: createMockNodeList([testNode])
-        })];
+      // Start observing
+      controller.start(mockPriceData);
+      
+      // Create mutation records
+      const records: MutationRecord[] = [createMockMutationRecord({
+        target: rootElement,
+        addedNodes: createMockNodeList([testNode])
+      })];
         
         // Verify callback was captured
         expect(mutationCallback).not.toBeNull();
@@ -207,10 +195,6 @@ describe('dom-observer.ts', () => {
             processedNodes
           );
         }
-      } finally {
-        // Restore original MutationObserver
-        global.MutationObserver = originalMutationObserver;
-      }
     });
   });
   
@@ -234,10 +218,6 @@ describe('dom-observer.ts', () => {
         };
       });
       
-      // Replace global MutationObserver
-      const originalMutationObserver = global.MutationObserver;
-      global.MutationObserver = mockMutationObserver as any;
-      
       // Mock setTimeout and clearTimeout
       const originalSetTimeout = global.setTimeout;
       const originalClearTimeout = global.clearTimeout;
@@ -247,12 +227,13 @@ describe('dom-observer.ts', () => {
       global.clearTimeout = clearTimeoutMock;
       
       try {
-        // Create observer controller
+        // Create observer controller with injected mock constructor
         const controller = createDomObserver(
           rootElement,
           mockAnnotationFunction,
           TEST_DEBOUNCE_MS,
-          processedNodes
+          processedNodes,
+          mockMutationObserver as any
         );
         
         // Start observing
@@ -283,7 +264,6 @@ describe('dom-observer.ts', () => {
         }
       } finally {
         // Restore original globals
-        global.MutationObserver = originalMutationObserver;
         global.setTimeout = originalSetTimeout;
         global.clearTimeout = originalClearTimeout;
       }
@@ -404,41 +384,33 @@ describe('dom-observer.ts', () => {
         };
       });
       
-      // Replace global MutationObserver
-      const originalMutationObserver = global.MutationObserver;
-      global.MutationObserver = mockMutationObserver as any;
+      // Create observer controller with injected mock constructor
+      const controller = createDomObserver(
+        rootElement,
+        mockAnnotationFunction,
+        TEST_DEBOUNCE_MS,
+        processedNodes,
+        mockMutationObserver as any
+      );
       
-      try {
-        // Create observer controller
-        const controller = createDomObserver(
-          rootElement,
-          mockAnnotationFunction,
-          TEST_DEBOUNCE_MS,
-          processedNodes
-        );
+      // Start observing
+      controller.start(mockPriceData);
+      
+      // Verify callback was captured
+      expect(mutationCallback).not.toBeNull();
+      
+      // Create empty mutations array
+      const emptyMutations: MutationRecord[] = [];
+      
+      if (mutationCallback) {
+        // Call with empty mutations array
+        mutationCallback(emptyMutations);
         
-        // Start observing
-        controller.start(mockPriceData);
+        // setTimeout should not be called since there are no mutations
+        expect(setTimeoutSpy).not.toHaveBeenCalled();
         
-        // Verify callback was captured
-        expect(mutationCallback).not.toBeNull();
-        
-        // Create empty mutations array
-        const emptyMutations: MutationRecord[] = [];
-        
-        if (mutationCallback) {
-          // Call with empty mutations array
-          mutationCallback(emptyMutations);
-          
-          // setTimeout should not be called since there are no mutations
-          expect(setTimeoutSpy).not.toHaveBeenCalled();
-          
-          // Annotation function should not have been called
-          expect(mockAnnotationFunction).not.toHaveBeenCalled();
-        }
-      } finally {
-        // Restore original MutationObserver
-        global.MutationObserver = originalMutationObserver;
+        // Annotation function should not have been called
+        expect(mockAnnotationFunction).not.toHaveBeenCalled();
       }
     });
     
@@ -462,53 +434,45 @@ describe('dom-observer.ts', () => {
         };
       });
       
-      // Replace global MutationObserver
-      const originalMutationObserver = global.MutationObserver;
-      global.MutationObserver = mockMutationObserver as any;
+      // Create observer controller with injected mock constructor
+      const controller = createDomObserver(
+        rootElement,
+        mockAnnotationFunction,
+        TEST_DEBOUNCE_MS,
+        processedNodes,
+        mockMutationObserver as any
+      );
       
-      try {
-        // Create observer controller
-        const controller = createDomObserver(
-          rootElement,
-          mockAnnotationFunction,
-          TEST_DEBOUNCE_MS,
-          processedNodes
-        );
+      // Start observing
+      controller.start(mockPriceData);
+      
+      // Create mutations with only removedNodes
+      const removedNode = document.createElement('div');
+      const mutationsWithOnlyRemovedNodes: MutationRecord[] = [{
+        type: 'childList',
+        target: rootElement,
+        addedNodes: { length: 0, [Symbol.iterator]: function* () {} } as any,
+        removedNodes: { 
+          length: 1, 
+          0: removedNode,
+          [Symbol.iterator]: function* () { yield this[0]; } 
+        } as any,
+        previousSibling: null,
+        nextSibling: null,
+        attributeName: null,
+        attributeNamespace: null,
+        oldValue: null
+      }];
+      
+      if (mutationCallback) {
+        // Call with mutations that have only removedNodes
+        mutationCallback(mutationsWithOnlyRemovedNodes);
         
-        // Start observing
-        controller.start(mockPriceData);
+        // setTimeout should not be called since there are no added nodes
+        expect(setTimeoutSpy).not.toHaveBeenCalled();
         
-        // Create mutations with only removedNodes
-        const removedNode = document.createElement('div');
-        const mutationsWithOnlyRemovedNodes: MutationRecord[] = [{
-          type: 'childList',
-          target: rootElement,
-          addedNodes: { length: 0, [Symbol.iterator]: function* () {} } as any,
-          removedNodes: { 
-            length: 1, 
-            0: removedNode,
-            [Symbol.iterator]: function* () { yield this[0]; } 
-          } as any,
-          previousSibling: null,
-          nextSibling: null,
-          attributeName: null,
-          attributeNamespace: null,
-          oldValue: null
-        }];
-        
-        if (mutationCallback) {
-          // Call with mutations that have only removedNodes
-          mutationCallback(mutationsWithOnlyRemovedNodes);
-          
-          // setTimeout should not be called since there are no added nodes
-          expect(setTimeoutSpy).not.toHaveBeenCalled();
-          
-          // Annotation function should not have been called
-          expect(mockAnnotationFunction).not.toHaveBeenCalled();
-        }
-      } finally {
-        // Restore original MutationObserver
-        global.MutationObserver = originalMutationObserver;
+        // Annotation function should not have been called
+        expect(mockAnnotationFunction).not.toHaveBeenCalled();
       }
     });
   });
@@ -754,38 +718,30 @@ describe('dom-observer.ts', () => {
         };
       });
       
-      // Replace global MutationObserver
-      const originalMutationObserver = global.MutationObserver;
-      global.MutationObserver = mockMutationObserver as any;
+      // Create observer controller with injected mock constructor
+      const controller = createDomObserver(
+        rootElement,
+        mockAnnotationFunction,
+        TEST_DEBOUNCE_MS,
+        processedNodes,
+        mockMutationObserver as any
+      );
       
-      try {
-        // Create observer controller
-        const controller = createDomObserver(
-          rootElement,
-          mockAnnotationFunction,
-          TEST_DEBOUNCE_MS,
-          processedNodes
-        );
-        
-        // Start observing
-        controller.start(mockPriceData);
-        
-        // Verify callback was captured
-        expect(mutationCallback).not.toBeNull();
-        
-        // Create invalid mutation records that will cause forEach to throw
-        const invalidRecords = [createMockMutationRecord({
-          target: rootElement,
-          addedNodes: null as any, // This will cause an error when trying to access forEach
-        })];
-        
-        if (mutationCallback) {
-          // Call should not throw despite the error
-          expect(() => mutationCallback(invalidRecords)).not.toThrow();
-        }
-      } finally {
-        // Restore original MutationObserver
-        global.MutationObserver = originalMutationObserver;
+      // Start observing
+      controller.start(mockPriceData);
+      
+      // Verify callback was captured
+      expect(mutationCallback).not.toBeNull();
+      
+      // Create invalid mutation records that will cause forEach to throw
+      const invalidRecords = [createMockMutationRecord({
+        target: rootElement,
+        addedNodes: null as any, // This will cause an error when trying to access forEach
+      })];
+      
+      if (mutationCallback) {
+        // Call should not throw despite the error
+        expect(() => mutationCallback(invalidRecords)).not.toThrow();
       }
     });
     
@@ -804,26 +760,18 @@ describe('dom-observer.ts', () => {
         disconnect: vi.fn()
       }));
       
-      // Replace global MutationObserver
-      const originalMutationObserver = global.MutationObserver;
-      global.MutationObserver = mockMutationObserver as any;
+      // Create observer controller with injected mock constructor
+      const controller = createDomObserver(
+        rootElement,
+        mockAnnotationFunction,
+        TEST_DEBOUNCE_MS,
+        processedNodes,
+        mockMutationObserver as any
+      );
       
-      try {
-        // Create observer controller
-        const controller = createDomObserver(
-          rootElement,
-          mockAnnotationFunction,
-          TEST_DEBOUNCE_MS,
-          processedNodes
-        );
-        
-        // start() should throw because observe throws
-        expect(() => controller.stop()).not.toThrow();
-        expect(() => controller.start(mockPriceData)).toThrow('Mock observe error');
-      } finally {
-        // Restore original MutationObserver
-        global.MutationObserver = originalMutationObserver;
-      }
+      // start() should throw because observe throws
+      expect(() => controller.stop()).not.toThrow();
+      expect(() => controller.start(mockPriceData)).toThrow('Mock observe error');
     });
     
     it('should handle observer.disconnect throwing an error', () => {
@@ -840,28 +788,20 @@ describe('dom-observer.ts', () => {
         disconnect: mockDisconnect
       }));
       
-      // Replace global MutationObserver
-      const originalMutationObserver = global.MutationObserver;
-      global.MutationObserver = mockMutationObserver as any;
+      // Create observer controller with injected mock constructor
+      const controller = createDomObserver(
+        rootElement,
+        mockAnnotationFunction,
+        TEST_DEBOUNCE_MS,
+        processedNodes,
+        mockMutationObserver as any
+      );
       
-      try {
-        // Create observer controller
-        const controller = createDomObserver(
-          rootElement,
-          mockAnnotationFunction,
-          TEST_DEBOUNCE_MS,
-          processedNodes
-        );
-        
-        // Start observing
-        controller.start(mockPriceData);
-        
-        // stop() should not throw even though disconnect throws
-        expect(() => controller.stop()).not.toThrow();
-      } finally {
-        // Restore original MutationObserver
-        global.MutationObserver = originalMutationObserver;
-      }
+      // Start observing
+      controller.start(mockPriceData);
+      
+      // stop() should not throw even though disconnect throws
+      expect(() => controller.stop()).not.toThrow();
     });
   });
   
@@ -883,52 +823,44 @@ describe('dom-observer.ts', () => {
         };
       });
       
-      // Replace global MutationObserver
-      const originalMutationObserver = global.MutationObserver;
-      global.MutationObserver = mockMutationObserver as any;
+      // Create observer controller but don't call start() to avoid setting priceData
+      const controller = createDomObserver(
+        rootElement,
+        mockAnnotationFunction,
+        TEST_DEBOUNCE_MS,
+        processedNodes,
+        mockMutationObserver as any
+      );
       
-      try {
-        // Create observer controller but don't call start() to avoid setting priceData
-        const controller = createDomObserver(
-          rootElement,
-          mockAnnotationFunction,
-          TEST_DEBOUNCE_MS,
-          processedNodes
-        );
+      // Create a node to process
+      const node = document.createElement('div');
+      
+      // Create mutation records with the node
+      const records: MutationRecord[] = [{
+        type: 'childList',
+        target: rootElement,
+        addedNodes: { 
+          length: 1, 
+          0: node, 
+          [Symbol.iterator]: function* () { yield this[0]; } 
+        } as any,
+        removedNodes: { length: 0, [Symbol.iterator]: function* () {} } as any,
+        previousSibling: null,
+        nextSibling: null,
+        attributeName: null,
+        attributeNamespace: null,
+        oldValue: null
+      }];
+      
+      if (mutationCallback) {
+        // Call the callback - this should add nodes to pendingNodes
+        mutationCallback(records);
         
-        // Create a node to process
-        const node = document.createElement('div');
+        // Advance time to trigger processDebouncedNodes
+        vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
-        // Create mutation records with the node
-        const records: MutationRecord[] = [{
-          type: 'childList',
-          target: rootElement,
-          addedNodes: { 
-            length: 1, 
-            0: node, 
-            [Symbol.iterator]: function* () { yield this[0]; } 
-          } as any,
-          removedNodes: { length: 0, [Symbol.iterator]: function* () {} } as any,
-          previousSibling: null,
-          nextSibling: null,
-          attributeName: null,
-          attributeNamespace: null,
-          oldValue: null
-        }];
-        
-        if (mutationCallback) {
-          // Call the callback - this should add nodes to pendingNodes
-          mutationCallback(records);
-          
-          // Advance time to trigger processDebouncedNodes
-          vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
-          
-          // Annotation function should not be called due to missing priceData
-          expect(mockAnnotationFunction).not.toHaveBeenCalled();
-        }
-      } finally {
-        // Restore original MutationObserver
-        global.MutationObserver = originalMutationObserver;
+        // Annotation function should not be called due to missing priceData
+        expect(mockAnnotationFunction).not.toHaveBeenCalled();
       }
     });
     
@@ -949,21 +881,18 @@ describe('dom-observer.ts', () => {
         };
       });
       
-      // Replace global MutationObserver
-      const originalMutationObserver = global.MutationObserver;
-      global.MutationObserver = mockMutationObserver as any;
-      
       // Mock performance.now() for test
       const originalPerformanceNow = performance.now;
       performance.now = vi.fn().mockReturnValue(1000);
       
       try {
-        // Create controller and start it to set priceData
+        // Create controller and start it to set priceData with injected mock constructor
         const controller = createDomObserver(
           rootElement,
           mockAnnotationFunction,
           TEST_DEBOUNCE_MS,
-          processedNodes
+          processedNodes,
+          mockMutationObserver as any
         );
         
         controller.start(mockPriceData);
@@ -1018,7 +947,6 @@ describe('dom-observer.ts', () => {
         }
       } finally {
         // Restore originals
-        global.MutationObserver = originalMutationObserver;
         performance.now = originalPerformanceNow;
       }
     });
@@ -1109,66 +1037,60 @@ describe('dom-observer.ts', () => {
         };
       });
       
-      // Replace global MutationObserver
-      const originalMutationObserver = global.MutationObserver;
-      global.MutationObserver = mockMutationObserver as any;
+      // Create observer controller with injected mock constructor
+      const controller = createDomObserver(
+        rootElement,
+        mockAnnotationFunction,
+        TEST_DEBOUNCE_MS,
+        processedNodes,
+        mockMutationObserver as any
+      );
       
-      try {
-        // Create observer controller
-        const controller = createDomObserver(
-          rootElement,
-          mockAnnotationFunction,
-          TEST_DEBOUNCE_MS,
-          processedNodes
-        );
+      // Start observing
+      controller.start(mockPriceData);
+      
+      // Create nodes of different types (valid and filtered)
+      const divNode = document.createElement('div'); // Valid, should be processed
+      const textNode = document.createTextNode('text'); // Invalid, should be filtered
+      const scriptNode = document.createElement('script'); // Invalid, should be filtered
+      
+      // Create mutation records
+      const records: MutationRecord[] = [{
+        type: 'childList',
+        target: rootElement,
+        addedNodes: { 
+          length: 3, 
+          0: divNode,
+          1: textNode,
+          2: scriptNode,
+          [Symbol.iterator]: function* () { 
+            yield this[0]; 
+            yield this[1];
+            yield this[2];
+          } 
+        } as any,
+        removedNodes: { length: 0, [Symbol.iterator]: function* () {} } as any,
+        previousSibling: null,
+        nextSibling: null,
+        attributeName: null,
+        attributeNamespace: null,
+        oldValue: null
+      }];
+      
+      if (mutationCallback) {
+        // Call the callback
+        mutationCallback(records);
         
-        // Start observing
-        controller.start(mockPriceData);
+        // Advance time to trigger processDebouncedNodes
+        vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
-        // Create nodes of different types (valid and filtered)
-        const divNode = document.createElement('div'); // Valid, should be processed
-        const textNode = document.createTextNode('text'); // Invalid, should be filtered
-        const scriptNode = document.createElement('script'); // Invalid, should be filtered
-        
-        // Create mutation records
-        const records: MutationRecord[] = [{
-          type: 'childList',
-          target: rootElement,
-          addedNodes: { 
-            length: 3, 
-            0: divNode,
-            1: textNode,
-            2: scriptNode,
-            [Symbol.iterator]: function* () { 
-              yield this[0]; 
-              yield this[1];
-              yield this[2];
-            } 
-          } as any,
-          removedNodes: { length: 0, [Symbol.iterator]: function* () {} } as any,
-          previousSibling: null,
-          nextSibling: null,
-          attributeName: null,
-          attributeNamespace: null,
-          oldValue: null
-        }];
-        
-        if (mutationCallback) {
-          // Call the callback
-          mutationCallback(records);
-          
-          // Advance time to trigger processDebouncedNodes
-          vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
-          
-          // Verify mockAnnotationFunction was called only for valid nodes
-          expect(mockAnnotationFunction).toHaveBeenCalledTimes(1);
-          expect(mockAnnotationFunction).toHaveBeenCalledWith(divNode, mockPriceData, processedNodes);
-        }
-      } finally {
-        // Restore originals
-        global.MutationObserver = originalMutationObserver;
-        performance.now = originalPerformanceNow;
+        // Verify mockAnnotationFunction was called only for valid nodes
+        expect(mockAnnotationFunction).toHaveBeenCalledTimes(1);
+        expect(mockAnnotationFunction).toHaveBeenCalledWith(divNode, mockPriceData, processedNodes);
       }
+      
+      // Restore performance.now
+      performance.now = originalPerformanceNow;
     });
   });
 });
