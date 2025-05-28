@@ -58,7 +58,7 @@
         1. Add a temporary assertion or debugger statement to confirm callback capture during a test run.
     - **Depends‑on:** [T002]
 
-- [ ] **T006 · Test · P1: refactor `dom-observer.test.ts` to use captured callback and remove `_callback` access**
+- [x] **T006 · Test · P1: refactor `dom-observer.test.ts` to use captured callback and remove `_callback` access**
     - **Context:** PLAN.md · cr-01 · Steps 3-5
     - **Action:**
         1. Identify all test instances (e.g., L298, L358, L427, L511, L616, L1012 in `dom-observer.test.ts`) that use `(new MutationObserver(...))._callback`.
@@ -187,13 +187,3 @@
         1. Code review confirms improved readability and appropriate commenting.
     - **Depends‑on:** none
 
----
-
-### Clarifications & Assumptions
-- [ ] **Issue:** Confirm accuracy of file paths and line numbers referenced from PLAN.md.
-    - **Context:** All tasks referencing specific file locations.
-    - **Blocking?:** no (Developer to verify during implementation)
-
-- [ ] **Issue:** Determine if the `catch` block in `scheduleProcessing` (cr-03) is intended to catch errors from `pendingNodes.add` specifically, or more general errors within the `try`.
-    - **Context:** PLAN.md · cr-03 (Affects T008 strategy)
-    - **Blocking?:** no (T008 includes evaluation)
