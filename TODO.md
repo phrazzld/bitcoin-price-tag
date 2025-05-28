@@ -74,7 +74,7 @@
     - **Depends‑on:** [T005]
 
 ## `Set.prototype` Global State (CR-03)
-- [ ] **T007 · Refactor · P1: remove `Set.prototype.add` modification from `dom-observer.test.ts`**
+- [x] **T007 · Refactor · P1: remove `Set.prototype.add` modification from `dom-observer.test.ts`**
     - **Context:** PLAN.md · cr-03 · Step 1
     - **Action:**
         1. In `src/content-script/dom-observer.test.ts:749-752`, remove the lines that modify and restore `Set.prototype.add`.
