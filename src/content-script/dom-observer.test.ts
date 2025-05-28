@@ -1,10 +1,16 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createDomObserver } from './dom-observer';
 import { PriceData } from '../common/types';
-import { createLogger } from '../shared/logger';
 
-// Import the same logger that dom-observer.ts uses
-const logger = createLogger('content-script:dom-observer');
+// Mock the logger to avoid console output in tests
+vi.mock('../shared/logger', () => ({
+  createLogger: () => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+  }),
+}));
 
 // Mock price data for testing
 const mockPriceData: PriceData = {

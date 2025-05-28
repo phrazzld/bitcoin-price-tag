@@ -124,7 +124,7 @@
     - **Depends‑on:** none
 
 ## Test Logging (CR-05)
-- [ ] **T011 · Test · P2: standardize logger mocking in `dom-observer.test.ts`**
+- [x] **T011 · Test · P2: standardize logger mocking in `dom-observer.test.ts`**
     - **Context:** PLAN.md · cr-05 · Steps 1-3
     - **Action:**
         1. In `src/content-script/dom-observer.test.ts`, add `vi.mock('../../src/shared/logger', () => ({ createLogger: () => ({ info: vi.fn(), error: vi.fn(), debug: vi.fn(), warn: vi.fn() }) }));` at the top of the file.
