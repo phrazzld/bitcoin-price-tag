@@ -98,7 +98,7 @@
     - **Depends‑on:** [T007]
 
 ## Integration Testing Practices (CR-04)
-- [ ] **T009 · Test · P1: remove internal module mocks in `content-script-initialization.test.ts`**
+- [x] **T009 · Test · P1: remove internal module mocks in `content-script-initialization.test.ts`**
     - **Context:** PLAN.md · cr-04 · Steps 1-3
     - **Action:**
         1. In `tests/integration/content-script-initialization.test.ts`, remove `vi.mock` calls for `../../src/content-script/price-annotation/findAndAnnotatePrices` and `../../src/content-script/dom-observer`.
