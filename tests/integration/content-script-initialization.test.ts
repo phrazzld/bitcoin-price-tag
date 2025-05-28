@@ -24,11 +24,9 @@ vi.mock('../../src/content-script/dom', () => ({
   findAndAnnotatePrices: vi.fn(),
 }));
 
+// Mock dom-observer at the module level for integration testing
 vi.mock('../../src/content-script/dom-observer', () => ({
-  createDomObserver: vi.fn().mockImplementation(() => ({
-    start: vi.fn(),
-    stop: vi.fn()
-  })),
+  createDomObserver: vi.fn(),
 }));
 
 vi.mock('../../src/shared/logger', () => ({
@@ -43,11 +41,14 @@ vi.mock('../../src/shared/logger', () => ({
 // Import mocked modules - must be done outside the describe block due to ESM module rules
 import { requestPriceData } from '../../src/content-script/messaging';
 import { findAndAnnotatePrices } from '../../src/content-script/dom';
+
+// Import real implementation for dom-observer
 import { createDomObserver } from '../../src/content-script/dom-observer';
 
 describe('Content Script Initialization Flow', () => {
   let mockPriceData: PriceData;
   let originalDocumentReadyState: string;
+  let mockDomObserverController: { start: ReturnType<typeof vi.fn>, stop: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     // Reset modules and mocks
@@ -68,6 +69,15 @@ describe('Content Script Initialization Flow', () => {
     
     // Setup requestPriceData to resolve with mock data
     vi.mocked(requestPriceData).mockResolvedValue(mockPriceData);
+    
+    // Create mock DOM observer controller
+    mockDomObserverController = {
+      start: vi.fn(),
+      stop: vi.fn()
+    };
+    
+    // Setup createDomObserver to return the mock controller
+    vi.mocked(createDomObserver).mockReturnValue(mockDomObserverController);
   });
   
   afterEach(() => {
@@ -111,10 +121,9 @@ describe('Content Script Initialization Flow', () => {
       expect.any(Set)
     );
     
-    // Get the controller returned by createDomObserver
-    const controller = vi.mocked(createDomObserver).mock.results[0].value;
-    expect(controller.start).toHaveBeenCalledTimes(1);
-    expect(controller.start).toHaveBeenCalledWith(mockPriceData);
+    // Verify the mock controller's start method was called
+    expect(mockDomObserverController.start).toHaveBeenCalledTimes(1);
+    expect(mockDomObserverController.start).toHaveBeenCalledWith(mockPriceData);
   });
 
   it('should initialize when DOMContentLoaded event fires', async () => {
@@ -154,10 +163,9 @@ describe('Content Script Initialization Flow', () => {
       expect.any(Set)
     );
     
-    // Get the controller returned by createDomObserver
-    const controller = vi.mocked(createDomObserver).mock.results[0].value;
-    expect(controller.start).toHaveBeenCalledTimes(1);
-    expect(controller.start).toHaveBeenCalledWith(mockPriceData);
+    // Verify the mock controller's start method was called
+    expect(mockDomObserverController.start).toHaveBeenCalledTimes(1);
+    expect(mockDomObserverController.start).toHaveBeenCalledWith(mockPriceData);
   });
 
   it('should use the same processedNodes set for findAndAnnotatePrices and createDomObserver', async () => {

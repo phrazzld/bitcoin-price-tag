@@ -14,7 +14,7 @@
         2. Run `npm run build` (or equivalent type-checking command).
     - **Depends‑on:** none
 
-- [ ] **T002 · Test · P0: remove `global.MutationObserver` assignments from `dom-observer.test.ts`**
+- [~] **T002 · Test · P0: remove `global.MutationObserver` assignments from `dom-observer.test.ts`**
     - **Context:** PLAN.md · cr-02 · Steps 3-4
     - **Action:**
         1. In `src/content-script/dom-observer.test.ts`, refactor `beforeEach`/`afterEach` blocks to remove assignments to `global.MutationObserver`.
@@ -26,7 +26,7 @@
         1. Run `dom-observer.test.ts` multiple times, potentially in random order, to check for flakiness.
     - **Depends‑on:** [T001]
 
-- [ ] **T003 · Test · P0: remove `global.MutationObserver` assignments from `content-script-initialization.test.ts`**
+- [x] **T003 · Test · P0: remove `global.MutationObserver` assignments from `content-script-initialization.test.ts`**
     - **Context:** PLAN.md · cr-02 · Steps 3-4
     - **Action:**
         1. In `tests/integration/content-script-initialization.test.ts`, refactor `beforeEach`/`afterEach` blocks to remove assignments to `global.MutationObserver`.
