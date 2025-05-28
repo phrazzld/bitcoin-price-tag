@@ -48,7 +48,7 @@
         1. Run `dom-observer-annotation.test.ts` to confirm tests pass.
     - **Depends‑on:** [T001]
 
-- [ ] **T005 · Test · P1: capture SUT's `handleMutationsCallback` in `dom-observer.test.ts` mock constructor**
+- [x] **T005 · Test · P1: capture SUT's `handleMutationsCallback` in `dom-observer.test.ts` mock constructor**
     - **Context:** PLAN.md · cr-01 · Step 2
     - **Action:**
         1. In `src/content-script/dom-observer.test.ts`, when providing the mock `mutationObserverConstructor` to `createDomObserver` (as per T002), ensure its implementation captures the `callback` argument passed to it by the SUT.

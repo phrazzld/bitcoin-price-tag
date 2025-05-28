@@ -284,12 +284,25 @@ describe('dom-observer.ts', () => {
       // Create spy on setTimeout to track debouncing
       const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
       
-      // Create observer controller
+      // Mock the MutationObserver to capture the callback
+      let mutationCallback: ((mutations: MutationRecord[]) => void) | null = null;
+      
+      const mockObserve = vi.fn();
+      const mockMutationObserver = vi.fn(function(callback) {
+        mutationCallback = callback;
+        return {
+          observe: mockObserve,
+          disconnect: vi.fn()
+        };
+      });
+      
+      // Create observer controller with injected mock constructor
       const controller = createDomObserver(
         rootElement,
         mockAnnotationFunction,
         TEST_DEBOUNCE_MS,
-        processedNodes
+        processedNodes,
+        mockMutationObserver as any
       );
       
       // Start observing
@@ -304,12 +317,12 @@ describe('dom-observer.ts', () => {
         addedNodes: createMockNodeList([addedNode1, addedNode2])
       })];
       
-      // Get the MutationObserver callback directly
-      const callback = (new MutationObserver(() => {}) as any)._callback;
+      // Verify callback was captured
+      expect(mutationCallback).not.toBeNull();
       
       // Simulate the callback being called with our records
-      if (callback) {
-        callback(records);
+      if (mutationCallback) {
+        mutationCallback(records);
         
         // Check if setTimeout was called (indicating scheduling)
         expect(setTimeoutSpy).toHaveBeenCalled();
@@ -330,12 +343,25 @@ describe('dom-observer.ts', () => {
       // Create spy on setTimeout to track debouncing
       const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
       
-      // Create observer controller
+      // Mock the MutationObserver to capture the callback
+      let mutationCallback: ((mutations: MutationRecord[]) => void) | null = null;
+      
+      const mockObserve = vi.fn();
+      const mockMutationObserver = vi.fn(function(callback) {
+        mutationCallback = callback;
+        return {
+          observe: mockObserve,
+          disconnect: vi.fn()
+        };
+      });
+      
+      // Create observer controller with injected mock constructor
       const controller = createDomObserver(
         rootElement,
         mockAnnotationFunction,
         TEST_DEBOUNCE_MS,
-        processedNodes
+        processedNodes,
+        mockMutationObserver as any
       );
       
       // Start observing
@@ -346,12 +372,12 @@ describe('dom-observer.ts', () => {
         target: rootElement
       })];
       
-      // Get the MutationObserver callback directly
-      const callback = (new MutationObserver(() => {}) as any)._callback;
+      // Verify callback was captured
+      expect(mutationCallback).not.toBeNull();
       
       // Simulate the callback being called with our empty records
-      if (callback) {
-        callback(records);
+      if (mutationCallback) {
+        mutationCallback(records);
         
         // setTimeout should not be called since there are no nodes to process
         expect(setTimeoutSpy).not.toHaveBeenCalled();
@@ -487,21 +513,34 @@ describe('dom-observer.ts', () => {
       const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
       const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
       
-      // Create observer controller
+      // Mock the MutationObserver to capture the callback
+      let mutationCallback: ((mutations: MutationRecord[]) => void) | null = null;
+      
+      const mockObserve = vi.fn();
+      const mockMutationObserver = vi.fn(function(callback) {
+        mutationCallback = callback;
+        return {
+          observe: mockObserve,
+          disconnect: vi.fn()
+        };
+      });
+      
+      // Create observer controller with injected mock constructor
       const controller = createDomObserver(
         rootElement,
         mockAnnotationFunction,
         TEST_DEBOUNCE_MS,
-        processedNodes
+        processedNodes,
+        mockMutationObserver as any
       );
       
       // Start observing
       controller.start(mockPriceData);
       
-      // Get the MutationObserver callback directly
-      const callback = (new MutationObserver(() => {}) as any)._callback;
+      // Verify callback was captured
+      expect(mutationCallback).not.toBeNull();
       
-      if (callback) {
+      if (mutationCallback) {
         // Simulate multiple mutations in rapid succession
         const createMutationRecord = (node: Node): MutationRecord => ({
           type: 'childList',
@@ -521,17 +560,17 @@ describe('dom-observer.ts', () => {
         
         // First mutation
         const node1 = document.createElement('div');
-        callback([createMutationRecord(node1)]);
+        mutationCallback([createMutationRecord(node1)]);
         
         // Second mutation shortly after
         vi.advanceTimersByTime(100); // Less than debounce time
         const node2 = document.createElement('span');
-        callback([createMutationRecord(node2)]);
+        mutationCallback([createMutationRecord(node2)]);
         
         // Third mutation shortly after
         vi.advanceTimersByTime(100); // Still less than debounce time
         const node3 = document.createElement('p');
-        callback([createMutationRecord(node3)]);
+        mutationCallback([createMutationRecord(node3)]);
         
         // setTimeout should have been called 3 times
         expect(setTimeoutSpy).toHaveBeenCalledTimes(3);
@@ -554,21 +593,34 @@ describe('dom-observer.ts', () => {
       const rootElement = document.createElement('div');
       const processedNodes = new Set<Node>();
       
-      // Create observer controller
+      // Mock the MutationObserver to capture the callback
+      let mutationCallback: ((mutations: MutationRecord[]) => void) | null = null;
+      
+      const mockObserve = vi.fn();
+      const mockMutationObserver = vi.fn(function(callback) {
+        mutationCallback = callback;
+        return {
+          observe: mockObserve,
+          disconnect: vi.fn()
+        };
+      });
+      
+      // Create observer controller with injected mock constructor
       const controller = createDomObserver(
         rootElement,
         mockAnnotationFunction,
         TEST_DEBOUNCE_MS,
-        processedNodes
+        processedNodes,
+        mockMutationObserver as any
       );
       
       // Start observing
       controller.start(mockPriceData);
       
-      // Get the MutationObserver callback directly
-      const callback = (new MutationObserver(() => {}) as any)._callback;
+      // Verify callback was captured
+      expect(mutationCallback).not.toBeNull();
       
-      if (callback) {
+      if (mutationCallback) {
         // Create different types of nodes to test filtering
         const divElement = document.createElement('div');
         const textNode = document.createTextNode('Some text');
@@ -601,7 +653,7 @@ describe('dom-observer.ts', () => {
         }];
         
         // Trigger the callback
-        callback(records);
+        mutationCallback(records);
         
         // Advance time to trigger the debounced function
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
@@ -631,21 +683,34 @@ describe('dom-observer.ts', () => {
         }
       });
       
-      // Create observer controller
+      // Mock the MutationObserver to capture the callback
+      let mutationCallback: ((mutations: MutationRecord[]) => void) | null = null;
+      
+      const mockObserve = vi.fn();
+      const mockMutationObserver = vi.fn(function(callback) {
+        mutationCallback = callback;
+        return {
+          observe: mockObserve,
+          disconnect: vi.fn()
+        };
+      });
+      
+      // Create observer controller with injected mock constructor
       const controller = createDomObserver(
         rootElement,
         erroringAnnotationFunction,
         TEST_DEBOUNCE_MS,
-        processedNodes
+        processedNodes,
+        mockMutationObserver as any
       );
       
       // Start observing
       controller.start(mockPriceData);
       
-      // Get the MutationObserver callback directly
-      const callback = (new MutationObserver(() => {}) as any)._callback;
+      // Verify callback was captured
+      expect(mutationCallback).not.toBeNull();
       
-      if (callback) {
+      if (mutationCallback) {
         // Create different nodes
         const divElement = document.createElement('div'); // This will cause an error
         const spanElement = document.createElement('span'); // This should still be processed
@@ -672,7 +737,7 @@ describe('dom-observer.ts', () => {
         }];
         
         // Trigger the callback
-        callback(records);
+        mutationCallback(records);
         
         // Advance time to trigger the debounced function
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
@@ -963,21 +1028,34 @@ describe('dom-observer.ts', () => {
         nodes.add(node);
       });
       
-      // Create observer controller
+      // Mock the MutationObserver to capture the callback
+      let mutationCallback: ((mutations: MutationRecord[]) => void) | null = null;
+      
+      const mockObserve = vi.fn();
+      const mockMutationObserver = vi.fn(function(callback) {
+        mutationCallback = callback;
+        return {
+          observe: mockObserve,
+          disconnect: vi.fn()
+        };
+      });
+      
+      // Create observer controller with injected mock constructor
       const controller = createDomObserver(
         rootElement,
         addingAnnotationFunction,
         TEST_DEBOUNCE_MS,
-        initialProcessedNodes
+        initialProcessedNodes,
+        mockMutationObserver as any
       );
       
       // Start observing
       controller.start(mockPriceData);
       
-      // Get the MutationObserver callback directly
-      const callback = (new MutationObserver(() => {}) as any)._callback;
+      // Verify callback was captured
+      expect(mutationCallback).not.toBeNull();
       
-      if (callback) {
+      if (mutationCallback) {
         // Create a node to add
         const newNode = document.createElement('div');
         
@@ -999,7 +1077,7 @@ describe('dom-observer.ts', () => {
         }];
         
         // Trigger the callback
-        callback(records);
+        mutationCallback(records);
         
         // Advance time to trigger the debounced function
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
