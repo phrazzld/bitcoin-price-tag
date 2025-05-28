@@ -176,7 +176,7 @@
         1. Code review confirms improved readability and appropriate commenting.
     - **Depends‑on:** none
 
-- [ ] **T015 · Chore · P2: prune verbose/redundant comments in `src/common/constants.ts`**
+- [x] **T015 · Chore · P2: prune verbose/redundant comments in `src/common/constants.ts`**
     - **Context:** PLAN.md · cr-07 · Steps 1-4
     - **Action:**
         1. Review `src/common/constants.ts`. Delete comments that explain *what* the code is doing if the code itself is clear.
