@@ -164,7 +164,7 @@
     - **Depends‑on:** none
 
 ## Code Readability (CR-07)
-- [ ] **T014 · Chore · P2: prune verbose/redundant comments in `src/content-script/dom-observer.ts`**
+- [x] **T014 · Chore · P2: prune verbose/redundant comments in `src/content-script/dom-observer.ts`**
     - **Context:** PLAN.md · cr-07 · Steps 1-4
     - **Action:**
         1. Review `src/content-script/dom-observer.ts`. Delete comments that explain *what* the code is doing if the code itself is clear.

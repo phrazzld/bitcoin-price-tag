@@ -48,10 +48,8 @@ export function createDomObserver(
   initialProcessedNodes: Set<Node>,
   mutationObserverConstructor: typeof MutationObserver = MutationObserver
 ): DomObserverController {
-  // Log creation with debounce value
   logger.info('DOM Observer created.', { debounceMilliseconds });
   
-  // Internal state variables
   let currentPriceData: PriceData | null = null;
   let processedNodes: Set<Node> = initialProcessedNodes;
   let observer: MutationObserver | null = null;
@@ -65,7 +63,6 @@ export function createDomObserver(
    * @returns true if the node should be processed, false otherwise
    */
   function shouldProcessNode(node: Node): boolean {
-    // Skip non-Element nodes (like text nodes, comments, etc.)
     if (node.nodeType !== Node.ELEMENT_NODE) {
       return false;
     }
@@ -76,7 +73,6 @@ export function createDomObserver(
       return false;
     }
     
-    // All other Element nodes should be processed
     return true;
   }
   
@@ -89,12 +85,10 @@ export function createDomObserver(
    * before passing them to the annotation function.
    */
   function processDebouncedNodes(): void {
-    // Log the start of processing with node count
     logger.debug('Processing debounced node batch.', {
       nodeCount: pendingNodes.size
     });
     
-    // Safety check: we need price data to annotate prices
     if (!currentPriceData) {
       logger.warn('Cannot process nodes: No price data available.');
       pendingNodes.clear();
@@ -102,7 +96,6 @@ export function createDomObserver(
       return;
     }
     
-    // Exit early if there are no nodes to process
     if (pendingNodes.size === 0) {
       logger.debug('No nodes to process.');
       timeoutId = null;
@@ -110,18 +103,13 @@ export function createDomObserver(
     }
     
     try {
-      // Track start time for performance logging
       const startTime = performance.now();
-      
-      // Convert set to array for iteration
       const nodesToProcess = Array.from(pendingNodes);
       let processedCount = 0;
       let filteredCount = 0;
       
-      // Process each node using the annotation function, filtering irrelevant nodes
       for (const node of nodesToProcess) {
         try {
-          // Filter out irrelevant nodes before processing
           if (!shouldProcessNode(node)) {
             filteredCount++;
             logger.debug('Node filtered out (irrelevant type):', {
@@ -131,11 +119,9 @@ export function createDomObserver(
             continue;
           }
           
-          // Call the annotation function with the node, priceData, and shared processedNodes set
           annotationFunction(node, currentPriceData, processedNodes);
           processedCount++;
         } catch (error) {
-          // Log errors for individual nodes but continue processing others
           logger.error('Error processing individual node:', {
             nodeName: node.nodeName,
             nodeType: node.nodeType,
@@ -144,10 +130,8 @@ export function createDomObserver(
         }
       }
       
-      // Calculate processing duration for performance monitoring
       const duration = performance.now() - startTime;
       
-      // Log completion with performance metrics
       logger.debug('Finished processing debounced node batch.', {
         nodeCount: nodesToProcess.length,
         processedCount,
@@ -156,14 +140,12 @@ export function createDomObserver(
         processedNodesSize: processedNodes.size
       });
     } catch (error) {
-      // Log any unexpected errors during processing
       logger.error('Error in processDebouncedNodes:', {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
       });
     } finally {
-      // Always clear the pendingNodes set and reset timeoutId
-      // regardless of success or failure
+      // Always clear state regardless of success or failure
       pendingNodes.clear();
       timeoutId = null;
     }
@@ -175,26 +157,22 @@ export function createDomObserver(
    */
   function scheduleProcessing(newNodes: Node[]): void {
     try {
-      // Add new nodes to the pending set
       newNodes.forEach(node => pendingNodes.add(node));
     
-    // Log the scheduling of processing
-    logger.debug('Scheduling debounced processing.', {
-      newNodesCount: newNodes.length,
-      totalPendingCount: pendingNodes.size,
-      debounceMs: debounceMilliseconds
-    });
+      logger.debug('Scheduling debounced processing.', {
+        newNodesCount: newNodes.length,
+        totalPendingCount: pendingNodes.size,
+        debounceMs: debounceMilliseconds
+      });
     
-    // Clear any existing timeout to implement debouncing
-    if (timeoutId !== null) {
-      clearTimeout(timeoutId);
-      logger.debug('Cleared previous debounce timeout.');
-    }
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        logger.debug('Cleared previous debounce timeout.');
+      }
     
-    // Set a new timeout (window.setTimeout returns number in browser environment)
-    timeoutId = window.setTimeout(processDebouncedNodes, debounceMilliseconds) as number;
+      // window.setTimeout returns number in browser environment
+      timeoutId = window.setTimeout(processDebouncedNodes, debounceMilliseconds) as number;
     } catch (error) {
-      // Log any errors in the scheduling process
       logger.error('Error scheduling debounced processing.', {
         errorMessage: error instanceof Error ? error.message : String(error),
         errorStack: error instanceof Error ? error.stack : undefined
@@ -209,45 +187,35 @@ export function createDomObserver(
    */
   function handleMutationsCallback(mutations: MutationRecord[]): void {
     try {
-      // Log the callback trigger with mutation count
       logger.debug('MutationObserver callback triggered.', {
         mutationCount: mutations.length
       });
     
-    // Exit early if there are no mutations
-    if (mutations.length === 0) {
-      logger.debug('No mutations to process.');
-      return;
-    }
-    
-    // Collect all added nodes from all mutations
-    const addedNodes: Node[] = [];
-    
-    for (const mutation of mutations) {
-      // Check if this mutation has added nodes
-      if (mutation.addedNodes.length > 0) {
-        // Convert NodeList to array and add to our collection
-        const nodes = Array.from(mutation.addedNodes);
-        nodes.forEach(node => addedNodes.push(node));
+      if (mutations.length === 0) {
+        logger.debug('No mutations to process.');
+        return;
       }
-    }
     
-    // Log the number of added nodes found
-    logger.debug('Collected added nodes for debounced processing.', {
-      addedNodeCount: addedNodes.length
-    });
+      const addedNodes: Node[] = [];
     
-    // Exit early if no added nodes were found
-    if (addedNodes.length === 0) {
-      logger.debug('No added nodes to process.');
-      return;
-    }
+      for (const mutation of mutations) {
+        if (mutation.addedNodes.length > 0) {
+          const nodes = Array.from(mutation.addedNodes);
+          nodes.forEach(node => addedNodes.push(node));
+        }
+      }
     
-    // Schedule the collected nodes for processing
-    // This uses the debouncing mechanism implemented in T009
-    scheduleProcessing(addedNodes);
+      logger.debug('Collected added nodes for debounced processing.', {
+        addedNodeCount: addedNodes.length
+      });
+    
+      if (addedNodes.length === 0) {
+        logger.debug('No added nodes to process.');
+        return;
+      }
+    
+      scheduleProcessing(addedNodes);
     } catch (error) {
-      // Log any errors in the mutation observer callback
       logger.error('Error in MutationObserver callback.', {
         errorMessage: error instanceof Error ? error.message : String(error),
         errorStack: error instanceof Error ? error.stack : undefined
@@ -258,24 +226,19 @@ export function createDomObserver(
   return {
     start(priceData: PriceData): void {
       try {
-        // Store the price data for future use
         currentPriceData = priceData;
       
-      // Create the MutationObserver with the callback
-      observer = new mutationObserverConstructor(handleMutationsCallback);
+        observer = new mutationObserverConstructor(handleMutationsCallback);
       
-      // Start observing with specified configuration
-      observer.observe(rootElementToObserve, {
-        childList: true, // Watch for added/removed children
-        subtree: true    // Watch the entire subtree
-      });
+        observer.observe(rootElementToObserve, {
+          childList: true, // Watch for added/removed children
+          subtree: true    // Watch the entire subtree
+        });
       
-        // Log the observer start
         logger.info('DOM Observer started on element:', {
           rootElementNodeName: rootElementToObserve.nodeName
         });
       } catch (error) {
-        // Log any errors during observer start
         logger.error('Error starting DOM Observer.', {
           errorMessage: error instanceof Error ? error.message : String(error),
           errorStack: error instanceof Error ? error.stack : undefined
@@ -286,24 +249,20 @@ export function createDomObserver(
     
     stop(): void {
       try {
-        // Disconnect the MutationObserver if it exists
-      if (observer !== null) {
-        observer.disconnect();
-        logger.debug('MutationObserver disconnected.');
-        observer = null;
-      }
+        if (observer !== null) {
+          observer.disconnect();
+          logger.debug('MutationObserver disconnected.');
+          observer = null;
+        }
       
-      // Clear any pending debounce timeout
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-        logger.debug('Cleared debounce timeout during stop.');
-      }
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+          logger.debug('Cleared debounce timeout during stop.');
+        }
       
-        // Log that the observer has been fully stopped
         logger.info('DOM Observer stopped.');
       } catch (error) {
-        // Log any errors during observer stop
         logger.error('Error stopping DOM Observer.', {
           errorMessage: error instanceof Error ? error.message : String(error),
           errorStack: error instanceof Error ? error.stack : undefined
