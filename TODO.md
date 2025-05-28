@@ -151,7 +151,7 @@
         2. Review code to ensure helper usage.
     - **Depends‑on:** none
 
-- [ ] **T013 · Refactor · P2: verify `tsconfig.json` DOM lib and fix `setTimeout` type cast**
+- [x] **T013 · Refactor · P2: verify `tsconfig.json` DOM lib and fix `setTimeout` type cast**
     - **Context:** PLAN.md · cr-06 · Steps 3-4
     - **Action:**
         1. In `src/content-script/dom-observer.ts:213`, verify `tsconfig.json` includes `"DOM"` in the `"lib"` array. If missing, add it.

@@ -191,8 +191,8 @@ export function createDomObserver(
       logger.debug('Cleared previous debounce timeout.');
     }
     
-    // Set a new timeout (cast to number to satisfy TypeScript in browser environment)
-    timeoutId = window.setTimeout(processDebouncedNodes, debounceMilliseconds) as unknown as number;
+    // Set a new timeout (window.setTimeout returns number in browser environment)
+    timeoutId = window.setTimeout(processDebouncedNodes, debounceMilliseconds) as number;
     } catch (error) {
       // Log any errors in the scheduling process
       logger.error('Error scheduling debounced processing.', {
