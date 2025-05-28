@@ -37,7 +37,7 @@
         1. Run `content-script-initialization.test.ts` to confirm tests pass.
     - **Depends‑on:** [T001]
 
-- [ ] **T004 · Test · P0: remove `global.MutationObserver` assignments from `dom-observer-annotation.test.ts`**
+- [x] **T004 · Test · P0: remove `global.MutationObserver` assignments from `dom-observer-annotation.test.ts`**
     - **Context:** PLAN.md · cr-02 · Steps 3-4
     - **Action:**
         1. In `tests/integration/dom-observer-annotation.test.ts`, refactor `beforeEach`/`afterEach` blocks to remove assignments to `global.MutationObserver`.
