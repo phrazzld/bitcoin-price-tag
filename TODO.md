@@ -84,7 +84,7 @@
         1. Run `dom-observer.test.ts` and confirm the specific test related to this (if it still exists and runs) passes or fails as expected without the prototype pollution.
     - **Depends‑on:** none
 
-- [ ] **T008 · Test · P2: evaluate and refactor/remove `Set.add` failure test in `dom-observer.test.ts`**
+- [x] **T008 · Test · P2: evaluate and refactor/remove `Set.add` failure test in `dom-observer.test.ts`**
     - **Context:** PLAN.md · cr-03 · Steps 2-4
     - **Action:**
         1. Analyze the `try/catch` block in `scheduleProcessing` (in `src/content-script/dom-observer.ts`).
