@@ -112,7 +112,7 @@
         1. Run `content-script-initialization.test.ts` and confirm tests pass by observing actual integrated effects.
     - **Depends‑on:** none  (While T003 makes `createDomObserver` injectable, this task is about *not* mocking it at the integration level)
 
-- [ ] **T010 · Test · P2: review logger mocking in `dom-observer-annotation.test.ts`**
+- [x] **T010 · Test · P2: review logger mocking in `dom-observer-annotation.test.ts`**
     - **Context:** PLAN.md · cr-04 · Step 4
     - **Action:**
         1. In `tests/integration/dom-observer-annotation.test.ts`, review logger mocking.
