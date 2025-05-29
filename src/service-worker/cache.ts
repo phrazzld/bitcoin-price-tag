@@ -4,6 +4,12 @@
 
 import { LocalStorageCache, PriceData } from '../common/types';
 import { DEFAULT_CACHE_TTL_MS, PRICE_CACHE_KEY } from '../common/constants';
+import {
+  isObject,
+  isValidTimestamp,
+  hasOnlyExpectedProperties,
+  hasRequiredProperties
+} from '../common/validation-helpers';
 
 /** 
  * Current cache schema version - increment when structure changes
@@ -49,28 +55,58 @@ export class CacheError extends Error {
  * @param data The data to validate
  * @returns Whether the data is a valid LocalStorageCache
  */
-function isValidCache(data: unknown): data is LocalStorageCache {
-  if (!data || typeof data !== 'object') {
-    return false;
-  }
-
-  const cache = data as Partial<LocalStorageCache>;
+/**
+ * Type guard to check if value is valid PriceData
+ */
+function isValidPriceData(value: unknown): value is PriceData {
+  if (!isObject(value)) return false;
   
-  // Check required top-level properties
-  if (typeof cache.cachedAt !== 'number' || 
-      typeof cache.version !== 'number' || 
-      !cache.priceData) {
-    return false;
-  }
-
-  // Check PriceData properties
-  const priceData = cache.priceData as Partial<PriceData>;
+  const requiredProps = ['usdRate', 'satoshiRate', 'fetchedAt', 'source'];
+  if (!hasRequiredProperties(value, requiredProps)) return false;
+  if (!hasOnlyExpectedProperties(value, requiredProps)) return false;
+  
   return (
-    typeof priceData.usdRate === 'number' &&
-    typeof priceData.satoshiRate === 'number' &&
-    typeof priceData.fetchedAt === 'number' &&
-    typeof priceData.source === 'string'
+    typeof value.usdRate === 'number' && 
+    Number.isFinite(value.usdRate) && 
+    value.usdRate > 0 &&
+    typeof value.satoshiRate === 'number' && 
+    Number.isFinite(value.satoshiRate) && 
+    value.satoshiRate > 0 &&
+    isValidTimestamp(value.fetchedAt) &&
+    typeof value.source === 'string' && 
+    value.source.length > 0
   );
+}
+
+/**
+ * Type guard to check if value is a valid cache version
+ */
+function isValidCacheVersion(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1;
+}
+
+/**
+ * Enhanced type guard to check if data is a valid LocalStorageCache
+ * @internal Exported for testing only
+ */
+export function isValidCache(data: unknown): data is LocalStorageCache {
+  if (!isObject(data)) return false;
+  
+  const requiredProps = ['priceData', 'cachedAt', 'version'];
+  if (!hasRequiredProperties(data, requiredProps)) return false;
+  if (!hasOnlyExpectedProperties(data, requiredProps)) return false;
+  
+  // Validate all properties with proper types
+  if (!isValidPriceData(data.priceData)) return false;
+  if (!isValidTimestamp(data.cachedAt)) return false;
+  if (!isValidCacheVersion(data.version)) return false;
+  
+  // Check cache age - cache is invalid if too old
+  const now = Date.now();
+  const age = now - data.cachedAt;
+  if (age < 0 || age >= DEFAULT_CACHE_TTL_MS) return false;
+  
+  return true;
 }
 
 /**

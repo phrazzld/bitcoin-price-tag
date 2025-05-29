@@ -4,6 +4,12 @@
 
 import { PriceData, PriceRequestMessage, PriceResponseMessage } from '../common/types';
 import { createLogger } from '../shared/logger';
+import {
+  isObject,
+  isValidTimestamp,
+  hasOnlyExpectedProperties,
+  hasRequiredProperties
+} from '../common/validation-helpers';
 
 /** 
  * Logger instance for this module
@@ -161,16 +167,86 @@ export async function requestPriceData(timeoutMs = REQUEST_TIMEOUT_MS): Promise<
 }
 
 /**
- * Type guard to check if a message is a PriceResponseMessage
+ * Type guard to check if value is a valid status
  */
-function isPriceResponseMessage(message: unknown): message is PriceResponseMessage {
+function isValidStatus(value: unknown): value is 'success' | 'error' {
+  return value === 'success' || value === 'error';
+}
+
+/**
+ * Type guard to check if value is a valid request ID
+ */
+function isValidRequestId(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+/**
+ * Type guard to check if value is valid PriceData
+ */
+function isValidPriceData(value: unknown): value is PriceData {
+  if (!isObject(value)) return false;
+  
+  const requiredProps = ['usdRate', 'satoshiRate', 'fetchedAt', 'source'];
+  if (!hasRequiredProperties(value, requiredProps)) return false;
+  if (!hasOnlyExpectedProperties(value, requiredProps)) return false;
+  
   return (
-    message !== null &&
-    typeof message === 'object' &&
-    'type' in message &&
-    message.type === 'PRICE_RESPONSE' &&
-    'requestId' in message &&
-    'status' in message &&
-    'timestamp' in message
+    typeof value.usdRate === 'number' && value.usdRate > 0 &&
+    typeof value.satoshiRate === 'number' && value.satoshiRate > 0 &&
+    isValidTimestamp(value.fetchedAt) &&
+    typeof value.source === 'string' && value.source.length > 0
   );
+}
+
+/**
+ * Type guard to check if value is valid error object
+ */
+function isValidError(value: unknown): value is { message: string; code: string } {
+  if (!isObject(value)) return false;
+  
+  const requiredProps = ['message', 'code'];
+  if (!hasRequiredProperties(value, requiredProps)) return false;
+  if (!hasOnlyExpectedProperties(value, requiredProps)) return false;
+  
+  return (
+    typeof value.message === 'string' && value.message.length > 0 &&
+    typeof value.code === 'string' && value.code.length > 0
+  );
+}
+
+/**
+ * Type guard to check if a message is a PriceResponseMessage
+ * @internal Exported for testing only
+ */
+export function isPriceResponseMessage(message: unknown): message is PriceResponseMessage {
+  if (!isObject(message)) return false;
+  
+  const requiredProps = ['requestId', 'type', 'status', 'timestamp'];
+  if (!hasRequiredProperties(message, requiredProps)) return false;
+  
+  // Check core properties
+  if (message.type !== 'PRICE_RESPONSE') return false;
+  if (!isValidRequestId(message.requestId)) return false;
+  if (!isValidStatus(message.status)) return false;
+  if (!isValidTimestamp(message.timestamp)) return false;
+  
+  // Check optional properties based on status
+  if (message.status === 'success') {
+    if (!('data' in message) || !isValidPriceData(message.data)) return false;
+    // Success responses should not have error property
+    if ('error' in message) return false;
+    
+    const allowedProps = ['requestId', 'type', 'status', 'timestamp', 'data'];
+    if (!hasOnlyExpectedProperties(message, allowedProps)) return false;
+  } else {
+    // status === 'error'
+    if (!('error' in message) || !isValidError(message.error)) return false;
+    // Error responses should not have data property
+    if ('data' in message) return false;
+    
+    const allowedProps = ['requestId', 'type', 'status', 'timestamp', 'error'];
+    if (!hasOnlyExpectedProperties(message, allowedProps)) return false;
+  }
+  
+  return true;
 }

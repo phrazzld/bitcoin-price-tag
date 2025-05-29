@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PriceData, PriceRequestMessage } from '../common/types';
+import { PriceData, PriceRequestMessage, LocalStorageCache } from '../common/types';
 import { REFRESH_ALARM_NAME, DEFAULT_CACHE_TTL_MS } from '../common/constants';
+import { isValidCache } from './cache';
 
 // Mock Chrome APIs
 const mockChrome = {
@@ -135,6 +136,245 @@ describe('Cache functionality test', () => {
       status: 'success',
       data: validCachedData,
       timestamp: expect.any(Number)
+    });
+  });
+});
+
+describe('isValidCache', () => {
+  const validPriceData: PriceData = {
+    usdRate: 45000.50,
+    satoshiRate: 0.00000001,
+    fetchedAt: 1640995200000,
+    source: 'coingecko'
+  };
+
+  let validCache: LocalStorageCache;
+
+  beforeEach(() => {
+    // Mock Date.now to return a consistent timestamp
+    vi.spyOn(Date, 'now').mockReturnValue(1640995300000); // 100 seconds after fetchedAt
+    
+    // Create valid cache with proper timestamp after mocking Date.now
+    validCache = {
+      priceData: validPriceData,
+      cachedAt: Date.now() - 1000, // 1 second ago
+      version: 1
+    };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('valid cache', () => {
+    it('should return true for valid fresh cache', () => {
+      expect(isValidCache(validCache)).toBe(true);
+    });
+
+    it('should return true for cache at exact age boundary', () => {
+      const cacheAtBoundary = {
+        ...validCache,
+        cachedAt: Date.now() - DEFAULT_CACHE_TTL_MS + 1
+      };
+      expect(isValidCache(cacheAtBoundary)).toBe(true);
+    });
+  });
+
+  describe('invalid input types', () => {
+    it('should return false for null', () => {
+      expect(isValidCache(null)).toBe(false);
+    });
+
+    it('should return false for undefined', () => {
+      expect(isValidCache(undefined)).toBe(false);
+    });
+
+    it('should return false for primitives', () => {
+      expect(isValidCache('string')).toBe(false);
+      expect(isValidCache(123)).toBe(false);
+      expect(isValidCache(true)).toBe(false);
+    });
+
+    it('should return false for arrays', () => {
+      expect(isValidCache([])).toBe(false);
+      expect(isValidCache([1, 2, 3])).toBe(false);
+    });
+  });
+
+  describe('missing required properties', () => {
+    it('should return false when missing priceData', () => {
+      const cache = { ...validCache };
+      delete (cache as any).priceData;
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when missing cachedAt', () => {
+      const cache = { ...validCache };
+      delete (cache as any).cachedAt;
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when missing version', () => {
+      const cache = { ...validCache };
+      delete (cache as any).version;
+      expect(isValidCache(cache)).toBe(false);
+    });
+  });
+
+  describe('extra properties', () => {
+    it('should return false when cache has extra properties', () => {
+      const cache = { ...validCache, extra: 'value' };
+      expect(isValidCache(cache)).toBe(false);
+    });
+  });
+
+  describe('invalid priceData', () => {
+    it('should return false for null priceData', () => {
+      const cache = { ...validCache, priceData: null };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false for non-object priceData', () => {
+      const cache = { ...validCache, priceData: 'string' };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when priceData is missing usdRate', () => {
+      const priceData = { ...validPriceData };
+      delete (priceData as any).usdRate;
+      const cache = { ...validCache, priceData };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when priceData has invalid usdRate', () => {
+      const cache = { ...validCache, priceData: { ...validPriceData, usdRate: -1 } };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when priceData has NaN usdRate', () => {
+      const cache = { ...validCache, priceData: { ...validPriceData, usdRate: NaN } };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when priceData has Infinity usdRate', () => {
+      const cache = { ...validCache, priceData: { ...validPriceData, usdRate: Infinity } };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when priceData is missing satoshiRate', () => {
+      const priceData = { ...validPriceData };
+      delete (priceData as any).satoshiRate;
+      const cache = { ...validCache, priceData };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when priceData has invalid satoshiRate', () => {
+      const cache = { ...validCache, priceData: { ...validPriceData, satoshiRate: 0 } };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when priceData is missing fetchedAt', () => {
+      const priceData = { ...validPriceData };
+      delete (priceData as any).fetchedAt;
+      const cache = { ...validCache, priceData };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when priceData has invalid fetchedAt', () => {
+      const cache = { ...validCache, priceData: { ...validPriceData, fetchedAt: -1 } };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when priceData is missing source', () => {
+      const priceData = { ...validPriceData };
+      delete (priceData as any).source;
+      const cache = { ...validCache, priceData };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when priceData has invalid source', () => {
+      const cache = { ...validCache, priceData: { ...validPriceData, source: '' } };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false when priceData has extra properties', () => {
+      const cache = { ...validCache, priceData: { ...validPriceData, extra: 'value' } };
+      expect(isValidCache(cache)).toBe(false);
+    });
+  });
+
+  describe('invalid cachedAt', () => {
+    it('should return false for non-number cachedAt', () => {
+      const cache = { ...validCache, cachedAt: '1640995200000' };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false for negative cachedAt', () => {
+      const cache = { ...validCache, cachedAt: -1 };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false for zero cachedAt', () => {
+      const cache = { ...validCache, cachedAt: 0 };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false for NaN cachedAt', () => {
+      const cache = { ...validCache, cachedAt: NaN };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false for Infinity cachedAt', () => {
+      const cache = { ...validCache, cachedAt: Infinity };
+      expect(isValidCache(cache)).toBe(false);
+    });
+  });
+
+  describe('invalid version', () => {
+    it('should return false for non-number version', () => {
+      const cache = { ...validCache, version: '1' };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false for non-integer version', () => {
+      const cache = { ...validCache, version: 1.5 };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false for zero version', () => {
+      const cache = { ...validCache, version: 0 };
+      expect(isValidCache(cache)).toBe(false);
+    });
+
+    it('should return false for negative version', () => {
+      const cache = { ...validCache, version: -1 };
+      expect(isValidCache(cache)).toBe(false);
+    });
+  });
+
+  describe('cache age validation', () => {
+    it('should return false for expired cache', () => {
+      const expiredCache = {
+        ...validCache,
+        cachedAt: Date.now() - DEFAULT_CACHE_TTL_MS - 1000 // 1 second past expiry
+      };
+      expect(isValidCache(expiredCache)).toBe(false);
+    });
+
+    it('should return false for cache with future timestamp', () => {
+      const futureCache = {
+        ...validCache,
+        cachedAt: Date.now() + 1000 // 1 second in the future
+      };
+      expect(isValidCache(futureCache)).toBe(false);
+    });
+
+    it('should return false for cache at exact expiry boundary', () => {
+      const expiredCache = {
+        ...validCache,
+        cachedAt: Date.now() - DEFAULT_CACHE_TTL_MS
+      };
+      expect(isValidCache(expiredCache)).toBe(false);
     });
   });
 });
