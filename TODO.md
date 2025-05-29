@@ -50,7 +50,7 @@
         1. Tests pass with strict type checking enabled
     - **Depends-on:** [T001]
 
-- [~] **T004 · Refactor · P0**: Strengthen critical type guards
+- [x] **T004 · Refactor · P0**: Strengthen critical type guards
     - **Context:** CR-B2: Enhance Type Guards
     - **Action:**
         1. Enhance `isPriceResponseMessage` with deep property validation
