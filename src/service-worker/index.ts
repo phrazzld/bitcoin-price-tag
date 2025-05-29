@@ -149,7 +149,7 @@ function handleMessage(
   // Unknown message type - send error response
   logger.warn('Unknown message type received', {
     function_name: 'handleMessage',
-    messageType: (message as any)?.type
+    messageType: (message as Record<string, unknown>)?.type ?? 'unknown'
   });
   
   sendResponse({

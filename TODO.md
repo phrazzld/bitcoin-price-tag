@@ -24,7 +24,7 @@
         1. Audit list attached to PR or tracked in issue system
     - **Depends-on:** none
 
-- [ ] **T002 · Refactor · P0**: Replace type suppressions in application code
+- [x] **T002 · Refactor · P0**: Replace type suppressions in application code
     - **Context:** CR-B2: Fix Application Code
     - **Action:**
         1. Define precise TypeScript interfaces for all suppressed types

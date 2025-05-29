@@ -1,3 +1,5 @@
+# Plan Details
+
 # Bitcoin Price Tag Remediation Plan – Sprint 1
 
 ## Executive Summary
@@ -143,3 +145,9 @@ Complete CR-H4, CR-H3, CR-H1, and CR-M1. These build on the clean foundation fro
 ## Key Insight
 
 The codebase's most critical issue is not any single violation, but the **systematic abandonment of stated architectural principles**. By fixing integration test mocking first, we restore the feedback loop that prevents architectural decay. Combined with automated enforcement, this creates a self-healing system aligned with the development philosophy.
+
+## Task Breakdown Requirements
+- Create atomic, independent tasks
+- Ensure proper dependency mapping
+- Include verification steps
+- Follow project task ID and formatting conventions
