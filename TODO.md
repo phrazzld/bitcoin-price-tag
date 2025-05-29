@@ -63,7 +63,7 @@
         1. Type guards reject malformed data at runtime
     - **Depends-on:** [T001]
 
-- [ ] **T005 · Chore · P0**: Enforce no-explicit-any ESLint rule
+- [x] **T005 · Chore · P0**: Enforce no-explicit-any ESLint rule
     - **Context:** CR-B2: Prevent Regression
     - **Action:**
         1. Add `@typescript-eslint/no-explicit-any: error` to `.eslintrc`
