@@ -1,6 +1,14 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createDomObserver } from './dom-observer';
 import { PriceData } from '../common/types';
+import { 
+  createMockNodeList, 
+  createMockMutationRecord,
+  createMockMutationObserver,
+  createMockMutationObserverWithCallback,
+  createElement,
+  createTextNode
+} from '../../tests/utils/dom-builders';
 
 // Mock the logger to avoid console output in tests
 vi.mock('../shared/logger', () => ({
@@ -11,51 +19,6 @@ vi.mock('../shared/logger', () => ({
     warn: vi.fn(),
   }),
 }));
-
-/**
- * Helper function to create mock MutationRecord objects with proper typing
- * This eliminates the need for 'as any' casts when creating test data
- */
-function createMockMutationRecord(options: Partial<MutationRecord> = {}): MutationRecord {
-  const defaultNodeList = { 
-    length: 0, 
-    [Symbol.iterator]: function* () {} 
-  } as NodeListOf<Node>;
-  
-  return {
-    type: 'childList',
-    target: document.createElement('div'),
-    addedNodes: defaultNodeList,
-    removedNodes: defaultNodeList,
-    previousSibling: null,
-    nextSibling: null,
-    attributeName: null,
-    attributeNamespace: null,
-    oldValue: null,
-    ...options,
-  } as MutationRecord;
-}
-
-/**
- * Helper function to create a mock NodeListOf<Node> for MutationRecord testing
- */
-function createMockNodeList(nodes: Node[]): NodeListOf<Node> {
-  const mockNodeList = {
-    length: nodes.length,
-    [Symbol.iterator]: function* () {
-      for (let i = 0; i < nodes.length; i++) {
-        yield this[i];
-      }
-    }
-  } as any;
-  
-  // Add indexed properties
-  nodes.forEach((node, index) => {
-    mockNodeList[index] = node;
-  });
-  
-  return mockNodeList as NodeListOf<Node>;
-}
 
 // Mock price data for testing
 const mockPriceData: PriceData = {
@@ -113,11 +76,7 @@ describe('dom-observer.ts', () => {
       const processedNodes = new Set<Node>();
       
       // Mock MutationObserver
-      const mockObserve = vi.fn();
-      const mockMutationObserver = vi.fn(() => ({
-        observe: mockObserve,
-        disconnect: vi.fn()
-      }));
+      const mockMutationObserver = createMockMutationObserver();
       
       // Create observer controller with injected mock constructor
       const controller = createDomObserver(
@@ -125,7 +84,7 @@ describe('dom-observer.ts', () => {
         mockAnnotationFunction,
         TEST_DEBOUNCE_MS,
         processedNodes,
-        mockMutationObserver as any
+        mockMutationObserver
       );
       
       // Start observing
@@ -134,9 +93,10 @@ describe('dom-observer.ts', () => {
       // Verify MutationObserver was created
       expect(mockMutationObserver).toHaveBeenCalledTimes(1);
       
-      // Verify observe was called with correct parameters
-      expect(mockObserve).toHaveBeenCalledTimes(1);
-      expect(mockObserve).toHaveBeenCalledWith(rootElement, {
+      // Get the created instance and verify observe was called
+      const instance = mockMutationObserver.getInstances()[0];
+      expect(instance.observe).toHaveBeenCalledTimes(1);
+      expect(instance.observe).toHaveBeenCalledWith(rootElement, {
         childList: true,
         subtree: true
       });
@@ -149,16 +109,7 @@ describe('dom-observer.ts', () => {
       const testNode = document.createElement('span');
       
       // Mock the MutationObserver to capture the callback
-      let mutationCallback: ((mutations: MutationRecord[]) => void) | null = null;
-      
-      const mockObserve = vi.fn();
-      const mockMutationObserver = vi.fn(function(callback) {
-        mutationCallback = callback;
-        return {
-          observe: mockObserve,
-          disconnect: vi.fn()
-        };
-      });
+      const { MockMutationObserver, getCapturedCallback, mockObserve } = createMockMutationObserverWithCallback();
       
       // Create observer controller with injected mock constructor
       const controller = createDomObserver(
@@ -166,7 +117,7 @@ describe('dom-observer.ts', () => {
         mockAnnotationFunction,
         TEST_DEBOUNCE_MS,
         processedNodes,
-        mockMutationObserver as any
+        MockMutationObserver
       );
       
       // Start observing
@@ -179,6 +130,7 @@ describe('dom-observer.ts', () => {
       })];
         
         // Verify callback was captured
+        const mutationCallback = getCapturedCallback();
         expect(mutationCallback).not.toBeNull();
         
         // Call the mutation callback directly
@@ -204,19 +156,8 @@ describe('dom-observer.ts', () => {
       const rootElement = document.createElement('div');
       const processedNodes = new Set<Node>();
       
-      // Mock MutationObserver
-      const mockDisconnect = vi.fn();
-      const mockObserve = vi.fn();
-      
       // Create a way to capture the mutation callback
-      let capturedCallback: Function | null = null;
-      const mockMutationObserver = vi.fn(function(callback) {
-        capturedCallback = callback;
-        return {
-          observe: mockObserve,
-          disconnect: mockDisconnect
-        };
-      });
+      const { MockMutationObserver, getCapturedCallback, mockDisconnect, mockObserve } = createMockMutationObserverWithCallback();
       
       // Mock setTimeout and clearTimeout
       const originalSetTimeout = global.setTimeout;
@@ -233,13 +174,14 @@ describe('dom-observer.ts', () => {
           mockAnnotationFunction,
           TEST_DEBOUNCE_MS,
           processedNodes,
-          mockMutationObserver as any
+          MockMutationObserver
         );
         
         // Start observing
         controller.start(mockPriceData);
         
         // Trigger a mutation to set up a timeout
+        const capturedCallback = getCapturedCallback();
         if (capturedCallback) {
           const testNode = document.createElement('div');
           const records: MutationRecord[] = [createMockMutationRecord({
@@ -248,7 +190,11 @@ describe('dom-observer.ts', () => {
           })];
           
           // Call the callback to trigger setTimeout
-          capturedCallback(records);
+          const capturedCallback = getCapturedCallback();
+          expect(capturedCallback).not.toBeNull();
+          if (capturedCallback) {
+            capturedCallback(records);
+          }
           
           // Verify setTimeout was called
           expect(global.setTimeout).toHaveBeenCalled();

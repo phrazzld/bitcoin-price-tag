@@ -37,7 +37,7 @@
         1. Run `tsc --noEmit --strict` with zero errors
     - **Depends-on:** [T001]
 
-- [ ] **T003 · Refactor · P0**: Create typed test builders
+- [x] **T003 · Refactor · P0**: Create typed test builders
     - **Context:** CR-B2: Fix Test Code
     - **Action:**
         1. Implement test data builders using `satisfies` operator
