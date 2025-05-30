@@ -94,7 +94,7 @@
         1. Test logger output in dev (DEBUG) and prod (INFO) modes
     - **Depends-on:** none
 
-- [ ] **T007 · Config · P0**: Configure production build for INFO logging
+- [x] **T007 · Config · P0**: Configure production build for INFO logging
     - **Context:** CR-B3: Production Configuration
     - **Action:**
         1. Update `webpack.config.js` production config
