@@ -51,10 +51,10 @@ export function createDomObserver(
   logger.info('DOM Observer created.', { debounceMilliseconds });
   
   let currentPriceData: PriceData | null = null;
-  let processedNodes: Set<Node> = initialProcessedNodes;
+  const processedNodes: Set<Node> = initialProcessedNodes;
   let observer: MutationObserver | null = null;
   let timeoutId: number | null = null;
-  let pendingNodes: Set<Node> = new Set<Node>();
+  const pendingNodes: Set<Node> = new Set<Node>();
   
   /**
    * Determines if a node should be processed for price annotation
@@ -171,7 +171,7 @@ export function createDomObserver(
       }
     
       // window.setTimeout returns number in browser environment
-      timeoutId = window.setTimeout(processDebouncedNodes, debounceMilliseconds) as number;
+      timeoutId = window.setTimeout(processDebouncedNodes, debounceMilliseconds);
     } catch (error) {
       logger.error('Error scheduling debounced processing.', {
         errorMessage: error instanceof Error ? error.message : String(error),

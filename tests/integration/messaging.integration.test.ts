@@ -119,7 +119,7 @@ describe('Service Worker <-> Content Script Communication', () => {
       // where we verify that multiple messages are handled correctly
       
       // Setup: Simple counter to verify each request is processed
-      let requestCount = 0;
+      const requestCount = 0;
       const results: any[] = [];
       
       // Send three requests in parallel

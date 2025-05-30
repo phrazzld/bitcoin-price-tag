@@ -33,6 +33,20 @@ module.exports = tseslint.config(
       '@typescript-eslint/no-unsafe-return': 'error',
       '@typescript-eslint/no-unsafe-call': 'error',
       '@typescript-eslint/no-unsafe-argument': 'error',
+      
+      // Detect unused variables and imports
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          'args': 'all',
+          'argsIgnorePattern': '^_',
+          'caughtErrors': 'all',
+          'caughtErrorsIgnorePattern': '^_',
+          'destructuredArrayIgnorePattern': '^_',
+          'varsIgnorePattern': '^_',
+          'ignoreRestSiblings': true
+        }
+      ],
     },
   },
   // Config for test files - no type checking but still no any
@@ -40,6 +54,18 @@ module.exports = tseslint.config(
     files: ['**/*.test.ts', '**/*.spec.ts', 'tests/**/*.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          'args': 'all',
+          'argsIgnorePattern': '^_',
+          'caughtErrors': 'all',
+          'caughtErrorsIgnorePattern': '^_',
+          'destructuredArrayIgnorePattern': '^_',
+          'varsIgnorePattern': '^_',
+          'ignoreRestSiblings': true
+        }
+      ],
     },
   },
   // Config for config files
@@ -47,6 +73,18 @@ module.exports = tseslint.config(
     files: ['*.config.ts', '*.config.js'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          'args': 'all',
+          'argsIgnorePattern': '^_',
+          'caughtErrors': 'all',
+          'caughtErrorsIgnorePattern': '^_',
+          'destructuredArrayIgnorePattern': '^_',
+          'varsIgnorePattern': '^_',
+          'ignoreRestSiblings': true
+        }
+      ],
     },
   },
   // JS files

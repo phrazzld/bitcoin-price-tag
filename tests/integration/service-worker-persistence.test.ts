@@ -7,7 +7,7 @@ describe('Service Worker Persistence Integration Tests', () => {
   let mockStorage: any;
   let mockAlarms: any;
   let mockRuntime: any;
-  let serviceWorkerHandlers: any = {
+  const serviceWorkerHandlers: any = {
     onInstalled: null,
     onStartup: null,
     onAlarm: null,
