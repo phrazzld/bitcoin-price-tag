@@ -124,7 +124,7 @@
 
 ## Integration Test Architecture [BLOCKER]
 
-- [ ] **T009 · Test · P0**: Remove internal mocks from dom-observer integration test
+- [x] **T009 · Test · P0**: Remove internal mocks from dom-observer integration test
     - **Context:** CR-B1: Fix `dom-observer-annotation.test.ts`
     - **Action:**
         1. Delete `vi.mock()` calls for `findAndAnnotatePrices`
