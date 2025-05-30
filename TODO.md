@@ -165,7 +165,7 @@
 
 ## Quick Wins [HIGH]
 
-- [ ] **T012 · Chore · P1**: Configure ESLint for unused imports
+- [x] **T012 · Chore · P1**: Configure ESLint for unused imports
     - **Context:** CR-H2: Automate Unused Import Cleanup
     - **Action:**
         1. Enable `no-unused-vars` with `argsIgnorePattern: "^_"`
