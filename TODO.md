@@ -150,7 +150,7 @@
         1. Test passes without internal mocks
     - **Depends-on:** none
 
-- [ ] **T011 · Test · P0**: Validate integration tests use only external mocks
+- [x] **T011 · Test · P0**: Validate integration tests use only external mocks
     - **Context:** CR-B1: Ensure Proper Boundaries
     - **Action:**
         1. Audit all integration tests for mock usage
