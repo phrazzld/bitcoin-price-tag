@@ -107,7 +107,7 @@
         1. Build production bundle and verify log output
     - **Depends-on:** [T006]
 
-- [ ] **T008 · Refactor · P0**: Audit and fix debug log statements
+- [x] **T008 · Refactor · P0**: Audit and fix debug log statements
     - **Context:** CR-B3: Clean Up Debug Logs
     - **Action:**
         1. Search for all `logger.debug` calls across codebase

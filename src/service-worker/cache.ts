@@ -10,6 +10,10 @@ import {
   hasOnlyExpectedProperties,
   hasRequiredProperties
 } from '../common/validation-helpers';
+import { createLogger } from '../shared/logger';
+
+// Create logger instance for cache module
+const logger = createLogger('service-worker-cache');
 
 /** 
  * Current cache schema version - increment when structure changes
@@ -134,7 +138,10 @@ export async function rehydrateCache(): Promise<void> {
       memoryCache = cachedData;
     }
   } catch (error) {
-    console.error('Failed to rehydrate cache:', error);
+    logger.error('Failed to rehydrate cache', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     // Don't throw - rehydration failing shouldn't break the application
     // The code will fall back to API calls
   }
