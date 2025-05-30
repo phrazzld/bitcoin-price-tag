@@ -137,7 +137,7 @@
         1. Grep shows no internal module mocks in file
     - **Depends-on:** none
 
-- [ ] **T010 · Test · P0**: Remove internal mocks from content-script integration test
+- [x] **T010 · Test · P0**: Remove internal mocks from content-script integration test
     - **Context:** CR-B1: Fix `content-script-initialization.test.ts`
     - **Action:**
         1. Delete `vi.mock()` calls for `requestPriceData`
