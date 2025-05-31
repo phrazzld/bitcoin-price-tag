@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "build": "webpack --config webpack.config.js",
     "build:old": "rimraf dist && tsc && cpy src/manifest.json dist --flat && cpy 'images/**/*' dist/images && cpy styles.css dist && cpy tests/playwright/fixtures/index.html dist",
-    "build:zip": "npm run build && node verify-build.js && cd dist && zip -r ../bitcoin-price-tag.zip * && cd .. && echo '✅ Created bitcoin-price-tag.zip'"
+    "build:zip": "npm run build && node verify-build.js && cd dist && zip -r ../bitcoin-price-tag.zip * && cd .. && echo '✅ Created bitcoin-price-tag.zip'",
+    "prepare": "husky"
   },
   "keywords": [
     "chrome-extension",
@@ -30,6 +31,11 @@
     "type": "git",
     "url": "https://github.com/dylanseago/bitcoin-price-tag.git"
   },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix"
+    ]
+  },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
     "@playwright/test": "^1.52.0",
@@ -43,6 +49,8 @@
     "cpy-cli": "^5.0.0",
     "eslint": "^9.27.0",
     "happy-dom": "^17.4.7",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.0",
     "rimraf": "^6.0.1",
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.3",

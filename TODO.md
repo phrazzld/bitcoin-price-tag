@@ -177,7 +177,7 @@
         1. Test with file containing unused import
     - **Depends-on:** none
 
-- [ ] **T013 · Chore · P1**: Install pre-commit hooks
+- [x] **T013 · Chore · P1**: Install pre-commit hooks
     - **Context:** CR-H2: Enforce on Commit
     - **Action:**
         1. Install `husky` and `lint-staged` as dev dependencies
