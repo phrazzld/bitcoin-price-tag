@@ -218,7 +218,7 @@
         1. Peer review confirms clarity
     - **Depends-on:** none
 
-- [ ] **T016 · Docs · P1**: Document DOM manipulation functions
+- [x] **T016 · Docs · P1**: Document DOM manipulation functions
     - **Context:** CR-H4: Document Complex DOM Algorithms
     - **Action:**
         1. Add TSDoc to all exports in `src/content-script/dom.ts`
