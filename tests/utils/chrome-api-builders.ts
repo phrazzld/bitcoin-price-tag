@@ -8,7 +8,7 @@ import { vi } from 'vitest';
  * Create a mock chrome.runtime.sendMessage function
  */
 export const createMockSendMessage = () => 
-  vi.fn().mockImplementation((message, callback) => {
+  vi.fn().mockImplementation((_message, callback) => {
     if (callback) callback(undefined);
   });
 

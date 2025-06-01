@@ -190,7 +190,7 @@
         1. Stage file with unused import, verify auto-fix on commit
     - **Depends-on:** [T012]
 
-- [ ] **T014 · Chore · P1**: Initial unused import cleanup
+- [x] **T014 · Chore · P1**: Initial unused import cleanup
     - **Context:** CR-H2: One-time Cleanup
     - **Action:**
         1. Run `eslint --fix` on entire codebase

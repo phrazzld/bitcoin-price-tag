@@ -4,9 +4,6 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ChromeRuntimeHarness } from '../harness/ChromeRuntimeHarness';
-import { createStorageWithCache } from '../mocks/storage';
-import { createTestPriceData } from '../utils/test-helpers';
-import { PRICE_CACHE_KEY } from '../../src/common/constants';
 
 describe('Simple Messaging Test', () => {
   let harness: ChromeRuntimeHarness;
@@ -23,7 +20,7 @@ describe('Simple Messaging Test', () => {
     
     // Create a simple listener that responds immediately
     harness.setContext('service-worker');
-    chromeApi.runtime.onMessage.addListener((message: any, sender: any, sendResponse: (response: any) => void) => {
+    chromeApi.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: (response: any) => void) => {
       console.log('[SW] Received message:', message);
       
       if (message.type === 'TEST') {

@@ -47,7 +47,7 @@ export function createMockLoggerAdapter() {
 function tryParseJson(jsonString: string): LogEntry | null {
   try {
     return JSON.parse(jsonString) as LogEntry;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }

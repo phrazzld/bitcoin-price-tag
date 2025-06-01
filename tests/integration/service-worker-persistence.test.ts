@@ -16,7 +16,7 @@ describe('Service Worker Persistence Integration Tests', () => {
 
   // Mock cache module
   let cacheModule: any;
-  let apiModule: any;
+  let _apiModule: any;
 
   beforeEach(async () => {
     // Clear all mocks

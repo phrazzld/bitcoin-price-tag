@@ -1,4 +1,4 @@
-import { test as base, chromium, BrowserContext, Page } from '@playwright/test';
+import { test as base, chromium, BrowserContext } from '@playwright/test';
 import path from 'path';
 
 // Custom fixture to handle extension loading

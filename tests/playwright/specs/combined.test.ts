@@ -7,8 +7,7 @@ import {
   getAlarmFromSW,
   clearStorageInSW,
   clearAllAlarmsInSW,
-  setupAlarmListener,
-  waitForAlarmTrigger
+  setupAlarmListener
 } from '../helpers/service-worker';
 
 test.describe('Combined State and Alarm Persistence', () => {

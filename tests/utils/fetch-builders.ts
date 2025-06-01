@@ -32,7 +32,7 @@ export const createMockResponse = (data: any, options?: Partial<Response>): Resp
 export const createMockFetch = (responses?: Map<string, Response>) => {
   const defaultResponse = createMockResponse({ bitcoin: { usd: 50000 } });
   
-  return vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+  return vi.fn().mockImplementation((url: string, _init?: RequestInit) => {
     const response = responses?.get(url) || defaultResponse;
     return Promise.resolve(response);
   });

@@ -7,9 +7,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ChromeRuntimeHarness } from '../harness/ChromeRuntimeHarness';
 import { createFetchMock, mockFetchPrice, mockFetchError } from '../mocks/fetch';
 import { createStorageMock, createStorageWithCache, createEmptyStorage } from '../mocks/storage';
-import { createTestPriceData, createTestPriceRequest, waitFor } from '../utils/test-helpers';
+import { createTestPriceData, createTestPriceRequest } from '../utils/test-helpers';
 import { PRICE_CACHE_KEY, DEFAULT_CACHE_TTL_MS } from '../../src/common/constants';
-import type { PriceData, PriceRequestMessage, PriceResponseMessage } from '../../src/common/types';
+import type { PriceData } from '../../src/common/types';
 
 describe('Service Worker <-> Content Script Communication', () => {
   let harness: ChromeRuntimeHarness;
@@ -119,8 +119,8 @@ describe('Service Worker <-> Content Script Communication', () => {
       // where we verify that multiple messages are handled correctly
       
       // Setup: Simple counter to verify each request is processed
-      const requestCount = 0;
-      const results: any[] = [];
+      const _requestCount = 0;
+      const _results: any[] = [];
       
       // Send three requests in parallel
       const promises = [
@@ -273,7 +273,7 @@ describe('Service Worker <-> Content Script Communication', () => {
       vi.stubGlobal('fetch', mockFetch);
       
       // Set a timestamp to verify delay
-      const startTime = performance.now();
+      const _startTime = performance.now();
       
       // Start the request
       const requestPromise = requestPriceData();
@@ -286,7 +286,7 @@ describe('Service Worker <-> Content Script Communication', () => {
       
       // Get the result
       const result = await requestPromise;
-      const endTime = performance.now();
+      const _endTime = performance.now();
       
       // Assert: Should receive data after advancing timers
       expect(result.usdRate).toBe(48000);

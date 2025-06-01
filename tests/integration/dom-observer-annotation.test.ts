@@ -5,7 +5,7 @@
  * annotation function and that the processedNodes set is shared correctly.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createTestPriceData } from "../utils/test-helpers";
 import { PriceData } from "../../src/common/types";
 import { DOM_OBSERVER_DEBOUNCE_MS } from "../../src/common/constants";
@@ -167,7 +167,7 @@ describe("DomObserver and DOM Annotation Integration", () => {
     const processedNodesTracker: Node[] = [];
     const trackingAnnotationFunction = (
       node: Node,
-      priceData: PriceData,
+      _priceData: PriceData,
       processedNodes: Set<Node>,
     ) => {
       processedNodesTracker.push(node);

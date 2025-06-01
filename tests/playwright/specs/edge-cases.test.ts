@@ -103,7 +103,7 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
 
     try {
       await setStateInSW(serviceWorker, 'edgeCase', edgeCaseData);
-    } catch (error) {
+    } catch (_error) {
       // Expected - some values might fail
     }
 
@@ -163,7 +163,7 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
 
   test('should handle restart during storage operation', async ({ context, extensionId, serviceWorker }) => {
     // Start a storage operation and restart immediately
-    const storagePromise = setStateInSW(serviceWorker, 'racyWrite', { 
+    const _storagePromise = setStateInSW(serviceWorker, 'racyWrite', { 
       timestamp: Date.now(),
       data: 'test'
     });

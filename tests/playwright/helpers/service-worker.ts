@@ -8,7 +8,7 @@ export async function forceServiceWorkerRestart(context: BrowserContext, extensi
   try {
     // Try index.html first
     await page.goto(`chrome-extension://${extensionId}/index.html`);
-  } catch (error) {
+  } catch (_error) {
     // If that fails, try the base URL
     await page.goto(`chrome-extension://${extensionId}/`);
   }

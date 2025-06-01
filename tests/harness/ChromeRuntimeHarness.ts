@@ -114,7 +114,6 @@ export class ChromeRuntimeHarness {
     responseCallback?: (response: any) => void
   ): Promise<any> {
     this.lastError = null;
-    const messageId = ++this.messageCounter;
 
     // If responseCallback is provided, use callback-style API
     if (responseCallback) {
