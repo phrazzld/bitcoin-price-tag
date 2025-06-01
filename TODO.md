@@ -204,7 +204,7 @@
 
 ## Documentation [HIGH]
 
-- [ ] **T015 · Docs · P1**: Document DOM observer algorithms
+- [x] **T015 · Docs · P1**: Document DOM observer algorithms
     - **Context:** CR-H4: Document Complex DOM Algorithms
     - **Action:**
         1. Add TSDoc to all exports in `src/content-script/dom-observer.ts`
