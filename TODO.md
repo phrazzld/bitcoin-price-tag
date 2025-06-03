@@ -249,7 +249,7 @@
         1. Document reviewed and approved
     - **Depends-on:** none
 
-- [ ] **T018 · Refactor · P1**: Implement typed error classes
+- [x] **T018 · Refactor · P1**: Implement typed error classes
     - **Context:** CR-H3: Type-safe Errors
     - **Action:**
         1. Create base error classes in `src/shared/errors/`
