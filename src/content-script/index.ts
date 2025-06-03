@@ -99,7 +99,11 @@ function initialize(): void {
         function_name: 'initialize'
       });
       // Start annotation directly when DOM is ready
-      initPriceAnnotation();
+      initPriceAnnotation().catch(error => {
+        logger.error('Failed to initialize price annotation after DOMContentLoaded', error, {
+          function_name: 'initialize'
+        });
+      });
     });
   } else {
     // DOM is already loaded
@@ -108,7 +112,11 @@ function initialize(): void {
       readyState: document.readyState
     });
     // Start annotation immediately as DOM is already available
-    initPriceAnnotation();
+    initPriceAnnotation().catch(error => {
+      logger.error('Failed to initialize price annotation for already loaded DOM', error, {
+        function_name: 'initialize'
+      });
+    });
   }
 }
 

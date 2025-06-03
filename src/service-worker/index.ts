@@ -141,7 +141,23 @@ function handleMessage(
 
   // Type check and handle price request messages
   if (isPriceRequestMessage(message)) {
-    handlePriceRequest(message, sendResponse);
+    handlePriceRequest(message, sendResponse).catch(error => {
+      logger.error('Unhandled error in handlePriceRequest', error, {
+        function_name: 'handleMessage',
+        requestId: message.requestId
+      });
+      // Send error response as fallback
+      sendResponse({
+        requestId: message.requestId,
+        type: 'PRICE_RESPONSE',
+        status: 'error',
+        error: {
+          message: 'Internal error processing request',
+          code: 'internal_error'
+        },
+        timestamp: Date.now()
+      });
+    });
     // Return true to indicate we'll send a response asynchronously
     return true;
   }
@@ -266,8 +282,31 @@ async function handlePriceRequest(
   }
 }
 
-// Register all event listeners
-chrome.runtime.onInstalled.addListener(handleInstalled);
-chrome.runtime.onStartup.addListener(handleStartup);
-chrome.alarms.onAlarm.addListener(handleAlarm);
+// Register all event listeners with error handling
+chrome.runtime.onInstalled.addListener((details) => {
+  handleInstalled(details).catch(error => {
+    logger.error('Unhandled error in onInstalled handler', error, {
+      function_name: 'onInstalled_wrapper'
+    });
+  });
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  handleStartup().catch(error => {
+    logger.error('Unhandled error in onStartup handler', error, {
+      function_name: 'onStartup_wrapper'
+    });
+  });
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  handleAlarm(alarm).catch(error => {
+    logger.error('Unhandled error in onAlarm handler', error, {
+      function_name: 'onAlarm_wrapper',
+      alarmName: alarm.name
+    });
+  });
+});
+
+// onMessage handler is not async, so no wrapper needed
 chrome.runtime.onMessage.addListener(handleMessage);
