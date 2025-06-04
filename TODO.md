@@ -319,7 +319,7 @@
 
 ## Quality Gates [MEDIUM]
 
-- [ ] **T023 · Chore · P2**: Enforce conventional commits
+- [x] **T023 · Chore · P2**: Enforce conventional commits
     - **Context:** CR-M1: Implement Quality Gates
     - **Action:**
         1. Install `@commitlint/cli` and `@commitlint/config-conventional`
