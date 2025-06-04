@@ -304,7 +304,7 @@
         1. Test coverage maintained
     - **Depends-on:** none
 
-- [ ] **T022 · Refactor · P1**: Implement test isolation patterns
+- [x] **T022 · Refactor · P1**: Implement test isolation patterns
     - **Context:** CR-H1: Prevent Test Pollution
     - **Action:**
         1. Add `beforeEach`/`afterEach` to all test suites

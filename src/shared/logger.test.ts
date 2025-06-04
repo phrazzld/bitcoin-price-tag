@@ -11,15 +11,20 @@ describe('logger.ts', () => {
   };
 
   beforeEach(() => {
+    // Clear all mocks first
+    vi.clearAllMocks();
+    
+    // Setup console spies
     vi.spyOn(console, 'debug').mockImplementation(mockConsole.debug);
     vi.spyOn(console, 'info').mockImplementation(mockConsole.info);
     vi.spyOn(console, 'warn').mockImplementation(mockConsole.warn);
     vi.spyOn(console, 'error').mockImplementation(mockConsole.error);
-    vi.clearAllMocks();
   });
 
   afterEach(() => {
+    // Comprehensive cleanup
     vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Logger class', () => {
@@ -213,8 +218,15 @@ describe('logger.ts', () => {
   describe('getEnvironmentLogLevel', () => {
     const originalProcess = global.process;
 
+    beforeEach(() => {
+      // Clear mocks for this describe block
+      vi.clearAllMocks();
+    });
+
     afterEach(() => {
+      // Restore global process and clear mocks
       global.process = originalProcess;
+      vi.clearAllMocks();
     });
 
     it('should return INFO when no environment variable is set', () => {
@@ -285,8 +297,15 @@ describe('logger.ts', () => {
   describe('environment-based logging', () => {
     const originalProcess = global.process;
 
+    beforeEach(() => {
+      // Clear mocks for this describe block
+      vi.clearAllMocks();
+    });
+
     afterEach(() => {
+      // Restore global process and clear mocks
       global.process = originalProcess;
+      vi.clearAllMocks();
     });
 
     it('should respect DEBUG level from environment', () => {

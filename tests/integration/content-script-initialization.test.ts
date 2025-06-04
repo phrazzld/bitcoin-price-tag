@@ -20,20 +20,7 @@ import { createStorageWithCache } from "../mocks/storage";
 
 // No mocking of internal modules - use real implementations for integration testing
 
-vi.mock("../../src/shared/logger", () => ({
-  createLogger: () => ({
-    info: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-    warn: vi.fn(),
-    child: vi.fn().mockReturnValue({
-      info: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-      warn: vi.fn(),
-    }),
-  }),
-}));
+// Logger mock moved to beforeEach for proper test isolation
 
 // No imports needed for internal modules - they'll be used through the content script index
 
@@ -86,6 +73,22 @@ describe("Content Script Initialization Flow", () => {
     vi.resetModules();
     vi.clearAllMocks();
 
+    // Setup logger mock dynamically for proper isolation
+    vi.doMock("../../src/shared/logger", () => ({
+      createLogger: () => ({
+        info: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+        warn: vi.fn(),
+        child: vi.fn().mockReturnValue({
+          info: vi.fn(),
+          error: vi.fn(),
+          debug: vi.fn(),
+          warn: vi.fn(),
+        }),
+      }),
+    }));
+
     // Use fake timers for all tests
     vi.useFakeTimers();
 
@@ -118,7 +121,14 @@ describe("Content Script Initialization Flow", () => {
   });
 
   afterEach(() => {
-    // Restore original values
+    // Comprehensive cleanup
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    vi.resetModules();
+    vi.unstubAllGlobals();
+
+    // Restore original document state
     Object.defineProperty(document, "readyState", {
       configurable: true,
       get: () => originalDocumentReadyState,
@@ -129,9 +139,6 @@ describe("Content Script Initialization Flow", () => {
 
     // Reset harness state
     harness.reset();
-
-    // Restore real timers
-    vi.useRealTimers();
   });
 
   it("should initialize when document is already loaded", async () => {

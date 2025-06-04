@@ -72,34 +72,14 @@ const mockChrome = {
   }
 };
 
-// Setup global chrome mock
-global.chrome = mockChrome as any;
-
-// Mock for chrome.storage.local (needed by cache.ts)
+// Mock objects created at module level but applied in beforeEach
 const mockStorage = {
   get: vi.fn(),
   set: vi.fn(),
   remove: vi.fn()
 };
 
-// Mock fetch for api.ts
 const mockFetch = vi.fn();
-global.fetch = mockFetch as any;
-
-// Mock the logger module properly using vi.mock
-vi.mock('../shared/logger', async () => {
-  const actual = await vi.importActual('../shared/logger');
-  return {
-    ...actual,
-    createLogger: vi.fn((module: string, config: any = {}) => {
-      return new Logger({
-        module,
-        ...config
-      }, mockLoggerAdapter);
-    }),
-    logger: testLogger
-  };
-});
 
 describe('service-worker/index.ts', () => {
   let handlers: {
@@ -110,8 +90,9 @@ describe('service-worker/index.ts', () => {
   };
 
   beforeEach(async () => {
-    // Clear all mocks
+    // Clear all mocks and reset module state
     vi.clearAllMocks();
+    vi.resetModules();
     mockLoggerAdapter.reset();
     mockStorage.get.mockReset();
     mockStorage.set.mockReset();
@@ -121,20 +102,35 @@ describe('service-worker/index.ts', () => {
     // Set up fake timers
     vi.useFakeTimers();
     
-    // Reset chrome storage mock
+    // Setup global chrome mock fresh each time
+    global.chrome = mockChrome as any;
     global.chrome.storage = {
       local: mockStorage
     } as any;
 
+    // Setup global fetch mock fresh each time
+    global.fetch = mockFetch as any;
+
     // Mock Date.now for consistent timestamps
     vi.spyOn(Date, 'now').mockReturnValue(1734447415000);
 
+    // Setup logger module mock dynamically
+    vi.doMock('../shared/logger', async () => {
+      const actual = await vi.importActual('../shared/logger');
+      return {
+        ...actual,
+        createLogger: vi.fn((module: string, config: any = {}) => {
+          return new Logger({
+            module,
+            ...config
+          }, mockLoggerAdapter);
+        }),
+        logger: testLogger
+      };
+    });
+
     // Import the module fresh each time
     handlers = {};
-    vi.resetModules();
-    
-    // Reset global fetch mock
-    global.fetch = mockFetch as any;
     
     await vi.importActual('./index');
 
@@ -154,9 +150,19 @@ describe('service-worker/index.ts', () => {
   });
 
   afterEach(async () => {
+    // Comprehensive cleanup of all state
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     vi.useRealTimers();
+    vi.resetModules();
     mockLoggerAdapter.reset();
+    
+    // Clean up global state
+    delete (global as any).chrome;
+    delete (global as any).fetch;
+    
+    // Reset handlers
+    handlers = {};
   });
 
   /**

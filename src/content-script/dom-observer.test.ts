@@ -5,20 +5,10 @@ import {
   createMockNodeList, 
   createMockMutationRecord,
   createMockMutationObserver,
-  createMockMutationObserverWithCallback,
-  createElement,
-  createTextNode
+  createMockMutationObserverWithCallback
 } from '../../tests/utils/dom-builders';
 
-// Mock the logger to avoid console output in tests
-vi.mock('../shared/logger', () => ({
-  createLogger: () => ({
-    info: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-    warn: vi.fn(),
-  }),
-}));
+// Logger mock setup moved to beforeEach for proper isolation
 
 // Mock price data for testing
 const mockPriceData: PriceData = {
@@ -37,18 +27,34 @@ const TEST_DEBOUNCE_MS = 250;
 describe('dom-observer.ts', () => {
   // Setup before each test
   beforeEach(() => {
-    // Reset mocks
+    // Clear and reset all mocks and modules
     vi.clearAllMocks();
-    // Mock performance.now()
-    global.performance.now = vi.fn(() => 1000);
+    vi.resetModules();
+    
+    // Setup logger mock dynamically for proper isolation
+    vi.doMock('../shared/logger', () => ({
+      createLogger: () => ({
+        info: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+        warn: vi.fn(),
+      }),
+    }));
+    
+    // Mock performance.now() for consistent timing
+    vi.spyOn(global.performance, 'now').mockReturnValue(1000);
+    
     // Use fake timers for debouncing tests
     vi.useFakeTimers();
   });
 
   // Cleanup after each test
   afterEach(() => {
+    // Comprehensive cleanup
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     vi.useRealTimers();
+    vi.resetModules();
   });
 
   describe('createDomObserver factory', () => {

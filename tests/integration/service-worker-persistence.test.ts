@@ -80,7 +80,19 @@ describe('Service Worker Persistence Integration Tests', () => {
   });
 
   afterEach(() => {
+    // Comprehensive cleanup
     vi.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.resetModules();
+    
+    // Clean up global state
+    delete (global as any).chrome;
+    
+    // Reset handlers
+    serviceWorkerHandlers.onInstalled = null;
+    serviceWorkerHandlers.onStartup = null;
+    serviceWorkerHandlers.onAlarm = null;
+    serviceWorkerHandlers.onMessage = null;
   });
 
   describe('Chrome Storage Persistence', () => {

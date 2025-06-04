@@ -50,9 +50,12 @@ describe('Service Worker <-> Content Script Communication', () => {
   });
 
   afterEach(() => {
+    // Comprehensive cleanup
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
+    vi.resetModules();
     harness.reset();
   });
 

@@ -3,7 +3,7 @@ import { PriceData, PriceRequestMessage, LocalStorageCache } from '../common/typ
 import { REFRESH_ALARM_NAME, DEFAULT_CACHE_TTL_MS } from '../common/constants';
 import { isValidCache } from './cache';
 
-// Mock Chrome APIs
+// Mock objects created at module level but applied in beforeEach
 const mockChrome = {
   runtime: {
     onInstalled: { addListener: vi.fn() },
@@ -17,19 +17,13 @@ const mockChrome = {
   }
 };
 
-// Set up global chrome mock
-global.chrome = mockChrome as any;
-
-// Mock for chrome.storage.local
 const mockStorage = {
   get: vi.fn(),
   set: vi.fn(),
   remove: vi.fn()
 };
 
-// Mock fetch for api.ts
 const mockFetch = vi.fn();
-global.fetch = mockFetch as any;
 
 // Test for the cached price functionality specifically
 describe('Cache functionality test', () => {
@@ -53,8 +47,9 @@ describe('Cache functionality test', () => {
   };
   
   beforeEach(async () => {
-    // Clear all mocks
+    // Clear all mocks and reset module state
     vi.clearAllMocks();
+    vi.resetModules();
     mockStorage.get.mockReset();
     mockStorage.set.mockReset();
     mockFetch.mockReset();
@@ -63,17 +58,17 @@ describe('Cache functionality test', () => {
     // Set up fake timers
     vi.useFakeTimers();
     
-    // Reset chrome storage mock
+    // Setup global chrome mock fresh each time
+    global.chrome = mockChrome as any;
     global.chrome.storage = {
       local: mockStorage
     } as any;
     
+    // Setup global fetch mock fresh each time
+    global.fetch = mockFetch as any;
+    
     // Mock Date.now for consistent timestamps
     vi.spyOn(Date, 'now').mockReturnValue(1734447415000);
-    
-    // Reset modules and reimport
-    vi.resetModules();
-    global.fetch = mockFetch as any;
     
     // Import the module fresh
     await vi.importActual('./index');
@@ -89,8 +84,18 @@ describe('Cache functionality test', () => {
   });
   
   afterEach(() => {
+    // Comprehensive cleanup of all state
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     vi.useRealTimers();
+    vi.resetModules();
+    
+    // Clean up global state
+    delete (global as any).chrome;
+    delete (global as any).fetch;
+    
+    // Reset handlers
+    handlers = {};
   });
   
   it('should return cached price when available', async () => {
@@ -151,6 +156,9 @@ describe('isValidCache', () => {
   let validCache: LocalStorageCache;
 
   beforeEach(() => {
+    // Clear all mocks
+    vi.clearAllMocks();
+    
     // Mock Date.now to return a consistent timestamp
     vi.spyOn(Date, 'now').mockReturnValue(1640995300000); // 100 seconds after fetchedAt
     
@@ -163,7 +171,9 @@ describe('isValidCache', () => {
   });
 
   afterEach(() => {
+    // Comprehensive cleanup
     vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('valid cache', () => {

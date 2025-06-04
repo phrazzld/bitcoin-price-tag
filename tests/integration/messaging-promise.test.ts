@@ -91,9 +91,14 @@ describe('Promise-based Messaging Test', () => {
   });
   
   afterEach(() => {
+    // Comprehensive cleanup
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     vi.useRealTimers();
+    
+    // Reset message listeners
+    messageListeners = [];
   });
   
   it('should handle the content script messaging pattern', async () => {
