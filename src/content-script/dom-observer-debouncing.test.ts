@@ -23,15 +23,19 @@ describe('dom-observer debouncing mechanism', () => {
       const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
       const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
       
-      let mutationCallback: ((mutations: MutationRecord[]) => void) | null = null;
+      let mutationCallback: MutationCallback | null = null;
       
       const mockObserve = vi.fn();
+      const mockDisconnect = vi.fn();
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
+      
       const mockMutationObserver = vi.fn(function(callback: MutationCallback) {
         mutationCallback = callback;
-        return {
-          observe: mockObserve,
-          disconnect: vi.fn()
-        };
+        return mockObserver;
       });
       
       const controller = createDomObserver(
@@ -67,15 +71,15 @@ describe('dom-observer debouncing mechanism', () => {
         });
         
         const node1 = document.createElement('div');
-        mutationCallback([createMutationRecord(node1)]);
+        mutationCallback?.([createMutationRecord(node1)], mockObserver);
         
         vi.advanceTimersByTime(100); // Less than debounce time
         const node2 = document.createElement('span');
-        mutationCallback([createMutationRecord(node2)]);
+        mutationCallback?.([createMutationRecord(node2)], mockObserver);
         
         vi.advanceTimersByTime(100); // Still less than debounce time
         const node3 = document.createElement('p');
-        mutationCallback([createMutationRecord(node3)]);
+        mutationCallback?.([createMutationRecord(node3)], mockObserver);
         
         expect(setTimeoutSpy).toHaveBeenCalledTimes(3);
         expect(clearTimeoutSpy).toHaveBeenCalledTimes(2);

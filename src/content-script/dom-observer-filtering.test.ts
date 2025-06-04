@@ -23,7 +23,7 @@ describe('dom-observer node filtering', () => {
       const rootElement = document.createElement('div');
       const processedNodes = new Set<Node>();
       
-      const { MockMutationObserver, getCapturedCallback } = createMockMutationObserverWithCallback();
+      const { MockMutationObserver, getCapturedCallback, mockObserve, mockDisconnect } = createMockMutationObserverWithCallback();
       
       const controller = createDomObserver(
         rootElement,
@@ -34,6 +34,13 @@ describe('dom-observer node filtering', () => {
       );
       
       controller.start(mockPriceData);
+      
+      // Create mock observer instance for callback
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
       
       // Create various node types
       const textNode = document.createTextNode('Some text');
@@ -49,7 +56,7 @@ describe('dom-observer node filtering', () => {
       
       const mutationCallback = getCapturedCallback();
       if (mutationCallback) {
-        mutationCallback(records);
+        mutationCallback(records, mockObserver);
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
         // Should only call annotation function for div and span elements
@@ -64,7 +71,7 @@ describe('dom-observer node filtering', () => {
       const rootElement = document.createElement('div');
       const processedNodes = new Set<Node>();
       
-      const { MockMutationObserver, getCapturedCallback } = createMockMutationObserverWithCallback();
+      const { MockMutationObserver, getCapturedCallback, mockObserve, mockDisconnect } = createMockMutationObserverWithCallback();
       
       const controller = createDomObserver(
         rootElement,
@@ -76,6 +83,13 @@ describe('dom-observer node filtering', () => {
       
       controller.start(mockPriceData);
       
+      // Create mock observer instance for callback
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
+      
       const validElement = document.createElement('p');
       const commentNode = document.createComment('Comment');
       
@@ -86,7 +100,7 @@ describe('dom-observer node filtering', () => {
       
       const mutationCallback = getCapturedCallback();
       if (mutationCallback) {
-        mutationCallback(records);
+        mutationCallback(records, mockObserver);
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
         // Should only call for the valid element

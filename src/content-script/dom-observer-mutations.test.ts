@@ -24,7 +24,13 @@ describe('dom-observer mutation handling', () => {
       const processedNodes = new Set<Node>();
       const testNode = document.createElement('span');
       
-      const { MockMutationObserver, getCapturedCallback } = createMockMutationObserverWithCallback();
+      const { MockMutationObserver, getCapturedCallback, mockObserve, mockDisconnect } = createMockMutationObserverWithCallback();
+      
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
       
       const controller = createDomObserver(
         rootElement,
@@ -45,7 +51,7 @@ describe('dom-observer mutation handling', () => {
       expect(mutationCallback).not.toBeNull();
       
       if (mutationCallback) {
-        mutationCallback(records);
+        mutationCallback(records, mockObserver);
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
         expect(mockAnnotationFunction).toHaveBeenCalledWith(
@@ -60,7 +66,13 @@ describe('dom-observer mutation handling', () => {
       const rootElement = document.createElement('div');
       const processedNodes = new Set<Node>();
       
-      const { MockMutationObserver, getCapturedCallback } = createMockMutationObserverWithCallback();
+      const { MockMutationObserver, getCapturedCallback, mockObserve, mockDisconnect } = createMockMutationObserverWithCallback();
+      
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
       
       const controller = createDomObserver(
         rootElement,
@@ -79,7 +91,7 @@ describe('dom-observer mutation handling', () => {
       
       const mutationCallback = getCapturedCallback();
       if (mutationCallback) {
-        mutationCallback(records);
+        mutationCallback(records, mockObserver);
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
         expect(mockAnnotationFunction).not.toHaveBeenCalled();
@@ -90,7 +102,13 @@ describe('dom-observer mutation handling', () => {
       const rootElement = document.createElement('div');
       const processedNodes = new Set<Node>();
       
-      const { MockMutationObserver, getCapturedCallback } = createMockMutationObserverWithCallback();
+      const { MockMutationObserver, getCapturedCallback, mockObserve, mockDisconnect } = createMockMutationObserverWithCallback();
+      
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
       
       const controller = createDomObserver(
         rootElement,
@@ -104,7 +122,7 @@ describe('dom-observer mutation handling', () => {
       
       const mutationCallback = getCapturedCallback();
       if (mutationCallback) {
-        mutationCallback([]);
+        mutationCallback([], mockObserver);
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
         expect(mockAnnotationFunction).not.toHaveBeenCalled();

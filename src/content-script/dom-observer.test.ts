@@ -115,7 +115,7 @@ describe('dom-observer.ts', () => {
       const testNode = document.createElement('span');
       
       // Mock the MutationObserver to capture the callback
-      const { MockMutationObserver, getCapturedCallback, mockObserve } = createMockMutationObserverWithCallback();
+      const { MockMutationObserver, getCapturedCallback, mockObserve, mockDisconnect } = createMockMutationObserverWithCallback();
       
       // Create observer controller with injected mock constructor
       const controller = createDomObserver(
@@ -129,6 +129,13 @@ describe('dom-observer.ts', () => {
       // Start observing
       controller.start(mockPriceData);
       
+      // Create mock observer instance for callback
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
+      
       // Create mutation records
       const records: MutationRecord[] = [createMockMutationRecord({
         target: rootElement,
@@ -141,7 +148,7 @@ describe('dom-observer.ts', () => {
         
         // Call the mutation callback directly
         if (mutationCallback) {
-          mutationCallback(records);
+          mutationCallback(records, mockObserver);
           
           // Fast-forward time to trigger the debounced function
           vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
@@ -186,6 +193,13 @@ describe('dom-observer.ts', () => {
         // Start observing
         controller.start(mockPriceData);
         
+        // Create mock observer instance for callback
+        const mockObserver = {
+          observe: mockObserve,
+          disconnect: mockDisconnect,
+          takeRecords: vi.fn().mockReturnValue([])
+        } as MutationObserver;
+        
         // Trigger a mutation to set up a timeout
         const capturedCallback = getCapturedCallback();
         if (capturedCallback) {
@@ -196,24 +210,21 @@ describe('dom-observer.ts', () => {
           })];
           
           // Call the callback to trigger setTimeout
-          const capturedCallback = getCapturedCallback();
           expect(capturedCallback).not.toBeNull();
-          if (capturedCallback) {
-            capturedCallback(records);
-          }
-          
-          // Verify setTimeout was called
-          expect(global.setTimeout).toHaveBeenCalled();
-          
-          // Now stop the observer
-          controller.stop();
-          
-          // Verify the observer was disconnected
-          expect(mockDisconnect).toHaveBeenCalledTimes(1);
-          
-          // Verify clearTimeout was called with the timeout ID
-          expect(clearTimeoutMock).toHaveBeenCalledWith(mockTimeoutId);
+          capturedCallback(records, mockObserver);
         }
+        
+        // Verify setTimeout was called
+        expect(global.setTimeout).toHaveBeenCalled();
+        
+        // Now stop the observer
+        controller.stop();
+        
+        // Verify the observer was disconnected
+        expect(mockDisconnect).toHaveBeenCalledTimes(1);
+        
+        // Verify clearTimeout was called with the timeout ID
+        expect(clearTimeoutMock).toHaveBeenCalledWith(mockTimeoutId);
       } finally {
         // Restore original globals
         global.setTimeout = originalSetTimeout;
@@ -841,7 +852,7 @@ describe('dom-observer.ts', () => {
       });
       
       // Create observer controller but don't call start() to avoid setting priceData
-      const controller = createDomObserver(
+      const _controller = createDomObserver(
         rootElement,
         mockAnnotationFunction,
         TEST_DEBOUNCE_MS,
@@ -945,7 +956,7 @@ describe('dom-observer.ts', () => {
           expect(setTimeoutSpy).toHaveBeenCalled();
           
           // Get the function that was passed to setTimeout
-          const processDebouncedNodesFn = setTimeoutSpy.mock.calls[0][0] as Function;
+          const processDebouncedNodesFn = setTimeoutSpy.mock.calls[0][0] as () => void;
           
           // Clear pendingNodes by calling processDebouncedNodes once
           processDebouncedNodesFn();

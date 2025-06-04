@@ -28,7 +28,7 @@ describe('dom-observer integration and advanced features', () => {
         .mockImplementationOnce(() => { throw new Error('Test error'); })
         .mockImplementationOnce(() => {});
       
-      const { MockMutationObserver, getCapturedCallback } = createMockMutationObserverWithCallback();
+      const { MockMutationObserver, getCapturedCallback, mockObserve, mockDisconnect } = createMockMutationObserverWithCallback();
       
       const controller = createDomObserver(
         rootElement,
@@ -40,6 +40,13 @@ describe('dom-observer integration and advanced features', () => {
       
       controller.start(mockPriceData);
       
+      // Create mock observer instance for callback
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
+      
       const node1 = document.createElement('div');
       const node2 = document.createElement('span');
       
@@ -50,7 +57,7 @@ describe('dom-observer integration and advanced features', () => {
       
       const mutationCallback = getCapturedCallback();
       if (mutationCallback) {
-        mutationCallback(records);
+        mutationCallback(records, mockObserver);
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
         // Should be called twice despite the error in first call
@@ -64,7 +71,7 @@ describe('dom-observer integration and advanced features', () => {
       const rootElement = document.createElement('div');
       const processedNodes = new Set<Node>();
       
-      const { MockMutationObserver, getCapturedCallback } = createMockMutationObserverWithCallback();
+      const { MockMutationObserver, getCapturedCallback, mockObserve, mockDisconnect } = createMockMutationObserverWithCallback();
       
       const controller = createDomObserver(
         rootElement,
@@ -76,6 +83,13 @@ describe('dom-observer integration and advanced features', () => {
       
       controller.start(mockPriceData);
       
+      // Create mock observer instance for callback
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
+      
       const testNode = document.createElement('div');
       
       const records: MutationRecord[] = [createMockMutationRecord({
@@ -85,7 +99,7 @@ describe('dom-observer integration and advanced features', () => {
       
       const mutationCallback = getCapturedCallback();
       if (mutationCallback) {
-        mutationCallback(records);
+        mutationCallback(records, mockObserver);
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
         expect(mockAnnotationFunction).toHaveBeenCalledWith(
@@ -102,7 +116,7 @@ describe('dom-observer integration and advanced features', () => {
       const rootElement = document.createElement('div');
       const processedNodes = new Set<Node>();
       
-      const { MockMutationObserver, getCapturedCallback } = createMockMutationObserverWithCallback();
+      const { MockMutationObserver, getCapturedCallback, mockObserve, mockDisconnect } = createMockMutationObserverWithCallback();
       
       const controller = createDomObserver(
         rootElement,
@@ -114,6 +128,13 @@ describe('dom-observer integration and advanced features', () => {
       
       controller.start(mockPriceData);
       
+      // Create mock observer instance for callback
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
+      
       const mutationCallback = getCapturedCallback();
       if (mutationCallback) {
         // First mutation cycle
@@ -121,7 +142,7 @@ describe('dom-observer integration and advanced features', () => {
         mutationCallback([createMockMutationRecord({
           target: rootElement,
           addedNodes: createMockNodeList([node1])
-        })]);
+        })], mockObserver);
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
         // Second mutation cycle
@@ -129,7 +150,7 @@ describe('dom-observer integration and advanced features', () => {
         mutationCallback([createMockMutationRecord({
           target: rootElement,
           addedNodes: createMockNodeList([node2])
-        })]);
+        })], mockObserver);
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
         expect(mockAnnotationFunction).toHaveBeenCalledTimes(2);

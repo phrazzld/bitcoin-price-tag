@@ -71,7 +71,13 @@ describe('dom-observer setup and lifecycle', () => {
       const rootElement = document.createElement('div');
       const processedNodes = new Set<Node>();
       const testNode = document.createElement('span');
-      const { MockMutationObserver, getCapturedCallback } = createMockMutationObserverWithCallback();
+      const { MockMutationObserver, getCapturedCallback, mockObserve, mockDisconnect } = createMockMutationObserverWithCallback();
+      
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
       
       const controller = createDomObserver(
         rootElement,
@@ -92,7 +98,7 @@ describe('dom-observer setup and lifecycle', () => {
       expect(mutationCallback).not.toBeNull();
       
       if (mutationCallback) {
-        mutationCallback(records);
+        mutationCallback(records, mockObserver);
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
         
         expect(mockAnnotationFunction).toHaveBeenCalledWith(
@@ -108,7 +114,13 @@ describe('dom-observer setup and lifecycle', () => {
     it('should disconnect the MutationObserver and clear timeout', () => {
       const rootElement = document.createElement('div');
       const processedNodes = new Set<Node>();
-      const { MockMutationObserver, getCapturedCallback, mockDisconnect } = createMockMutationObserverWithCallback();
+      const { MockMutationObserver, getCapturedCallback, mockObserve, mockDisconnect } = createMockMutationObserverWithCallback();
+      
+      const mockObserver = {
+        observe: mockObserve,
+        disconnect: mockDisconnect,
+        takeRecords: vi.fn().mockReturnValue([])
+      } as MutationObserver;
       
       const originalSetTimeout = global.setTimeout;
       const originalClearTimeout = global.clearTimeout;
@@ -136,7 +148,7 @@ describe('dom-observer setup and lifecycle', () => {
             addedNodes: createMockNodeList([testNode])
           })];
           
-          capturedCallback(records);
+          capturedCallback(records, mockObserver);
           expect(global.setTimeout).toHaveBeenCalled();
           
           controller.stop();
