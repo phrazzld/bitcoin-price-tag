@@ -66,13 +66,16 @@ module.exports = tseslint.config(
           'ignoreRestSiblings': true
         }
       ],
+      // Allow unbound methods in test files for expect() matchers
+      '@typescript-eslint/unbound-method': 'off',
     },
   },
   // Config for config files
   {
-    files: ['*.config.ts', '*.config.js'],
+    files: ['*.config.ts', '*.config.js', 'eslint.config.js'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-require-imports': 'off', // Allow require() in config files
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
