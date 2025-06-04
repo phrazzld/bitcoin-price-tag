@@ -331,7 +331,7 @@
         1. Test with invalid commit message format
     - **Depends-on:** [T013]
 
-- [ ] **T024 · Chore · P2**: Configure CI quality pipeline
+- [x] **T024 · Chore · P2**: Configure CI quality pipeline
     - **Context:** CR-M1: Automated Enforcement
     - **Action:**
         1. Update CI workflow (GitHub Actions/etc)
