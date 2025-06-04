@@ -122,8 +122,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests with coverage
-        run: pnpm run test:coverage
+      - name: Run tests with coverage and enforce thresholds
+        run: pnpm run test:coverage:check
 
       - name: Upload coverage reports to Codecov
         if: matrix.node-version == 20
@@ -133,7 +133,7 @@ jobs:
           file: ./coverage/lcov.info
           flags: unittests
           name: codecov-umbrella
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
   build:
     name: Build
