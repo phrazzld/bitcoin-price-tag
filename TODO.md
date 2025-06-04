@@ -292,7 +292,7 @@
         1. All tests pass after refactor
     - **Depends-on:** none
 
-- [ ] **T021 · Refactor · P1**: Split service worker API test file
+- [x] **T021 · Refactor · P1**: Split service worker API test file
     - **Context:** CR-H1: Refactor Large Test Files
     - **Action:**
         1. Analyze `src/service-worker/api.test.ts` (~600 lines)
