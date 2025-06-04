@@ -10,6 +10,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "build": "webpack --config webpack.config.js",
     "build:old": "rimraf dist && tsc && cpy src/manifest.json dist --flat && cpy 'images/**/*' dist/images && cpy styles.css dist && cpy tests/playwright/fixtures/index.html dist",
     "build:zip": "npm run build && node verify-build.js && cd dist && zip -r ../bitcoin-price-tag.zip * && cd .. && echo '✅ Created bitcoin-price-tag.zip'",
@@ -37,6 +38,8 @@
     ]
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@eslint/js": "^9.27.0",
     "@playwright/test": "^1.52.0",
     "@types/chrome": "^0.0.322",

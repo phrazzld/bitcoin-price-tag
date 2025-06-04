@@ -1,5 +1,10 @@
 # Bitcoin Price Tag
 
+[![CI](https://github.com/dylanseago/bitcoin-price-tag/workflows/CI/badge.svg)](https://github.com/dylanseago/bitcoin-price-tag/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/dylanseago/bitcoin-price-tag/branch/main/graph/badge.svg)](https://codecov.io/gh/dylanseago/bitcoin-price-tag)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen.svg)](https://nodejs.org/)
+
 Chrome extension that automatically annotates fiat prices on web pages with their equivalent values in bitcoin.
 
 <img width="269" alt="Screen Shot 2021-10-05 at 5 10 13 PM" src="https://user-images.githubusercontent.com/3598502/138306555-d368d939-02a6-4365-8036-22e7e305fcde.png">
