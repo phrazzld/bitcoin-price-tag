@@ -262,7 +262,7 @@
         1. Error instances have proper types
     - **Depends-on:** [T017]
 
-- [ ] **T019 · Refactor · P1**: Audit async error handling
+- [x] **T019 · Refactor · P1**: Audit async error handling
     - **Context:** CR-H3: Prevent Unhandled Rejections
     - **Action:**
         1. Search for all `async/await` and Promise usage
@@ -278,7 +278,7 @@
 
 ## Test Refactoring [HIGH]
 
-- [ ] **T020 · Refactor · P1**: Split dom-observer test file
+- [x] **T020 · Refactor · P1**: Split dom-observer test file
     - **Context:** CR-H1: Refactor Large Test Files
     - **Action:**
         1. Analyze `src/content-script/dom-observer.test.ts` (~600 lines)
