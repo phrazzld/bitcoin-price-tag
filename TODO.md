@@ -344,7 +344,7 @@
         1. Submit PR with failing check
     - **Depends-on:** [T005, T012, T023]
 
-- [ ] **T025 · Chore · P2**: Implement coverage gates
+- [x] **T025 · Chore · P2**: Implement coverage gates
     - **Context:** CR-M1: Maintain Test Coverage
     - **Action:**
         1. Configure coverage reporting (jest/vitest)
