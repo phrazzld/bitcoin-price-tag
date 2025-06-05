@@ -1,7 +1,7 @@
 # Bitcoin Price Tag
 
-[![CI](https://github.com/dylanseago/bitcoin-price-tag/workflows/CI/badge.svg)](https://github.com/dylanseago/bitcoin-price-tag/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/dylanseago/bitcoin-price-tag/branch/main/graph/badge.svg)](https://codecov.io/gh/dylanseago/bitcoin-price-tag)
+[![CI](https://github.com/phrazzld/bitcoin-price-tag/workflows/CI/badge.svg)](https://github.com/phrazzld/bitcoin-price-tag/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/phrazzld/bitcoin-price-tag/branch/main/graph/badge.svg)](https://codecov.io/gh/phrazzld/bitcoin-price-tag)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen.svg)](https://nodejs.org/)
 
