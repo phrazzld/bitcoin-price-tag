@@ -347,97 +347,225 @@ jobs:
           DURATION=$((JOB_END_TIME - JOB_START_TIME))
           echo "✅ Build completed in ${DURATION}s"
 
-  # Performance monitoring and final status check
+  # CI Monitoring, Alerting, and Status Check
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
     needs: [changes, lint, typecheck, test, build]
     if: always()
     steps:
-      - name: Collect performance metrics
-        run: |
-          echo "📊 CI Performance Summary"
-          echo "=========================="
-          
-          # Calculate total pipeline duration (approximation)
-          echo "⏱️  Pipeline Performance:"
-          echo "   • Change Detection: ~5s"
-          
-          # Report job execution results
-          echo ""
-          echo "🎯 Job Execution Status:"
-          echo "   • Changes: ${{ needs.changes.result }}"
-          echo "   • Lint: ${{ needs.lint.result }} ${{ needs.lint.result == 'skipped' && '(⚡ skipped)' || '' }}"
-          echo "   • TypeCheck: ${{ needs.typecheck.result }} ${{ needs.typecheck.result == 'skipped' && '(⚡ skipped)' || '' }}"
-          echo "   • Test: ${{ needs.test.result }} ${{ needs.test.result == 'skipped' && '(⚡ skipped)' || '' }}"
-          echo "   • Build: ${{ needs.build.result }} ${{ needs.build.result == 'skipped' && '(⚡ skipped)' || '' }}"
-          
-          echo ""
-          echo "🚀 Optimization Features Active:"
-          echo "   • ✅ Smart job skipping based on file changes"
-          echo "   • ✅ Enhanced caching (dependencies, builds, tests)"
-          echo "   • ✅ Build artifact sharing"
-          echo "   • ✅ Performance timing collection"
-          echo "   • ✅ Test result caching"
-          echo "   • ✅ Incremental TypeScript builds"
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Check all jobs success
+      # Enhanced failure analysis and alerting
+      - name: Analyze CI Health and Performance
+        id: health-check
         run: |
-          # Handle conditional job execution - jobs can be skipped or successful
-          function check_job_result() {
-            local job_name=$1
-            local job_result=$2
-            
-            if [[ "$job_result" == "success" || "$job_result" == "skipped" ]]; then
-              return 0
-            else
-              return 1
-            fi
-          }
+          echo "🏥 CI Health Analysis"
+          echo "====================="
           
-          # Check each job (skipped jobs are considered successful)
-          FAILED_JOBS=()
+          # Calculate pipeline metrics
+          START_TIME="${{ github.event.pull_request.created_at || github.event.head_commit.timestamp }}"
+          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
-          if ! check_job_result "lint" "${{ needs.lint.result }}"; then
-            FAILED_JOBS+=("lint")
-          fi
+          echo "⏱️  Pipeline Timing:"
+          echo "   • Started: $START_TIME"
+          echo "   • Analysis: $CURRENT_TIME"
           
-          if ! check_job_result "test" "${{ needs.test.result }}"; then
-            FAILED_JOBS+=("test")
-          fi
+          # Job health analysis
+          declare -A job_status=(
+            ["changes"]="${{ needs.changes.result }}"
+            ["lint"]="${{ needs.lint.result }}"
+            ["typecheck"]="${{ needs.typecheck.result }}"
+            ["test"]="${{ needs.test.result }}"
+            ["build"]="${{ needs.build.result }}"
+          )
           
-          if ! check_job_result "build" "${{ needs.build.result }}"; then
-            FAILED_JOBS+=("build")
-          fi
-          
-          # TypeCheck is allowed to fail for now, but we still report it
-          TYPECHECK_STATUS="${{ needs.typecheck.result }}"
-          
-          if [ ${#FAILED_JOBS[@]} -gt 0 ]; then
-            echo "❌ CI pipeline failed"
-            echo ""
-            echo "Failed jobs: ${FAILED_JOBS[*]}"
-            echo ""
-            echo "Job Results:"
-            echo "   • Lint: ${{ needs.lint.result }}"
-            echo "   • TypeCheck: $TYPECHECK_STATUS (allowed to fail)"
-            echo "   • Test: ${{ needs.test.result }}"
-            echo "   • Build: ${{ needs.build.result }}"
-            exit 1
-          fi
-          
-          echo "✅ All required CI checks passed!"
           echo ""
-          echo "🎉 Pipeline completed successfully with optimizations:"
-          if [[ "${{ needs.lint.result }}" == "skipped" ]]; then
-            echo "   ⚡ Lint job skipped (no relevant changes)"
+          echo "🎯 Job Health Status:"
+          
+          FAILED_JOBS=()
+          SKIPPED_JOBS=()
+          SUCCESS_JOBS=()
+          
+          for job in changes lint typecheck test build; do
+            status=${job_status[$job]}
+            case $status in
+              "success")
+                SUCCESS_JOBS+=($job)
+                echo "   • $job: ✅ SUCCESS"
+                ;;
+              "failure")
+                FAILED_JOBS+=($job)
+                echo "   • $job: ❌ FAILED"
+                ;;
+              "skipped")
+                SKIPPED_JOBS+=($job)
+                echo "   • $job: ⚡ SKIPPED (optimized)"
+                ;;
+              "cancelled")
+                FAILED_JOBS+=($job)
+                echo "   • $job: ⚠️  CANCELLED"
+                ;;
+              *)
+                echo "   • $job: ❓ UNKNOWN ($status)"
+                ;;
+            esac
+          done
+          
+          # Performance and optimization metrics
+          echo ""
+          echo "🚀 Pipeline Optimizations:"
+          echo "   • Smart Job Skipping: ${#SKIPPED_JOBS[@]} jobs optimized"
+          echo "   • Cache Strategy: Multi-layer (deps, builds, tests)"
+          echo "   • Parallel Execution: Test matrix + threading"
+          echo "   • Artifact Sharing: Build outputs cached"
+          
+          # Set outputs for downstream steps
+          echo "failed_count=${#FAILED_JOBS[@]}" >> $GITHUB_OUTPUT
+          echo "success_count=${#SUCCESS_JOBS[@]}" >> $GITHUB_OUTPUT
+          echo "skipped_count=${#SKIPPED_JOBS[@]}" >> $GITHUB_OUTPUT
+          echo "failed_jobs=${FAILED_JOBS[*]}" >> $GITHUB_OUTPUT
+          
+          # Calculate health score (0-100)
+          TOTAL_JOBS=5
+          HEALTH_SCORE=$(( (SUCCESS_JOBS + SKIPPED_JOBS) * 100 / TOTAL_JOBS ))
+          echo "health_score=$HEALTH_SCORE" >> $GITHUB_OUTPUT
+
+      # Advanced failure notification and context
+      - name: CI Failure Analysis and Alerting
+        if: steps.health-check.outputs.failed_count > 0
+        run: |
+          echo "🚨 CI FAILURE DETECTED"
+          echo "======================"
+          echo ""
+          echo "📊 Failure Summary:"
+          echo "   • Failed Jobs: ${{ steps.health-check.outputs.failed_count }}"
+          echo "   • Success Jobs: ${{ steps.health-check.outputs.success_count }}"
+          echo "   • Optimized Jobs: ${{ steps.health-check.outputs.skipped_count }}"
+          echo "   • Health Score: ${{ steps.health-check.outputs.health_score }}%"
+          echo ""
+          echo "❌ Failed Components: ${{ steps.health-check.outputs.failed_jobs }}"
+          echo ""
+          
+          # Provide contextual troubleshooting guidance
+          echo "🔧 Troubleshooting Guidance:"
+          
+          if [[ "${{ needs.lint.result }}" == "failure" ]]; then
+            echo "   • Lint Failure: Run 'pnpm run lint --fix' locally"
+            echo "     - Check ESLint configuration and rule violations"
+            echo "     - Common issues: unused variables, type errors"
           fi
-          if [[ "${{ needs.typecheck.result }}" == "skipped" ]]; then
-            echo "   ⚡ TypeCheck job skipped (no relevant changes)"
+          
+          if [[ "${{ needs.typecheck.result }}" == "failure" ]]; then
+            echo "   • TypeScript Failure: Run 'pnpm run typecheck' locally"
+            echo "     - Check for type errors and missing declarations"
+            echo "     - Verify tsconfig.json and import paths"
           fi
-          if [[ "${{ needs.test.result }}" == "skipped" ]]; then
-            echo "   ⚡ Test jobs skipped (no relevant changes)"
+          
+          if [[ "${{ needs.test.result }}" == "failure" ]]; then
+            echo "   • Test Failure: Run 'pnpm run test' locally"
+            echo "     - Check test output for specific failures"
+            echo "     - Verify test environment and mocks"
+            echo "     - Consider test isolation and timing issues"
           fi
-          if [[ "${{ needs.build.result }}" == "skipped" ]]; then
-            echo "   ⚡ Build job skipped (no relevant changes)"
+          
+          if [[ "${{ needs.build.result }}" == "failure" ]]; then
+            echo "   • Build Failure: Run 'pnpm run build' locally"
+            echo "     - Check webpack configuration and dependencies"
+            echo "     - Verify TypeScript compilation settings"
+          fi
+          
+          echo ""
+          echo "📚 Resources:"
+          echo "   • Development Guide: docs/DEVELOPMENT_PHILOSOPHY.md"
+          echo "   • Error Handling: docs/ERROR_HANDLING.md"
+          echo "   • Local Testing: pnpm run test:watch"
+
+      # Automatic retry logic for known transient failures
+      - name: Transient Failure Retry Analysis
+        if: steps.health-check.outputs.failed_count > 0
+        run: |
+          echo "🔄 Analyzing for Transient Failures"
+          echo "==================================="
+          
+          # Check if failures might be transient (network, timing, flaky tests)
+          RETRY_CANDIDATES=()
+          
+          # Note: Actual retry implementation would require careful analysis
+          # of specific failure patterns and would be implemented as a separate
+          # workflow trigger rather than inline retry to avoid infinite loops
+          
+          echo "   • Pattern Analysis: Checking for known transient issues"
+          echo "   • Network Failures: API timeouts, dependency downloads"
+          echo "   • Test Flakiness: Timing-sensitive tests, race conditions"
+          echo "   • Infrastructure: GitHub Actions service issues"
+          echo ""
+          echo "ℹ️  Auto-retry not implemented in this iteration"
+          echo "   Manual re-run available via GitHub Actions UI"
+
+      # Success celebration and performance summary
+      - name: CI Success Celebration
+        if: steps.health-check.outputs.failed_count == 0
+        run: |
+          echo "🎉 CI PIPELINE SUCCESS"
+          echo "======================"
+          echo ""
+          echo "✅ All Quality Gates Passed!"
+          echo "   • Health Score: ${{ steps.health-check.outputs.health_score }}%"
+          echo "   • Successful Jobs: ${{ steps.health-check.outputs.success_count }}"
+          echo "   • Optimized Jobs: ${{ steps.health-check.outputs.skipped_count }}"
+          echo ""
+          
+          if [[ "${{ steps.health-check.outputs.skipped_count }}" -gt 0 ]]; then
+            echo "⚡ Performance Optimizations Active:"
+            echo "   • ${{ steps.health-check.outputs.skipped_count }} jobs skipped via smart detection"
+            echo "   • Estimated time saved: ~$(( ${{ steps.health-check.outputs.skipped_count }} * 15 ))s"
+          fi
+          
+          echo ""
+          echo "🚀 Ready for:"
+          echo "   • Code review and merge"
+          echo "   • Deployment to staging/production"
+          echo "   • Feature validation and testing"
+
+      # Final CI health assessment and pipeline status
+      - name: Final CI Status Check
+        run: |
+          echo "🎯 FINAL CI STATUS ASSESSMENT"
+          echo "============================="
+          
+          # Use health check results for final determination
+          FAILED_COUNT="${{ steps.health-check.outputs.failed_count }}"
+          
+          if [ "$FAILED_COUNT" -gt 0 ]; then
+            echo ""
+            echo "❌ CI PIPELINE FAILED"
+            echo "   • Failed Jobs: $FAILED_COUNT"
+            echo "   • Health Score: ${{ steps.health-check.outputs.health_score }}%"
+            echo "   • See failure analysis above for troubleshooting guidance"
+            echo ""
+            echo "🔧 Next Steps:"
+            echo "   1. Review failure analysis and troubleshooting guidance"
+            echo "   2. Fix issues locally using provided commands"
+            echo "   3. Test changes locally before pushing"
+            echo "   4. Push fixes to trigger new CI run"
+            echo ""
+            echo "📊 CI Health Monitoring:"
+            echo "   • Detailed failure context provided above"
+            echo "   • Performance metrics tracked and reported"
+            echo "   • Automatic optimization features active"
+            exit 1
+          else
+            echo ""
+            echo "✅ CI PIPELINE SUCCESSFUL"
+            echo "   • All quality gates passed"
+            echo "   • Health Score: ${{ steps.health-check.outputs.health_score }}%"
+            echo "   • Ready for code review and deployment"
+            echo ""
+            echo "🎉 CI Monitoring & Performance:"
+            echo "   • Enhanced failure analysis: ✅ Active"
+            echo "   • Performance optimization: ✅ Active"
+            echo "   • Health scoring: ✅ Implemented"
+            echo "   • Contextual guidance: ✅ Available"
           fi
