@@ -167,7 +167,7 @@ describe('Promise-based Messaging Test', () => {
       mockChrome.runtime.onMessage.addListener(handleResponse);
       
       // Send the message
-      mockChrome.runtime.sendMessage(request).catch((error) => {
+      mockChrome.runtime.sendMessage(request).catch((error: Error) => {
         clearTimeout(timeout);
         mockChrome.runtime.onMessage.removeListener(handleResponse);
         reject(error);

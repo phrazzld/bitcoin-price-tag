@@ -16,7 +16,6 @@ describe('Service Worker Persistence Integration Tests', () => {
 
   // Mock cache module
   let cacheModule: any;
-  let _apiModule: any;
 
   beforeEach(async () => {
     // Clear all mocks
@@ -76,7 +75,6 @@ describe('Service Worker Persistence Integration Tests', () => {
     // Import fresh modules
     vi.resetModules();
     cacheModule = await import('../../src/service-worker/cache');
-    apiModule = await import('../../src/service-worker/api');
   });
 
   afterEach(() => {
@@ -158,7 +156,7 @@ describe('Service Worker Persistence Integration Tests', () => {
         'custom_setting_2': { value: 'test2' },
       };
 
-      mockStorage.get.mockImplementation((keys) => {
+      mockStorage.get.mockImplementation((keys: string | string[] | null) => {
         if (keys === PRICE_CACHE_KEY) {
           return Promise.resolve({ [PRICE_CACHE_KEY]: multipleEntries[PRICE_CACHE_KEY] });
         }

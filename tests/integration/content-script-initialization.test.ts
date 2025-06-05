@@ -48,13 +48,6 @@ function assertPriceAnnotated(element: Element, originalPrice: string): void {
 }
 
 /**
- * Helper function to wait for DOM observer debounce period
- */
-async function _waitForDomObserver(): Promise<void> {
-  await vi.advanceTimersByTimeAsync(DOM_OBSERVER_DEBOUNCE_MS + 50); // Add buffer
-}
-
-/**
  * Helper function to check if any prices in the document have been annotated
  */
 function hasPriceAnnotations(): boolean {

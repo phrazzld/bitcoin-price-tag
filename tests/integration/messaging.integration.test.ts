@@ -122,8 +122,7 @@ describe('Service Worker <-> Content Script Communication', () => {
       // where we verify that multiple messages are handled correctly
       
       // Setup: Simple counter to verify each request is processed
-      const _requestCount = 0;
-      const _results: any[] = [];
+      // Note: Currently using simple parallel request validation
       
       // Send three requests in parallel
       const promises = [
@@ -275,9 +274,6 @@ describe('Service Worker <-> Content Script Communication', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
       
-      // Set a timestamp to verify delay
-      const _startTime = performance.now();
-      
       // Start the request
       const requestPromise = requestPriceData();
       
@@ -289,7 +285,6 @@ describe('Service Worker <-> Content Script Communication', () => {
       
       // Get the result
       const result = await requestPromise;
-      const _endTime = performance.now();
       
       // Assert: Should receive data after advancing timers
       expect(result.usdRate).toBe(48000);

@@ -181,6 +181,11 @@ export class ChromeRuntimeHarness {
         active: true,
         pinned: false,
         incognito: false,
+        frozen: false,
+        selected: false,
+        discarded: false,
+        autoDiscardable: true,
+        groupId: -1,
       };
     }
 
