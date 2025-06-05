@@ -55,14 +55,32 @@ export const setupLoggerMock = () => {
 };
 
 /**
+ * Mock performance.now with Node.js 18+ compatible approach
+ */
+export const mockPerformanceNow = (mockTime: number = 1000) => {
+  return vi.spyOn(performance, 'now').mockReturnValue(mockTime);
+};
+
+/**
+ * Mock performance.now to return a sequence of values
+ */
+export const mockPerformanceNowSequence = (times: number[]) => {
+  const spy = vi.spyOn(performance, 'now');
+  times.forEach((time) => {
+    spy.mockReturnValueOnce(time);
+  });
+  return spy;
+};
+
+/**
  * Common beforeEach setup for dom-observer tests
  * Sets up mocks, fake timers, and clears state
  */
 export const setupDomObserverTest = () => {
   // Reset mocks
   vi.clearAllMocks();
-  // Mock performance.now()
-  global.performance.now = vi.fn(() => 1000);
+  // Mock performance.now() with Node.js 18+ compatible approach
+  mockPerformanceNow(1000);
   // Use fake timers for debouncing tests
   vi.useFakeTimers();
 };

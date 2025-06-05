@@ -7,6 +7,10 @@ import {
   createMockMutationObserver,
   createMockMutationObserverWithCallback
 } from '../../tests/utils/dom-builders';
+import { 
+  mockPerformanceNow,
+  mockPerformanceNowSequence
+} from '../../tests/utils/dom-observer-helpers';
 
 // Logger mock setup moved to beforeEach for proper isolation
 
@@ -912,8 +916,7 @@ describe('dom-observer.ts', () => {
       });
       
       // Mock performance.now() for test
-      const originalPerformanceNow = performance.now;
-      performance.now = vi.fn().mockReturnValue(1000);
+      const performanceNowSpy = mockPerformanceNow(1000);
       
       try {
         // Create controller and start it to set priceData with injected mock constructor
@@ -976,8 +979,8 @@ describe('dom-observer.ts', () => {
           expect(mockAnnotationFunction).not.toHaveBeenCalled();
         }
       } finally {
-        // Restore originals
-        performance.now = originalPerformanceNow;
+        // Restore spy
+        performanceNowSpy.mockRestore();
       }
     });
   });
@@ -1062,11 +1065,7 @@ describe('dom-observer.ts', () => {
       const processedNodes = new Set<Node>();
       
       // Create a mock for performance.now that returns two different values
-      const originalPerformanceNow = performance.now;
-      performance.now = vi
-        .fn()
-        .mockReturnValueOnce(1000) // First call (start time)
-        .mockReturnValueOnce(1500); // Second call (end time, 500ms difference)
+      const performanceNowSpy = mockPerformanceNowSequence([1000, 1500]); // First call (start time), Second call (end time, 500ms difference)
       
       // Capture the mutation callback
       let mutationCallback: ((mutations: MutationRecord[]) => void) | null = null;
@@ -1132,8 +1131,8 @@ describe('dom-observer.ts', () => {
         expect(mockAnnotationFunction).toHaveBeenCalledWith(divNode, mockPriceData, processedNodes);
       }
       
-      // Restore performance.now
-      performance.now = originalPerformanceNow;
+      // Restore spy
+      performanceNowSpy.mockRestore();
     });
   });
 });
