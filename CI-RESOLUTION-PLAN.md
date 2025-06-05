@@ -1,170 +1,191 @@
 # CI Resolution Plan
 
-**Generated:** 2025-06-05T19:46:00Z  
+**Generated:** 2025-06-05T20:09:00Z  
 **Based on:** [CI-FAILURE-SUMMARY.md](CI-FAILURE-SUMMARY.md)  
-**Priority:** CRITICAL - Complete test pipeline failure
+**Priority:** MEDIUM - TypeScript and test logic issues
 
 ## Root Cause Summary
 
-The CI pipeline is failing due to **Performance.now readonly property errors** in the test infrastructure. Node.js 18+ treats `Performance.now` as a readonly property, preventing direct assignment for mocking, which breaks timing-dependent tests across multiple test files.
+✅ **Performance.now issue has been RESOLVED** - All Performance.now mocking incompatibilities fixed.
+
+The CI pipeline is now failing due to:
+1. **TypeScript strict type checking errors** (5 specific locations)  
+2. **Service worker test logic failures** (spy expectations and module definitions)
 
 ## Resolution Strategy
 
-### Phase 1: Immediate Fix (Estimated: 30-45 minutes)
+### Phase 1: Fix TypeScript Type Annotations (Estimated: 20-30 minutes)
 
-#### 1.1 Identify Performance.now Mocking Locations
+#### 1.1 Fix Integration Test Type Issues
 **Priority:** HIGH  
 **Estimated Time:** 10 minutes
 
-Search for and identify all locations where `Performance.now` is being mocked:
-
-```bash
-# Search for Performance.now mocking patterns
-rg -i "performance\.now" --type ts
-rg -i "performance\[.now.\]" --type ts
-grep -r "Performance.now" tests/
-grep -r "performance.now" src/
-```
-
-#### 1.2 Replace Direct Property Assignment
-**Priority:** HIGH  
-**Estimated Time:** 20-30 minutes
-
-Replace direct property assignment with compatible mocking approaches:
-
-**Current Pattern (Failing):**
+**File:** `tests/integration/service-worker-persistence.test.ts:161:43`
 ```typescript
-Performance.prototype.now = vi.fn(() => mockTime);
-// or
-performance.now = mockFunction;
+// Current (error): Parameter 'keys' implicitly has an 'any' type
+// Fix: Add explicit type annotation
+const mockKeys = (keys: string[]) => { /* implementation */ };
 ```
 
-**Replacement Patterns (Node.js 18+ Compatible):**
-```typescript
-// Option 1: Use Object.defineProperty
-Object.defineProperty(performance, 'now', {
-  value: vi.fn(() => mockTime),
-  writable: true,
-  configurable: true
-});
-
-// Option 2: Use vi.spyOn for Vitest
-vi.spyOn(performance, 'now').mockReturnValue(mockTime);
-
-// Option 3: Mock the entire performance object
-vi.stubGlobal('performance', {
-  ...performance,
-  now: vi.fn(() => mockTime)
-});
-```
-
-#### 1.3 Update Test Helper Utilities
-**Priority:** HIGH  
-**Estimated Time:** 10-15 minutes
-
-**Primary Files to Update:**
-- `tests/utils/dom-observer-helpers.ts:65:22` (primary location from error)
-- `test/setup.ts` (global test configuration)
-- Any test utilities in `tests/utils/` that handle timing
-
-**Approach:**
-1. Create a centralized timing mock utility
-2. Replace all direct Performance.now assignments
-3. Use consistent mocking pattern across all test files
-
-### Phase 2: Validation and Testing (Estimated: 15-20 minutes)
-
-#### 2.1 Local Test Validation
+#### 1.2 Fix Playwright Fixture Type Issues  
 **Priority:** HIGH  
 **Estimated Time:** 10 minutes
 
-```bash
-# Test the specific failing files
-pnpm run test src/content-script/dom-observer-integration.test.ts
-pnpm run test src/content-script/dom-observer-setup.test.ts
-
-# Run full test suite to check for regressions
-pnpm run test
+**File:** `tests/playwright/fixtures/extension.ts`
+```typescript
+// Lines 44,27 & 44,38 - Add explicit types
+const fixture = async ({ context }: { context: BrowserContext }, use: (value: any) => Promise<void>) => {
+  // Line 47,19 - Add worker type
+  const worker: Worker = await context.serviceWorkers[0];
+};
 ```
 
-#### 2.2 Node Version Compatibility Check
+#### 1.3 Remove Unused Variables
 **Priority:** MEDIUM  
-**Estimated Time:** 5-10 minutes
+**Estimated Time:** 5 minutes
 
-```bash
-# Test with both Node versions if available locally
-node --version  # Verify current version
-pnpm run test  # Should work with the fixes
+**File:** `tests/playwright/specs/edge-cases.test.ts:166:11`
+```typescript
+// Current: '_storagePromise' is declared but never used
+// Fix: Remove unused variable or use it appropriately
 ```
 
-### Phase 3: CI Pipeline Verification (Estimated: 10 minutes)
+### Phase 2: Fix Service Worker Test Logic (Estimated: 30-45 minutes)
 
-#### 3.1 Push and Monitor
+#### 2.1 Fix Service Worker Index Test Spy Expectations
+**Priority:** HIGH  
+**Estimated Time:** 20-25 minutes
+
+**File:** `src/service-worker/index.test.ts` (10 failed tests)
+
+**Common Issues:**
+- Spy functions not being called as expected
+- Alarm creation expectations not met
+- Chrome API mocking configuration
+
+**Resolution Approach:**
+1. Review each failing test's spy expectations
+2. Verify Chrome API mocks are properly configured
+3. Ensure test setup matches actual implementation behavior
+
+#### 2.2 Fix Cache Test Spy Mismatch
+**Priority:** MEDIUM  
+**Estimated Time:** 10 minutes
+
+**File:** `src/service-worker/cache.test.ts` (1 failed test)
+
+**Issue:** Spy call expectations not matching actual calls
+**Resolution:** Align test expectations with actual function behavior
+
+#### 2.3 Fix Integration Test Module Definitions
+**Priority:** HIGH  
+**Estimated Time:** 15 minutes
+
+**File:** `tests/integration/service-worker-persistence.test.ts` (11 failed tests)
+
+**Issue:** "apiModule is not defined" errors
+**Resolution:** 
+1. Check module import statements
+2. Verify test setup and mocking configuration  
+3. Ensure proper module loading in test environment
+
+### Phase 3: Validation and Testing (Estimated: 15-20 minutes)
+
+#### 3.1 Local TypeScript Validation
+**Priority:** HIGH  
+**Estimated Time:** 5 minutes
+
+```bash
+# Verify TypeScript compilation passes
+pnpm run typecheck
+```
+
+#### 3.2 Service Worker Test Validation  
 **Priority:** HIGH  
 **Estimated Time:** 10 minutes
 
-1. Commit the Performance.now mocking fixes
+```bash
+# Test specific failing files
+pnpm run test src/service-worker/index.test.ts
+pnpm run test src/service-worker/cache.test.ts
+pnpm run test tests/integration/service-worker-persistence.test.ts
+```
+
+#### 3.3 Full Test Suite Validation
+**Priority:** MEDIUM  
+**Estimated Time:** 5 minutes
+
+```bash
+# Ensure no regressions introduced
+pnpm run test --run
+```
+
+### Phase 4: CI Pipeline Verification (Estimated: 10 minutes)
+
+#### 4.1 Push and Monitor
+**Priority:** HIGH  
+**Estimated Time:** 10 minutes
+
+1. Commit TypeScript and test logic fixes
 2. Push to trigger CI pipeline
-3. Monitor test execution for:
-   - Test (Node 18) job success
-   - Test (Node 20) job success
-   - No new test failures introduced
+3. Monitor for complete CI success
 
 ## Implementation Details
 
 ### Specific Files to Modify
 
-1. **`tests/utils/dom-observer-helpers.ts`**
-   - Line 65:22 (primary error location)
-   - Replace direct Performance.now assignment
+1. **TypeScript Issues:**
+   - `tests/integration/service-worker-persistence.test.ts` (line 161)
+   - `tests/playwright/fixtures/extension.ts` (lines 44, 47)
+   - `tests/playwright/specs/edge-cases.test.ts` (line 166)
 
-2. **`test/setup.ts`**
-   - Add global Performance.now mock setup
-   - Ensure compatibility across all test files
+2. **Service Worker Test Logic:**
+   - `src/service-worker/index.test.ts` (spy expectations)
+   - `src/service-worker/cache.test.ts` (spy call mismatch)
+   - `tests/integration/service-worker-persistence.test.ts` (module definitions)
 
-3. **Affected Test Files:**
-   - `src/content-script/dom-observer-integration.test.ts`
-   - `src/content-script/dom-observer-setup.test.ts`
-   - Any other files using Performance.now mocking
-
-### Recommended Mocking Pattern
+### TypeScript Fix Patterns
 
 ```typescript
-// Create a reusable timing mock utility
-export function mockPerformanceNow(mockTime: number = 0) {
-  return vi.spyOn(performance, 'now').mockReturnValue(mockTime);
-}
+// Explicit parameter typing
+function handler(keys: string[]) { }
 
-export function mockPerformanceNowSequence(times: number[]) {
-  const spy = vi.spyOn(performance, 'now');
-  times.forEach((time, index) => {
-    spy.mockReturnValueOnce(time);
-  });
-  return spy;
-}
+// Playwright fixture typing
+const fixture = async (
+  { context }: { context: BrowserContext }, 
+  use: (value: Extension) => Promise<void>
+) => { };
+
+// Remove or use unused variables
+// const _storagePromise = ... // Remove if truly unused
 ```
 
 ## Risk Assessment
 
 ### Low Risk
-- **Scope:** Changes limited to test infrastructure
-- **Approach:** Using established Vitest mocking patterns
-- **Compatibility:** Node.js 18+ standard approach
+- **Scope:** TypeScript annotations and test logic alignment
+- **Approach:** Standard TypeScript patterns and test fixes
+- **Impact:** No production code changes required
+
+### Medium Risk
+- **Service Worker Tests:** May require deeper analysis of Chrome API mocking
+- **Integration Tests:** Module loading issues might indicate broader problems
 
 ### Mitigation Strategies
-- **Backup:** Keep original test code in comments during transition
-- **Incremental:** Fix one test file at a time and validate
+- **Incremental:** Fix TypeScript issues first, then test logic
+- **Validation:** Test each fix individually before moving to next
 - **Rollback:** Ready to revert if new issues emerge
 
 ## Success Criteria
 
-### Immediate Success (Phase 1 & 2)
-- [ ] All `Performance.now` mocking uses compatible patterns
-- [ ] `dom-observer-integration.test.ts` tests pass locally
-- [ ] `dom-observer-setup.test.ts` tests pass locally
-- [ ] No new test failures introduced
+### Phase 1 & 2 Success
+- [ ] TypeScript compilation passes (all 5 errors resolved)
+- [ ] Service worker index tests pass (10 currently failing)
+- [ ] Cache tests pass (1 currently failing)  
+- [ ] Integration tests pass (11 currently failing)
 
-### CI Pipeline Success (Phase 3)
+### CI Pipeline Success (Phase 4)
+- [ ] Type Check job passes
 - [ ] Test (Node 18) job passes
 - [ ] Test (Node 20) job passes
 - [ ] CI Success job passes
@@ -172,13 +193,17 @@ export function mockPerformanceNowSequence(times: number[]) {
 
 ## Post-Resolution Tasks
 
-1. **Documentation Update:** Update testing guidelines about readonly property mocking
-2. **Review Process:** Add code review checklist item for Performance API mocking
-3. **Best Practices:** Document the preferred mocking patterns for timing-related tests
+1. **Documentation:** Update TypeScript configuration guidelines
+2. **Best Practices:** Document service worker testing patterns
+3. **Review:** Add type annotation requirements to code review checklist
 
 ## Expected Timeline
 
-- **Total Estimated Time:** 55-85 minutes
-- **Critical Path:** Performance.now mocking replacement (Phase 1.2)
-- **Validation:** Local testing before CI push
-- **Completion Target:** CI pipeline fully green
+- **Total Estimated Time:** 75-115 minutes
+- **Critical Path:** Service worker test logic fixes (Phase 2)
+- **Validation:** Incremental testing after each phase
+- **Completion Target:** Full CI pipeline success
+
+---
+
+*Note: This plan builds on the successful resolution of the Performance.now issue and focuses on the remaining TypeScript and test logic problems that are preventing CI success.*

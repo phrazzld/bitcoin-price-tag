@@ -89,23 +89,18 @@ describe('Cache functionality test', () => {
   });
   
   it('should return cached price when available', async () => {
-    // Mock getCachedPrice directly through the imported module
-    vi.doMock('./cache', () => ({
-      getCachedPrice: vi.fn().mockResolvedValue(validCachedData),
-      setCachedPrice: vi.fn().mockResolvedValue(undefined),
-      rehydrateCache: vi.fn().mockResolvedValue(undefined),
-      clearCache: vi.fn().mockResolvedValue(undefined),
-      CacheError: class CacheError extends Error {},
-      CacheErrorCode: { READ_ERROR: 'read_error', WRITE_ERROR: 'write_error', INVALID_DATA: 'invalid_data' }
-    }));
+    // Setup storage mock to return valid cached data in the correct format
+    const cacheData = {
+      priceData: validCachedData,
+      cachedAt: Date.now() - 5000,
+      version: 1
+    };
     
-    // Reset module registry to use the mocked cache module
-    vi.resetModules();
+    mockStorage.get.mockResolvedValue({
+      'btc_price_data': cacheData
+    });
     
-    // Re-import handlers with the mocked dependencies
-    await vi.importActual('./index');
-    
-    // Extract handler (again, since we reset the modules)
+    // Extract handler from the already imported module
     const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
     
     // Call the message handler

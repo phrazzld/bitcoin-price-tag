@@ -372,11 +372,12 @@ function expectLogToContain(
     it('should rehydrate cache successfully', () => {
       // Mock successful cache rehydration
       mockStorage.get.mockResolvedValueOnce({
-        'btc_price_cache': {
+        'btc_price_data': {
           priceData: {
-            btcRate: 45000,
+            usdRate: 45000,
             satoshiRate: 0.00045,
-            timestamp: Date.now() - 1000
+            fetchedAt: Date.now() - 1000,
+            source: 'CoinGecko'
           },
           cachedAt: Date.now() - 1000,
           version: 1
@@ -497,7 +498,7 @@ function expectLogToContain(
     it.skip('should return cached price when available', async () => {
       // Mock cache with valid data
       mockStorage.get.mockResolvedValueOnce({
-        'btc_price_cache': {
+        'btc_price_data': {
           priceData: validCachedData,
           cachedAt: Date.now() - 5000,
           version: 1
@@ -545,7 +546,7 @@ function expectLogToContain(
     it('should return cached price when available without mocked logger', async () => {
       // Mock cache with valid data
       mockStorage.get.mockResolvedValueOnce({
-        'btc_price_cache': {
+        'btc_price_data': {
           priceData: validCachedData,
           cachedAt: Date.now() - 5000,
           version: 1

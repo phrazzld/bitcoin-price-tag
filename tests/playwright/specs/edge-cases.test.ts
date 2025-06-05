@@ -163,7 +163,7 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
 
   test('should handle restart during storage operation', async ({ context, extensionId, serviceWorker }) => {
     // Start a storage operation and restart immediately
-    const _storagePromise = setStateInSW(serviceWorker, 'racyWrite', { 
+    setStateInSW(serviceWorker, 'racyWrite', { 
       timestamp: Date.now(),
       data: 'test'
     });

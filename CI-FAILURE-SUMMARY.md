@@ -1,67 +1,83 @@
 # CI Failure Summary
 
-**Generated:** 2025-06-05T19:45:00Z  
-**CI Run:** [#15475778601](https://github.com/phrazzld/bitcoin-price-tag/actions/runs/15475778601)  
+**Generated:** 2025-06-05T20:08:00Z  
+**CI Run:** [#15476157923](https://github.com/phrazzld/bitcoin-price-tag/actions/runs/15476157923)  
 **Branch:** `robust-content-script-initialization`  
-**Commit:** `af80e83`
+**Commit:** `76e46c8`
 
-## Critical Issues Identified
+## Current Issues Identified
 
-### 🚨 PRIMARY BLOCKER: Performance.now readonly property error
+### ✅ **RESOLVED: Performance.now readonly property error**
+**Status:** FIXED - The original Performance.now mocking issue has been completely resolved.
+
+### 🟡 **PRIMARY ISSUE: TypeScript Strict Type Errors**
 
 **Error Pattern:**
-```
-Cannot assign to read only property 'now' of object '#<Performance>'
-```
+- Parameter implicitly has 'any' type
+- Unused variable declarations
+- Missing type annotations
 
-**Affected Tests:**
-- `src/content-script/dom-observer-integration.test.ts` (3/3 tests failed)
-- `src/content-script/dom-observer-setup.test.ts` (4/4 tests failed)
-- Multiple other test files with Performance.now mocking
+**Specific Errors:**
+1. `tests/integration/service-worker-persistence.test.ts(161,43)` - Parameter 'keys' implicitly has 'any' type
+2. `tests/playwright/fixtures/extension.ts(44,27)` - Binding element 'context' implicitly has 'any' type  
+3. `tests/playwright/fixtures/extension.ts(44,38)` - Parameter 'use' implicitly has 'any' type
+4. `tests/playwright/fixtures/extension.ts(47,19)` - Parameter 'worker' implicitly has 'any' type
+5. `tests/playwright/specs/edge-cases.test.ts(166,11)` - '_storagePromise' is declared but never used
 
-**Root Cause Analysis:**
-The test infrastructure is attempting to mock `Performance.now` but newer Node.js versions (18+) and test environments treat this as a readonly property, preventing assignment.
+### 🔴 **SECONDARY ISSUE: Service Worker Test Logic Failures**
+
+**Affected Files:**
+- `src/service-worker/index.test.ts` (10/22 tests failed) - Spy expectations not met
+- `src/service-worker/cache.test.ts` (1/36 tests failed) - Spy call mismatch
+- `tests/integration/service-worker-persistence.test.ts` (11/11 tests failed) - "apiModule is not defined"
 
 ## Job Status Overview
 
 | Job Name | Status | Duration | Details |
 |----------|--------|----------|---------|
 | Detect Changes | ✅ PASS | 4s | File change detection working |
-| Lint | ✅ PASS | 18s | ESLint passing cleanly |
-| Type Check | ✅ PASS | 16s | TypeScript compilation successful |
+| Lint | ✅ PASS | 26s | ESLint passing cleanly |
+| Type Check | ❌ FAIL | 19s | 5 TypeScript strict type errors |
 | Build | ✅ PASS | 13s | Webpack build successful |
-| Test (Node 18) | ❌ FAIL | 2m 1s | Performance.now readonly error |
-| Test (Node 20) | ❌ FAIL | 2m 5s | Performance.now readonly error |
-| CI Success | ❌ FAIL | 4s | Failed due to test failures |
+| Test (Node 18) | ❌ FAIL | 1m 59s | Service worker test logic issues |
+| Test (Node 20) | ❌ FAIL | 1m 55s | Service worker test logic issues |
+| CI Success | ❌ FAIL | 4s | Failed due to dependent job failures |
 
 ## Detailed Failure Analysis
 
-### Test Infrastructure Issues
+### 1. TypeScript Configuration Issues
 
-1. **Performance.now Mocking Incompatibility**
-   - Location: Test helper utilities that mock `Performance.now`
-   - Impact: Complete test suite failure on affected files
-   - Error: Attempting to assign to readonly property
+**Root Cause:** Strict type checking is enforcing explicit type annotations
+**Impact:** Build pipeline failing on type check step
+**Scope:** Test files and Playwright fixtures
 
-2. **Affected Test Categories**
-   - DOM Observer integration tests
-   - DOM Observer setup/lifecycle tests  
-   - Timing-dependent test scenarios
-   - Mock-heavy test utilities
+### 2. Service Worker Test Failures
+
+**Root Cause:** Test expectations not aligning with actual function behavior
+**Patterns:**
+- Spy functions not being called as expected
+- Module import/definition issues in integration tests  
+- Chrome API mocking not properly configured
 
 ### Impact Assessment
 
-**Severity:** CRITICAL - Complete test pipeline failure
-**Scope:** Test infrastructure affecting multiple test files
-**Regression Risk:** HIGH - Core functionality testing blocked
+**Severity:** MEDIUM - Infrastructure issues preventing CI success
+**Scope:** TypeScript configuration and service worker test logic
+**Regression Risk:** LOW - Core functionality works, tests need alignment
 
-## Notable Positives
+## Notable Progress
+
+✅ **Major Infrastructure Fixed:**
+- **Performance.now readonly property error completely resolved**
+- All content-script tests passing (99/99)
+- DOM observer functionality working correctly
+- Test infrastructure now Node.js 18+ compatible
 
 ✅ **Production Code Quality:**
 - Lint checks passing (0 errors)
-- TypeScript compilation successful 
-- Build process working correctly
-- Package management resolved
+- Build process working correctly  
+- Package management stable
+- Core functionality intact
 
 ✅ **CI Infrastructure:**
 - Smart job skipping working
@@ -71,14 +87,14 @@ The test infrastructure is attempting to mock `Performance.now` but newer Node.j
 
 ## Next Steps Required
 
-1. **Immediate Action:** Fix Performance.now mocking approach
-2. **Test Infrastructure:** Update test utilities for Node.js 18+ compatibility
-3. **Validation:** Ensure all timing-dependent tests work with new mocking strategy
-4. **Documentation:** Update testing guidelines for readonly property handling
+1. **Fix TypeScript strict type annotations** (5 specific locations)
+2. **Resolve service worker test expectations** (spy mocking issues)
+3. **Fix integration test module definitions** (apiModule undefined errors)
+4. **Validate complete test suite** after fixes
 
 ## Test Environment Details
 
 - **Node Versions:** 18.20.8, 20.x
 - **Test Framework:** Vitest 3.1.3
-- **Mock Library:** Built-in Vitest mocking
-- **Total Test Files:** 360+ tests affected by infrastructure issues
+- **TypeScript:** Strict mode with implicit any detection
+- **Affected Test Categories:** Integration tests, service worker functionality
