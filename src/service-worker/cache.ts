@@ -132,7 +132,7 @@ function isCacheExpired(cache: LocalStorageCache, ttlMs = DEFAULT_CACHE_TTL_MS):
 export async function rehydrateCache(): Promise<void> {
   try {
     const result = await chrome.storage.local.get(PRICE_CACHE_KEY);
-    const cachedData = result[PRICE_CACHE_KEY];
+    const cachedData: unknown = result[PRICE_CACHE_KEY];
 
     if (cachedData && isValidCache(cachedData)) {
       memoryCache = cachedData;
@@ -162,7 +162,7 @@ export async function getCachedPrice(ttlMs = DEFAULT_CACHE_TTL_MS): Promise<Pric
   // If memory cache is missing or expired, try chrome.storage.local
   try {
     const result = await chrome.storage.local.get(PRICE_CACHE_KEY);
-    const cachedData = result[PRICE_CACHE_KEY];
+    const cachedData: unknown = result[PRICE_CACHE_KEY];
 
     // Check if we have data and it's valid
     if (!cachedData || !isValidCache(cachedData)) {

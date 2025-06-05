@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PriceData, PriceRequestMessage, LocalStorageCache } from '../common/types';
-import { REFRESH_ALARM_NAME, DEFAULT_CACHE_TTL_MS } from '../common/constants';
+import { DEFAULT_CACHE_TTL_MS } from '../common/constants';
 import { isValidCache } from './cache';
 
 // Mock objects created at module level but applied in beforeEach
@@ -27,8 +27,8 @@ const mockFetch = vi.fn();
 
 // Test for the cached price functionality specifically
 describe('Cache functionality test', () => {
-  let handlers: {
-    onMessage?: Function;
+  let _handlers: {
+    onMessage?: (message: PriceRequestMessage, sender: unknown, sendResponse: (response: unknown) => void) => void;
   };
   const mockSendResponse = vi.fn();
   

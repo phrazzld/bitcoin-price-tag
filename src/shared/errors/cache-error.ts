@@ -106,12 +106,12 @@ export function createCacheError(
   } else if (params?.operation === 'set' || lowerMessage.includes('write')) {
     code = CacheErrorCode.WRITE_ERROR;
   } else {
-    // Default based on operation type
-    code = params?.operation === 'get' ? CacheErrorCode.READ_ERROR : CacheErrorCode.WRITE_ERROR;
+    // Default to write error for unknown operations
+    code = CacheErrorCode.WRITE_ERROR;
   }
   
   return new CacheError(code, message, {
     cause: error instanceof Error ? error : undefined,
-    context: params
+    context: params as CacheErrorContext
   });
 }

@@ -134,6 +134,6 @@ export function createMessagingError(
   
   return new MessagingError(code, message, {
     cause: error instanceof Error ? error : undefined,
-    context: params
+    context: params as MessagingErrorContext
   });
 }

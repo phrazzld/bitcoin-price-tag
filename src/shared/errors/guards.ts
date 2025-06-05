@@ -13,13 +13,15 @@ import { MessagingError, MessagingErrorCode } from './messaging-error';
  * Checks if an object is a BaseError (custom error with our interface)
  */
 export function isBaseError(error: unknown): error is IBaseError {
-  return error != null &&
-         typeof error === 'object' &&
-         error instanceof Error &&
-         'name' in error && typeof (error as Record<string, unknown>).name === 'string' &&
-         'code' in error && typeof (error as Record<string, unknown>).code === 'string' &&
-         'message' in error && typeof (error as Record<string, unknown>).message === 'string' &&
-         'timestamp' in error && typeof (error as Record<string, unknown>).timestamp === 'string';
+  if (error == null || typeof error !== 'object' || !(error instanceof Error)) {
+    return false;
+  }
+  
+  const errorObj = error as unknown as Record<string, unknown>;
+  return 'name' in error && typeof errorObj.name === 'string' &&
+         'code' in error && typeof errorObj.code === 'string' &&
+         'message' in error && typeof errorObj.message === 'string' &&
+         'timestamp' in error && typeof errorObj.timestamp === 'string';
 }
 
 /**

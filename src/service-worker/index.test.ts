@@ -5,7 +5,6 @@ import { PriceData, PriceRequestMessage } from '../common/types';
 // Import the logger types
 import { 
   Logger, 
-  LoggerOutputAdapter, 
   LogEntry, 
   LogLevelType
 } from '../shared/logger';
@@ -42,7 +41,7 @@ const mockLoggerAdapter = {
 function tryParseJson(jsonString: string): LogEntry | null {
   try {
     return JSON.parse(jsonString) as LogEntry;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -83,10 +82,10 @@ const mockFetch = vi.fn();
 
 describe('service-worker/index.ts', () => {
   let handlers: {
-    onInstalled?: Function;
-    onStartup?: Function;
-    onAlarm?: Function;
-    onMessage?: Function;
+    onInstalled?: (details: chrome.runtime.InstalledDetails) => void;
+    onStartup?: () => void;
+    onAlarm?: (alarm: chrome.alarms.Alarm) => void;
+    onMessage?: (message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => void;
   };
 
   beforeEach(async () => {

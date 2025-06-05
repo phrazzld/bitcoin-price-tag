@@ -83,10 +83,8 @@ export async function requestPriceData(timeoutMs = REQUEST_TIMEOUT_MS): Promise<
   });
 
   return new Promise<PriceData>((resolve, reject) => {
-    let timeoutId: number | undefined;
-    
     // Set up timeout
-    timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       logger.warn('Price request timed out', {
         function_name: 'requestPriceData',
         requestId,

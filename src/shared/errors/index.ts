@@ -23,56 +23,28 @@
  */
 
 // Base error infrastructure
-export {
-  BaseError,
-  IBaseError,
-  ErrorOptions,
-  SerializedError
-} from './base-error';
+export { BaseError } from './base-error';
+export type { IBaseError, ErrorOptions, SerializedError } from './base-error';
 
 // API errors
-export {
-  ApiError,
-  ApiErrorCode,
-  ApiErrorContext,
-  createApiError
-} from './api-error';
+export { ApiError, createApiError } from './api-error';
+export type { ApiErrorCode, ApiErrorContext } from './api-error';
 
 // Validation errors
-export {
-  ValidationError,
-  ValidationErrorCode,
-  ValidationErrorContext,
-  ValidationErrorParams,
-  createValidationError
-} from './validation-error';
+export { ValidationError, createValidationError } from './validation-error';
+export type { ValidationErrorCode, ValidationErrorContext, ValidationErrorParams } from './validation-error';
 
 // Chrome API errors
-export {
-  ChromeApiError,
-  ChromeErrorCode,
-  ChromeApiErrorContext,
-  createChromeApiError
-} from './chrome-api-error';
+export { ChromeApiError, createChromeApiError } from './chrome-api-error';
+export type { ChromeErrorCode, ChromeApiErrorContext } from './chrome-api-error';
 
 // Cache errors
-export {
-  CacheError,
-  CacheErrorCode,
-  CacheErrorContext,
-  CacheErrorParams,
-  createCacheError
-} from './cache-error';
+export { CacheError, createCacheError } from './cache-error';
+export type { CacheErrorCode, CacheErrorContext, CacheErrorParams } from './cache-error';
 
 // Messaging errors
-export {
-  MessagingError,
-  MessagingErrorCode,
-  MessagingErrorContext,
-  MessagingErrorParams,
-  PriceRequestTimeoutError,
-  createMessagingError
-} from './messaging-error';
+export { MessagingError, PriceRequestTimeoutError, createMessagingError } from './messaging-error';
+export type { MessagingErrorCode, MessagingErrorContext, MessagingErrorParams } from './messaging-error';
 
 // Serialization utilities
 export {
@@ -102,7 +74,6 @@ export {
 // Legacy compatibility exports
 // These maintain backward compatibility with existing error usage
 export { ApiError as NetworkError } from './api-error';
-export { PriceRequestTimeoutError } from './messaging-error';
 
 /**
  * Common error factory functions for frequently used patterns

@@ -132,14 +132,16 @@ export function serializeError(error: unknown): SerializedError {
   }
   
   // Build serialized error
-  const errorAsRecord = error as Record<string, unknown>;
-  const serialized: SerializedError = {
+  const errorAsRecord = error as unknown as Record<string, unknown>;
+  
+  // Build the serialized object with all properties
+  const serialized: Record<string, unknown> = {
     name: error.name || 'Error',
     message: error.message || 'Unknown error',
     timestamp: (typeof errorAsRecord.timestamp === 'string' ? errorAsRecord.timestamp : new Date().toISOString())
   };
-  
-  // Add optional properties if they exist
+
+  // Add optional properties conditionally
   if (error.stack) {
     serialized.stack = error.stack;
   }
@@ -160,12 +162,11 @@ export function serializeError(error: unknown): SerializedError {
     }
   }
   
-  // Handle error chain
   if (errorAsRecord.cause) {
     serialized.cause = serializeError(errorAsRecord.cause);
   }
   
-  return serialized;
+  return serialized as unknown as SerializedError;
 }
 
 /**
@@ -194,7 +195,7 @@ export function deserializeError(serialized: SerializedError): Error {
   }
   
   // Attach additional properties
-  const errorAsRecord = error as Record<string, unknown>;
+  const errorAsRecord = error as unknown as Record<string, unknown>;
   
   if (serialized.code) {
     errorAsRecord.code = serialized.code;

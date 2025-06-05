@@ -170,7 +170,7 @@ export async function fetchBtcPrice(logger: Logger, retryAttempt = 0): Promise<P
 
     // Parse the JSON response
     logger.debug('Parsing API response JSON');
-    const data = await response.json();
+    const data: unknown = await response.json();
 
     // Validate the response structure
     logger.debug('Validating API response data');
