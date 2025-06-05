@@ -19,12 +19,16 @@ export const createMockOnMessage = () => ({
   addListener: vi.fn(),
   removeListener: vi.fn(),
   hasListener: vi.fn().mockReturnValue(false),
-} satisfies chrome.runtime.ExtensionMessageEvent);
+  getRules: vi.fn(),
+  removeRules: vi.fn(),
+  addRules: vi.fn(),
+  hasListeners: vi.fn().mockReturnValue(false),
+});
 
 /**
  * Create a mock chrome.runtime API
  */
-export const createMockChromeRuntime = (overrides?: Partial<chrome.runtime.Runtime>) => ({
+export const createMockChromeRuntime = (overrides?: any) => ({
   sendMessage: createMockSendMessage(),
   onMessage: createMockOnMessage(),
   lastError: undefined,
@@ -32,7 +36,7 @@ export const createMockChromeRuntime = (overrides?: Partial<chrome.runtime.Runti
   getManifest: vi.fn().mockReturnValue({ version: '1.0.0' }),
   getURL: vi.fn((path: string) => `chrome-extension://test-extension-id/${path}`),
   ...overrides
-} satisfies Partial<chrome.runtime.Runtime>);
+});
 
 /**
  * Create a mock chrome.storage.StorageArea
@@ -66,7 +70,7 @@ export const createMockStorageArea = (initialData: Record<string, any> = {}) => 
       if (callback) callback();
       return Promise.resolve();
     }),
-  } satisfies chrome.storage.StorageArea;
+  };
 };
 
 /**
@@ -77,7 +81,7 @@ export const createMockChromeStorage = () => ({
   sync: createMockStorageArea(),
   managed: createMockStorageArea(),
   session: createMockStorageArea(),
-} satisfies chrome.storage.Static);
+});
 
 /**
  * Create a mock chrome.alarms.Alarm
@@ -102,18 +106,18 @@ export const createMockChromeAlarms = () => ({
     addListener: vi.fn(),
     removeListener: vi.fn(),
     hasListener: vi.fn().mockReturnValue(false),
-  } satisfies chrome.alarms.AlarmEvent,
-} satisfies chrome.alarms.Alarms);
+  },
+});
 
 /**
  * Create a complete mock chrome API
  */
 export const createMockChrome = (overrides?: {
-  runtime?: Partial<chrome.runtime.Runtime>;
-  storage?: Partial<chrome.storage.Static>;
-  alarms?: Partial<chrome.alarms.Alarms>;
+  runtime?: any;
+  storage?: any;
+  alarms?: any;
 }) => ({
   runtime: createMockChromeRuntime(overrides?.runtime),
   storage: createMockChromeStorage(),
   alarms: createMockChromeAlarms(),
-} satisfies Partial<typeof chrome>);
+});

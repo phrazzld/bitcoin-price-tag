@@ -58,7 +58,7 @@ describe('dom-observer setup and lifecycle', () => {
       // Access the mock instance through the constructor call
       const constructorCall = vi.mocked(mockMutationObserver).mock.results[0];
       if (constructorCall.type === 'return') {
-        const instance = constructorCall.value as { observe: ReturnType<typeof vi.fn> };
+        const instance = constructorCall.value as unknown as { observe: ReturnType<typeof vi.fn> };
         expect(instance.observe).toHaveBeenCalledTimes(1);
         expect(instance.observe).toHaveBeenCalledWith(rootElement, {
           childList: true,
@@ -125,7 +125,9 @@ describe('dom-observer setup and lifecycle', () => {
       const originalSetTimeout = global.setTimeout;
       const originalClearTimeout = global.clearTimeout;
       const mockTimeoutId = 123;
-      global.setTimeout = vi.fn(() => mockTimeoutId);
+      global.setTimeout = Object.assign(vi.fn(() => mockTimeoutId), {
+        __promisify__: vi.fn()
+      }) as unknown as typeof setTimeout;
       const clearTimeoutMock = vi.fn();
       global.clearTimeout = clearTimeoutMock;
       

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Logger, LogLevel, createLogger, logger, getEnvironmentLogLevel } from './logger';
+import { Logger, LogLevel, createLogger, logger as _logger, getEnvironmentLogLevel } from './logger';
 
 describe('logger.ts', () => {
   // Mock console methods

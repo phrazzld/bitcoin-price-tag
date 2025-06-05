@@ -100,7 +100,7 @@ describe('dom-observer.ts', () => {
       expect(mockMutationObserver).toHaveBeenCalledTimes(1);
       
       // Get the created instance and verify observe was called
-      const instance = mockMutationObserver.getInstances()[0];
+      const instance = (mockMutationObserver as any).getInstances()[0];
       expect(instance.observe).toHaveBeenCalledTimes(1);
       expect(instance.observe).toHaveBeenCalledWith(rootElement, {
         childList: true,
@@ -147,8 +147,8 @@ describe('dom-observer.ts', () => {
         expect(mutationCallback).not.toBeNull();
         
         // Call the mutation callback directly
-        if (mutationCallback) {
-          mutationCallback(records, mockObserver);
+        if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[], observer: MutationObserver) => void;
+          cb(records, mockObserver);
           
           // Fast-forward time to trigger the debounced function
           vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
@@ -176,7 +176,9 @@ describe('dom-observer.ts', () => {
       const originalSetTimeout = global.setTimeout;
       const originalClearTimeout = global.clearTimeout;
       const mockTimeoutId = 123;
-      global.setTimeout = vi.fn(() => mockTimeoutId);
+      global.setTimeout = Object.assign(vi.fn(() => mockTimeoutId), {
+        __promisify__: vi.fn()
+      }) as unknown as typeof setTimeout;
       const clearTimeoutMock = vi.fn();
       global.clearTimeout = clearTimeoutMock;
       
@@ -284,8 +286,8 @@ describe('dom-observer.ts', () => {
       expect(mutationCallback).not.toBeNull();
       
       // Simulate the callback being called with our records
-      if (mutationCallback) {
-        mutationCallback(records);
+      if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
+        cb(records);
         
         // Check if setTimeout was called (indicating scheduling)
         expect(setTimeoutSpy).toHaveBeenCalled();
@@ -339,8 +341,8 @@ describe('dom-observer.ts', () => {
       expect(mutationCallback).not.toBeNull();
       
       // Simulate the callback being called with our empty records
-      if (mutationCallback) {
-        mutationCallback(records);
+      if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
+        cb(records);
         
         // setTimeout should not be called since there are no nodes to process
         expect(setTimeoutSpy).not.toHaveBeenCalled();
@@ -391,9 +393,9 @@ describe('dom-observer.ts', () => {
       // Create empty mutations array
       const emptyMutations: MutationRecord[] = [];
       
-      if (mutationCallback) {
+      if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
         // Call with empty mutations array
-        mutationCallback(emptyMutations);
+        cb(emptyMutations);
         
         // setTimeout should not be called since there are no mutations
         expect(setTimeoutSpy).not.toHaveBeenCalled();
@@ -453,9 +455,9 @@ describe('dom-observer.ts', () => {
         oldValue: null
       }];
       
-      if (mutationCallback) {
+      if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
         // Call with mutations that have only removedNodes
-        mutationCallback(mutationsWithOnlyRemovedNodes);
+        cb(mutationsWithOnlyRemovedNodes);
         
         // setTimeout should not be called since there are no added nodes
         expect(setTimeoutSpy).not.toHaveBeenCalled();
@@ -503,7 +505,7 @@ describe('dom-observer.ts', () => {
       // Verify callback was captured
       expect(mutationCallback).not.toBeNull();
       
-      if (mutationCallback) {
+      if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
         // Simulate multiple mutations in rapid succession
         const createMutationRecord = (node: Node): MutationRecord => ({
           type: 'childList',
@@ -523,17 +525,17 @@ describe('dom-observer.ts', () => {
         
         // First mutation
         const node1 = document.createElement('div');
-        mutationCallback([createMutationRecord(node1)]);
+        cb([createMutationRecord(node1)]);
         
         // Second mutation shortly after
         vi.advanceTimersByTime(100); // Less than debounce time
         const node2 = document.createElement('span');
-        mutationCallback([createMutationRecord(node2)]);
+        cb([createMutationRecord(node2)]);
         
         // Third mutation shortly after
         vi.advanceTimersByTime(100); // Still less than debounce time
         const node3 = document.createElement('p');
-        mutationCallback([createMutationRecord(node3)]);
+        cb([createMutationRecord(node3)]);
         
         // setTimeout should have been called 3 times
         expect(setTimeoutSpy).toHaveBeenCalledTimes(3);
@@ -583,7 +585,7 @@ describe('dom-observer.ts', () => {
       // Verify callback was captured
       expect(mutationCallback).not.toBeNull();
       
-      if (mutationCallback) {
+      if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
         // Create different types of nodes to test filtering
         const divElement = document.createElement('div');
         const textNode = document.createTextNode('Some text');
@@ -616,7 +618,7 @@ describe('dom-observer.ts', () => {
         }];
         
         // Trigger the callback
-        mutationCallback(records);
+        cb(records);
         
         // Advance time to trigger the debounced function
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
@@ -673,7 +675,7 @@ describe('dom-observer.ts', () => {
       // Verify callback was captured
       expect(mutationCallback).not.toBeNull();
       
-      if (mutationCallback) {
+      if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
         // Create different nodes
         const divElement = document.createElement('div'); // This will cause an error
         const spanElement = document.createElement('span'); // This should still be processed
@@ -700,7 +702,7 @@ describe('dom-observer.ts', () => {
         }];
         
         // Trigger the callback
-        mutationCallback(records);
+        cb(records);
         
         // Advance time to trigger the debounced function
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
@@ -767,9 +769,9 @@ describe('dom-observer.ts', () => {
         addedNodes: null as any, // This will cause an error when trying to access forEach
       })];
       
-      if (mutationCallback) {
+      if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
         // Call should not throw despite the error
-        expect(() => mutationCallback(invalidRecords)).not.toThrow();
+        expect(() => cb(invalidRecords)).not.toThrow();
       }
     });
     
@@ -852,7 +854,7 @@ describe('dom-observer.ts', () => {
       });
       
       // Create observer controller but don't call start() to avoid setting priceData
-      const _controller = createDomObserver(
+      createDomObserver(
         rootElement,
         mockAnnotationFunction,
         TEST_DEBOUNCE_MS,
@@ -880,9 +882,9 @@ describe('dom-observer.ts', () => {
         oldValue: null
       }];
       
-      if (mutationCallback) {
+      if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
         // Call the callback - this should add nodes to pendingNodes
-        mutationCallback(records);
+        cb(records);
         
         // Advance time to trigger processDebouncedNodes
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
@@ -948,9 +950,9 @@ describe('dom-observer.ts', () => {
           oldValue: null
         }];
         
-        if (mutationCallback) {
+        if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
           // Call the mutation callback to trigger scheduling processDebouncedNodes
-          mutationCallback(records);
+          cb(records);
           
           // Verify setTimeout was called
           expect(setTimeoutSpy).toHaveBeenCalled();
@@ -1018,7 +1020,7 @@ describe('dom-observer.ts', () => {
       // Verify callback was captured
       expect(mutationCallback).not.toBeNull();
       
-      if (mutationCallback) {
+      if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
         // Create a node to add
         const newNode = document.createElement('div');
         
@@ -1040,7 +1042,7 @@ describe('dom-observer.ts', () => {
         }];
         
         // Trigger the callback
-        mutationCallback(records);
+        cb(records);
         
         // Advance time to trigger the debounced function
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);
@@ -1118,9 +1120,9 @@ describe('dom-observer.ts', () => {
         oldValue: null
       }];
       
-      if (mutationCallback) {
+      if (mutationCallback) { const cb = mutationCallback as (mutations: MutationRecord[]) => void;
         // Call the callback
-        mutationCallback(records);
+        cb(records);
         
         // Advance time to trigger processDebouncedNodes
         vi.advanceTimersByTime(TEST_DEBOUNCE_MS + 10);

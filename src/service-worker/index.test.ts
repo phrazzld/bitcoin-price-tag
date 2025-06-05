@@ -11,7 +11,7 @@ import {
 
 // Create a mock logger adapter for capturing logs (scoped to this test file only)
 const mockLoggerAdapter = {
-  calls: new Map<LogLevelType, { message: string, entry: LogEntry }[]>(),
+  calls: new Map<LogLevelType, { message: string, entry: LogEntry | null }[]>(),
   debug: vi.fn((message: string) => {
     const entry = tryParseJson(message);
     addLogToAdapter('debug', message, entry);
@@ -44,6 +44,28 @@ function tryParseJson(jsonString: string): LogEntry | null {
   } catch (_e) {
     return null;
   }
+}
+
+// Helper to create mock Tab objects with all required properties
+function createMockTab(id: number): chrome.tabs.Tab {
+  return {
+    id,
+    index: 0,
+    pinned: false,
+    highlighted: false,
+    windowId: 1,
+    active: true,
+    url: 'https://example.com',
+    title: 'Test Page',
+    incognito: false,
+    width: 1024,
+    height: 768,
+    frozen: false,
+    selected: true,
+    discarded: false,
+    autoDiscardable: true,
+    groupId: -1
+  };
 }
 
 // Helper to add a log to the mock adapter
@@ -148,7 +170,7 @@ describe('service-worker/index.ts', () => {
     }
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     // Comprehensive cleanup of all state
     vi.restoreAllMocks();
     vi.clearAllMocks();
@@ -223,22 +245,19 @@ function expectLogToContain(
   const calls = mockLoggerAdapter[level].mock.calls;
   
   // Validate that we have logs at this level
-  expect(calls.length).toBeGreaterThan(0, 
-    `Expected log at level '${level}' but none were found`);
+  expect(calls.length).toBeGreaterThan(0);
 
   // Case 1: String expectation (just check the message)
   if (typeof expectedContent === 'string') {
     const logs = findLogsWithMessage(level, expectedContent, partialMatch);
-    expect(logs.length).toBeGreaterThan(0, 
-      `No log with ${partialMatch ? 'substring' : 'message'} "${expectedContent}" found at ${level} level`);
+    expect(logs.length).toBeGreaterThan(0);
   } 
   // Case 2: Object with message property
   else if ('message' in expectedContent) {
     const message = expectedContent.message as string;
     const logs = findLogsWithMessage(level, message, partialMatch);
     
-    expect(logs.length).toBeGreaterThan(0, 
-      `No log with ${partialMatch ? 'substring' : 'message'} "${message}" found at ${level} level`);
+    expect(logs.length).toBeGreaterThan(0);
     
     // For specific index, or first log if not specified
     const logToCheck = index !== undefined && index < logs.length 
@@ -248,7 +267,7 @@ function expectLogToContain(
     // Check expected fields
     if ('context' in expectedContent && expectedContent.context) {
       expect(logToCheck).toHaveProperty('context', 
-        expect.objectContaining(expectedContent.context as Record<string, unknown>));
+        expect.objectContaining(expectedContent.context));
     }
     
     if ('errorDetails' in expectedContent && expectedContent.errorDetails) {
@@ -265,7 +284,7 @@ function expectLogToContain(
     // Get index to check, defaulting to most recent
     const callIndex = index !== undefined ? index : calls.length - 1;
     const call = calls[callIndex];
-    expect(call).toBeDefined(`No log at index ${callIndex}`);
+    expect(call).toBeDefined();
     
     // Parse the log entry and validate errors
     try {
@@ -276,7 +295,7 @@ function expectLogToContain(
         expect(entry.errorDetails?.message).toContain(
           expectedContent.errorDetails.message);
       }
-    } catch (e) {
+    } catch (_e) {
       // If parsing fails, use the raw message
       expect(call[0]).toContain(expectedContent.errorDetails.message);
     }
@@ -293,11 +312,11 @@ function expectLogToContain(
   });
 
   describe('handleInstalled', () => {
-    it('should create alarm successfully on install', async () => {
+    it('should create alarm successfully on install', () => {
       mockChrome.alarms.clear.mockResolvedValueOnce(true);
       mockChrome.alarms.create.mockResolvedValueOnce(undefined);
 
-      await handlers.onInstalled!({ reason: 'install' });
+      handlers.onInstalled!({ reason: 'install' });
 
       expectLogToContain('info', 'Extension installed/updated');
       expect(mockChrome.alarms.clear).toHaveBeenCalledWith(REFRESH_ALARM_NAME);
@@ -308,11 +327,11 @@ function expectLogToContain(
       expectLogToContain('info', 'Alarm created successfully');
     });
 
-    it('should log previous version on update', async () => {
+    it('should log previous version on update', () => {
       mockChrome.alarms.clear.mockResolvedValueOnce(true);
       mockChrome.alarms.create.mockResolvedValueOnce(undefined);
 
-      await handlers.onInstalled!({ 
+      handlers.onInstalled!({ 
         reason: 'update',
         previousVersion: '1.0.0'
       });
@@ -326,11 +345,11 @@ function expectLogToContain(
       });
     });
 
-    it('should handle alarm creation failure', async () => {
+    it('should handle alarm creation failure', () => {
       mockChrome.alarms.clear.mockResolvedValueOnce(true);
       mockChrome.alarms.create.mockRejectedValueOnce(new Error('Alarm creation failed'));
 
-      await handlers.onInstalled!({ reason: 'install' });
+      handlers.onInstalled!({ reason: 'install' });
 
       expectLogToContain('error', 'Failed to create alarm');
       expectLogToContain('error', {
@@ -340,17 +359,17 @@ function expectLogToContain(
       });
     });
 
-    it('should handle alarm clear failure', async () => {
+    it('should handle alarm clear failure', () => {
       mockChrome.alarms.clear.mockRejectedValueOnce(new Error('Clear failed'));
 
-      await handlers.onInstalled!({ reason: 'install' });
+      handlers.onInstalled!({ reason: 'install' });
 
       expectLogToContain('error', 'Failed to create alarm');
     });
   });
 
   describe('handleStartup', () => {
-    it('should rehydrate cache successfully', async () => {
+    it('should rehydrate cache successfully', () => {
       // Mock successful cache rehydration
       mockStorage.get.mockResolvedValueOnce({
         'btc_price_cache': {
@@ -364,17 +383,17 @@ function expectLogToContain(
         }
       });
 
-      await handlers.onStartup!();
+      handlers.onStartup!();
 
       expectLogToContain('info', 'Service worker starting up');
       expectLogToContain('info', 'Cache successfully rehydrated');
       expect(mockStorage.get).toHaveBeenCalled();
     });
 
-    it('should handle rehydration failure gracefully', async () => {
+    it('should handle rehydration failure gracefully', () => {
       mockStorage.get.mockRejectedValueOnce(new Error('Storage error'));
 
-      await handlers.onStartup!();
+      handlers.onStartup!();
 
       expectLogToContain('info', 'Service worker starting up');
       expectLogToContain('error', {
@@ -390,18 +409,18 @@ function expectLogToContain(
       }
     };
 
-    it('should fetch and cache price on refresh alarm', async () => {
+    it('should fetch and cache price on refresh alarm', () => {
       // Mock successful API response
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => validApiResponse
+        json: () => Promise.resolve(validApiResponse)
       });
 
       // Mock storage operations
       mockStorage.set.mockResolvedValueOnce(undefined);
 
-      await handlers.onAlarm!({ name: REFRESH_ALARM_NAME });
+      handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
 
       expectLogToContain('info', 'Alarm fired');
       expectLogToContain('info', 'Starting price refresh');
@@ -412,10 +431,10 @@ function expectLogToContain(
       expectLogToContain('info', 'Price data cached successfully');
     });
 
-    it('should handle API fetch failure', async () => {
+    it('should handle API fetch failure', () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-      await handlers.onAlarm!({ name: REFRESH_ALARM_NAME });
+      handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
 
       expectLogToContain('error', 'Failed to refresh price data');
       expectLogToContain('error', {
@@ -425,15 +444,15 @@ function expectLogToContain(
       });
     });
 
-    it('should handle cache write failure', async () => {
+    it('should handle cache write failure', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => validApiResponse
+        json: () => Promise.resolve(validApiResponse)
       });
       mockStorage.set.mockRejectedValueOnce(new Error('Storage error'));
 
-      await handlers.onAlarm!({ name: REFRESH_ALARM_NAME });
+      handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
 
       expectLogToContain('error', 'Failed to refresh price data');
       expectLogToContain('error', {
@@ -443,8 +462,8 @@ function expectLogToContain(
       });
     });
 
-    it('should ignore unknown alarms', async () => {
-      await handlers.onAlarm!({ name: 'unknown_alarm' });
+    it('should ignore unknown alarms', () => {
+      handlers.onAlarm!({ name: 'unknown_alarm', scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
 
       expectLogToContain('info', 'Alarm fired');
       expect(mockLoggerAdapter.info.mock.calls.length).toBeGreaterThan(0);
@@ -488,7 +507,7 @@ function expectLogToContain(
       // Call the message handler
       const result = handlers.onMessage!(
         validRequest,
-        { tab: { id: 1 } },
+        { tab: createMockTab(1) },
         mockSendResponse
       );
 
@@ -536,7 +555,7 @@ function expectLogToContain(
       // Call the message handler
       const result = handlers.onMessage!(
         validRequest,
-        { tab: { id: 1 } },
+        { tab: createMockTab(1) },
         mockSendResponse
       );
 
@@ -572,7 +591,7 @@ function expectLogToContain(
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => apiResponse
+        json: () => Promise.resolve(apiResponse)
       });
 
       // Mock storage set
@@ -580,7 +599,7 @@ function expectLogToContain(
 
       const result = handlers.onMessage!(
         validRequest,
-        { tab: { id: 1 } },
+        { tab: createMockTab(1) },
         mockSendResponse
       );
 
@@ -613,7 +632,7 @@ function expectLogToContain(
 
       const result = handlers.onMessage!(
         invalidMessage,
-        { tab: { id: 1 } },
+        { tab: createMockTab(1) },
         mockSendResponse
       );
 
@@ -638,7 +657,7 @@ function expectLogToContain(
 
       const result = handlers.onMessage!(
         invalidMessage,
-        { tab: { id: 1 } },
+        { tab: createMockTab(1) },
         mockSendResponse
       );
 
@@ -664,7 +683,7 @@ function expectLogToContain(
 
       const result = handlers.onMessage!(
         validRequest,
-        { tab: { id: 1 } },
+        { tab: createMockTab(1) },
         mockSendResponse
       );
 
@@ -698,7 +717,7 @@ function expectLogToContain(
 
       const result = handlers.onMessage!(
         validRequest,
-        { tab: { id: 1 } },
+        { tab: createMockTab(1) },
         mockSendResponse
       );
 
@@ -731,7 +750,7 @@ function expectLogToContain(
     it('should handle null message', () => {
       const result = handlers.onMessage!(
         null,
-        { tab: { id: 1 } },
+        { tab: createMockTab(1) },
         vi.fn()
       );
 
@@ -742,7 +761,7 @@ function expectLogToContain(
     it('should handle non-object message', () => {
       const result = handlers.onMessage!(
         'string message',
-        { tab: { id: 1 } },
+        { tab: createMockTab(1) },
         vi.fn()
       );
 
@@ -753,7 +772,7 @@ function expectLogToContain(
     it('should handle message with wrong type field', () => {
       const result = handlers.onMessage!(
         { type: 123, requestId: 'test' },
-        { tab: { id: 1 } },
+        { tab: createMockTab(1) },
         vi.fn()
       );
 
@@ -774,7 +793,7 @@ function expectLogToContain(
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: async () => response
+          json: () => Promise.resolve(response)
         });
       });
 
@@ -784,8 +803,8 @@ function expectLogToContain(
       mockLoggerAdapter.reset();
 
       // Trigger two alarms concurrently
-      const alarm1 = handlers.onAlarm!({ name: REFRESH_ALARM_NAME });
-      const alarm2 = handlers.onAlarm!({ name: REFRESH_ALARM_NAME });
+      const alarm1 = handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
+      const alarm2 = handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
 
       await Promise.all([alarm1, alarm2]);
 

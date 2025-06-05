@@ -27,6 +27,7 @@ describe('Simple Messaging Test', () => {
         sendResponse({ type: 'RESPONSE', data: 'Hello from SW' });
         return true; // Will respond asynchronously
       }
+      return false;
     });
     
     // Send a message from content script

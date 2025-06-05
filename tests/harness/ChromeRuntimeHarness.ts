@@ -5,11 +5,11 @@
  */
 
 import { vi } from 'vitest';
-import type { Runtime } from '@types/chrome';
+// Use chrome global instead of @types/chrome import
 
 type MessageListener = (
   message: any,
-  sender: Runtime.MessageSender,
+  sender: chrome.runtime.MessageSender,
   sendResponse: (response?: any) => void
 ) => boolean | void;
 
@@ -168,7 +168,7 @@ export class ChromeRuntimeHarness {
     }
 
     // Create sender object
-    const sender: Runtime.MessageSender = {
+    const sender: chrome.runtime.MessageSender = {
       id: 'test-extension-id',
     };
 

@@ -229,7 +229,8 @@ describe('ValidationError', () => {
       );
       
       expect(aggregatedError.context?.errors).toHaveLength(3);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+       
+      // @ts-expect-error - accessing array index on dynamic context object
       expect(aggregatedError.context?.errors?.[0]?.field).toBe('email');
     });
   });

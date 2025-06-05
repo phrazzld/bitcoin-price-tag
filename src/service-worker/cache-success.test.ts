@@ -80,7 +80,7 @@ describe('Service Worker Cache Test', () => {
   it('returns cached price data without API call when cache is available', async () => {
     // Import the service worker module fresh each time
     vi.resetModules();
-    const _serviceWorkerModule = await import('./index');
+    await import('./index');
     
     // Find the message handler
     const onMessageHandler = (chrome.runtime.onMessage.addListener as any).mock.calls[0][0];

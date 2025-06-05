@@ -6,7 +6,7 @@
  * reduce duplication.
  */
 
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
 import { PriceData } from '../../src/common/types';
 
 // Re-export commonly used test utilities
@@ -107,12 +107,26 @@ export const createAddedNodesMutation = (addedNodes: Node[]): MutationRecord => 
         for (const node of addedNodes) {
           yield node;
         }
+      },
+      forEach: (callback: (value: Node, key: number, parent: NodeList) => void) => {
+        const nodeList = {
+          length: addedNodes.length,
+          item: (index: number) => addedNodes[index] || null,
+          [Symbol.iterator]: function* () {
+            for (const node of addedNodes) {
+              yield node;
+            }
+          },
+          forEach: () => {}
+        } as NodeList;
+        addedNodes.forEach((node, index) => callback(node, index, nodeList));
       }
     } as NodeList,
     removedNodes: {
       length: 0,
       item: () => null,
-      [Symbol.iterator]: function* () {}
+      [Symbol.iterator]: function* () {},
+      forEach: () => {}
     } as NodeList,
     previousSibling: null,
     nextSibling: null,

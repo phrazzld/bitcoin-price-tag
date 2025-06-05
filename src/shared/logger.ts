@@ -70,7 +70,7 @@ export interface LogEntry {
     readonly message: string;
     readonly stack?: string;
   };
-  readonly context?: any;
+  readonly context?: Record<string, unknown>;
 }
 
 /** 
@@ -163,7 +163,7 @@ export class Logger {
   /**
    * Format a log entry as JSON
    */
-  private formatEntry(level: LogLevelType, message: string, context?: any, error?: Error): LogEntry {
+  private formatEntry(level: LogLevelType, message: string, context?: Record<string, unknown>, error?: Error): LogEntry {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -224,7 +224,7 @@ export class Logger {
   /**
    * Log a debug message
    */
-  debug(message: string, context?: any): void {
+  debug(message: string, context?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
       const entry = this.formatEntry(LogLevel.DEBUG, message, context);
       this.output(LogLevel.DEBUG, entry);
@@ -234,7 +234,7 @@ export class Logger {
   /**
    * Log an info message
    */
-  info(message: string, context?: any): void {
+  info(message: string, context?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.INFO)) {
       const entry = this.formatEntry(LogLevel.INFO, message, context);
       this.output(LogLevel.INFO, entry);
@@ -244,7 +244,7 @@ export class Logger {
   /**
    * Log a warning message
    */
-  warn(message: string, context?: any): void {
+  warn(message: string, context?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.WARN)) {
       const entry = this.formatEntry(LogLevel.WARN, message, context);
       this.output(LogLevel.WARN, entry);
@@ -254,7 +254,7 @@ export class Logger {
   /**
    * Log an error message
    */
-  error(message: string, error?: Error | unknown, context?: any): void {
+  error(message: string, error?: unknown, context?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.ERROR)) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
       const entry = this.formatEntry(LogLevel.ERROR, message, context, errorObj);

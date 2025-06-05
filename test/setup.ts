@@ -1,5 +1,6 @@
 // Mock Chrome APIs for testing
-// @ts-nocheck
+import { vi } from 'vitest';
+
 global.chrome = {
   runtime: {
     sendMessage: vi.fn(),

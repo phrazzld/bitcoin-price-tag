@@ -27,9 +27,6 @@ const mockFetch = vi.fn();
 
 // Test for the cached price functionality specifically
 describe('Cache functionality test', () => {
-  let _handlers: {
-    onMessage?: (message: PriceRequestMessage, sender: unknown, sendResponse: (response: unknown) => void) => void;
-  };
   const mockSendResponse = vi.fn();
   
   // Define test data
@@ -73,12 +70,8 @@ describe('Cache functionality test', () => {
     // Import the module fresh
     await vi.importActual('./index');
     
-    // Extract handlers from mocks
-    if (mockChrome.runtime.onMessage.addListener.mock.calls.length > 0) {
-      handlers = {
-        onMessage: mockChrome.runtime.onMessage.addListener.mock.calls[0][0]
-      };
-    } else {
+    // Verify message handler was registered
+    if (mockChrome.runtime.onMessage.addListener.mock.calls.length === 0) {
       throw new Error('Message handler not registered');
     }
   });
@@ -93,9 +86,6 @@ describe('Cache functionality test', () => {
     // Clean up global state
     delete (global as any).chrome;
     delete (global as any).fetch;
-    
-    // Reset handlers
-    handlers = {};
   });
   
   it('should return cached price when available', async () => {

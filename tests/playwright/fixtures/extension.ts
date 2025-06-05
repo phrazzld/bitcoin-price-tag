@@ -35,7 +35,7 @@ export const test = base.extend<{
     // Extract extension ID from service worker URL
     // Format: chrome-extension://[extension-id]/service-worker/index.js
     const url = serviceWorker.url();
-    const match = url.match(/chrome-extension:\/\/([^\/]+)\//);
+    const match = url.match(/chrome-extension:\/\/([^/]+)\//);
     const extensionId = match ? match[1] : '';
     
     await use(extensionId);

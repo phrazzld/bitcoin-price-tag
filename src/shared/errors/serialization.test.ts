@@ -63,8 +63,8 @@ describe('serializeError', () => {
     
     // Should not throw
     const serialized = serializeError(error);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    expect(serialized.context?.data?.self).toBe('[Circular]');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((serialized.context as any)?.data?.self).toBe('[Circular]');
   });
 
   it('should handle null and undefined', () => {
@@ -141,9 +141,9 @@ describe('deserializeError', () => {
     
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toBe('Server error');
-    expect((error as { code: string }).code).toBe('HTTP_ERROR');
-    expect((error as { correlationId: string }).correlationId).toBe('req_123');
-    expect((error as { context: unknown }).context).toEqual(serialized.context);
+    expect((error as any).code).toBe('HTTP_ERROR');
+    expect((error as any).correlationId).toBe('req_123');
+    expect((error as any).context).toEqual(serialized.context);
   });
 
   it('should reconstruct error chain', () => {
@@ -161,13 +161,13 @@ describe('deserializeError', () => {
     
     const error = deserializeError(serialized);
     
-    expect((error as { cause: Error }).cause).toBeInstanceOf(Error);
-    expect((error as { cause: Error }).cause.message).toBe('Network timeout');
+    expect((error as any).cause).toBeInstanceOf(Error);
+    expect((error as any).cause.message).toBe('Network timeout');
   });
 
   it('should handle invalid serialized data', () => {
     const invalid = { invalid: 'data' };
-    const error = deserializeError(invalid as unknown);
+    const error = deserializeError(invalid as any);
     
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toBe('Unknown error');
@@ -180,16 +180,16 @@ describe('sanitizeForLogging', () => {
     const sanitized = sanitizeForLogging(longString);
     
     expect(sanitized).toHaveLength(215); // 200 + '... (truncated)'
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    expect(sanitized.endsWith('... (truncated)')).toBe(true);
+     
+    expect(String(sanitized).endsWith('... (truncated)')).toBe(true);
   });
 
   it('should limit array items', () => {
     const longArray = Array.from({ length: 10 }, (_, i) => i);
     const sanitized = sanitizeForLogging(longArray);
     
-    expect(sanitized).toHaveLength(6); // 5 items + summary
-    expect(sanitized[5]).toBe('... (5 more items)');
+    expect(Array.isArray(sanitized) ? sanitized.length : 0).toBe(6); // 5 items + summary
+    expect(Array.isArray(sanitized) ? sanitized[5] : undefined).toBe('... (5 more items)');
   });
 
   it('should limit object keys', () => {
@@ -199,7 +199,7 @@ describe('sanitizeForLogging', () => {
     const sanitized = sanitizeForLogging(largeObject);
     
     // Should have at most 10 keys (no extra summary key in current implementation)
-    expect(Object.keys(sanitized)).toHaveLength(10);
+    expect(Object.keys(sanitized as Record<string, unknown>)).toHaveLength(10);
   });
 
   it('should handle nested structures', () => {
@@ -251,10 +251,10 @@ describe('sanitizeForLogging', () => {
     
     const sanitized = sanitizeForLogging(sensitive);
     
-    expect(sanitized.password).toBe('[REDACTED]');
-    expect(sanitized.api_key).toBe('[REDACTED]');
-    expect(sanitized.token).toBe('[REDACTED]');
-    expect(sanitized.credit_card).toBe('[REDACTED]');
-    expect(sanitized.normal).toBe('visible data');
+    expect((sanitized as any).password).toBe('[REDACTED]');
+    expect((sanitized as any).api_key).toBe('[REDACTED]');
+    expect((sanitized as any).token).toBe('[REDACTED]');
+    expect((sanitized as any).credit_card).toBe('[REDACTED]');
+    expect((sanitized as any).normal).toBe('visible data');
   });
 });

@@ -40,7 +40,7 @@ import {
 } from '../../tests/utils/api-mocks';
 
 // Use the mock logger from the mocked module
-const mockLogger = loggerModule.createLogger();
+const mockLogger = loggerModule.createLogger('test-api-retry');
 
 describe('API retry logic', () => {
   beforeEach(setupApiTest);

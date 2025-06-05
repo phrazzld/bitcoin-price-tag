@@ -3,6 +3,7 @@
  * Used to simulate extension storage in tests
  */
 
+import { vi } from 'vitest';
 import type { LocalStorageCache, PriceData } from '../../src/common/types';
 import { PRICE_CACHE_KEY } from '../../src/common/constants';
 

@@ -3,7 +3,7 @@
  * Used by split API test files to avoid duplication
  */
 
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
 import { CoinGeckoApiResponse } from '../../src/common/types';
 
 /**
@@ -46,41 +46,89 @@ export const createValidApiResponse = (usdPrice: number = 43000): CoinGeckoApiRe
 /**
  * Create a successful fetch response
  */
-export const createSuccessResponse = (data: CoinGeckoApiResponse, status: number = 200) => ({
+export const createSuccessResponse = (data: CoinGeckoApiResponse, status: number = 200): Response => ({
   ok: true,
   status,
   statusText: status === 200 ? 'OK' : 'Success',
-  json: vi.fn().mockResolvedValue(data)
+  headers: new Headers(),
+  redirected: false,
+  type: 'basic' as ResponseType,
+  url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+  clone: vi.fn().mockReturnThis(),
+  body: null,
+  bodyUsed: false,
+  arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
+  blob: vi.fn().mockResolvedValue(new Blob()),
+  formData: vi.fn().mockResolvedValue(new FormData()),
+  json: vi.fn().mockResolvedValue(data),
+  text: vi.fn().mockResolvedValue(JSON.stringify(data)),
+  bytes: vi.fn().mockResolvedValue(new Uint8Array())
 });
 
 /**
  * Create a failed HTTP response
  */
-export const createFailedHttpResponse = (status: number, statusText: string) => ({
+export const createFailedHttpResponse = (status: number, statusText: string): Response => ({
   ok: false,
   status,
   statusText,
-  json: vi.fn().mockRejectedValue(new Error('No JSON body'))
+  headers: new Headers(),
+  redirected: false,
+  type: 'basic' as ResponseType,
+  url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+  clone: vi.fn().mockReturnThis(),
+  body: null,
+  bodyUsed: false,
+  arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
+  blob: vi.fn().mockResolvedValue(new Blob()),
+  formData: vi.fn().mockResolvedValue(new FormData()),
+  json: vi.fn().mockRejectedValue(new Error('No JSON body')),
+  text: vi.fn().mockResolvedValue(''),
+  bytes: vi.fn().mockResolvedValue(new Uint8Array())
 });
 
 /**
  * Create a response with malformed JSON
  */
-export const createMalformedJsonResponse = () => ({
+export const createMalformedJsonResponse = (): Response => ({
   ok: true,
   status: 200,
   statusText: 'OK',
-  json: vi.fn().mockRejectedValue(new SyntaxError('Unexpected token < in JSON at position 0'))
+  headers: new Headers(),
+  redirected: false,
+  type: 'basic' as ResponseType,
+  url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+  clone: vi.fn().mockReturnThis(),
+  body: null,
+  bodyUsed: false,
+  arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
+  blob: vi.fn().mockResolvedValue(new Blob()),
+  formData: vi.fn().mockResolvedValue(new FormData()),
+  json: vi.fn().mockRejectedValue(new SyntaxError('Unexpected token < in JSON at position 0')),
+  text: vi.fn().mockResolvedValue('<html>Error</html>'),
+  bytes: vi.fn().mockResolvedValue(new Uint8Array())
 });
 
 /**
  * Create an invalid API response (wrong structure)
  */
-export const createInvalidResponse = (data: unknown) => ({
+export const createInvalidResponse = (data: unknown): Response => ({
   ok: true,
   status: 200,
   statusText: 'OK',
-  json: vi.fn().mockResolvedValue(data)
+  headers: new Headers(),
+  redirected: false,
+  type: 'basic' as ResponseType,
+  url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+  clone: vi.fn().mockReturnThis(),
+  body: null,
+  bodyUsed: false,
+  arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
+  blob: vi.fn().mockResolvedValue(new Blob()),
+  formData: vi.fn().mockResolvedValue(new FormData()),
+  json: vi.fn().mockResolvedValue(data),
+  text: vi.fn().mockResolvedValue(JSON.stringify(data)),
+  bytes: vi.fn().mockResolvedValue(new Uint8Array())
 });
 
 /**

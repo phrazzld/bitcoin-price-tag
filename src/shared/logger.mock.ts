@@ -89,7 +89,7 @@ export function setupLoggerMock() {
     
     return {
       ...actual,
-      createLogger: vi.fn((_module: string, _config?: any, _adapter?: any) => testLogger),
+      createLogger: vi.fn((_module: string, _config?: Record<string, unknown>, _adapter?: unknown) => testLogger),
       logger: testLogger
     };
   });

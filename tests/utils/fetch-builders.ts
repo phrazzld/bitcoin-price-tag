@@ -23,6 +23,7 @@ export const createMockResponse = (data: any, options?: Partial<Response>): Resp
   formData: vi.fn().mockResolvedValue(new FormData()),
   json: vi.fn().mockResolvedValue(data),
   text: vi.fn().mockResolvedValue(JSON.stringify(data)),
+  bytes: vi.fn().mockResolvedValue(new Uint8Array()),
   ...options
 } satisfies Response);
 

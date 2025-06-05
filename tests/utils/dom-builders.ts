@@ -10,8 +10,8 @@ import { vi } from 'vitest';
 export const createMockNodeList = <T extends Node>(nodes: T[] = []): NodeListOf<T> => {
   const nodeList = {
     length: nodes.length,
-    item(index: number): T | null {
-      return nodes[index] ?? null;
+    item(index: number): T {
+      return nodes[index] as T;
     },
     [Symbol.iterator]: function* () {
       for (const node of nodes) {
@@ -37,9 +37,9 @@ export const createMockNodeList = <T extends Node>(nodes: T[] = []): NodeListOf<
       ...acc,
       [index]: node
     }), {} as { [index: number]: T })
-  } satisfies NodeListOf<T>;
+  };
   
-  return nodeList;
+  return nodeList as NodeListOf<T>;
 };
 
 /**

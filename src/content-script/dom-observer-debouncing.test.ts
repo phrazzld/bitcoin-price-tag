@@ -57,7 +57,7 @@ describe('dom-observer debouncing mechanism', () => {
           addedNodes: {
             length: 1,
             0: node,
-            [Symbol.iterator]: function* () { yield this[0]; }
+            [Symbol.iterator]: function* () { yield (this as Record<string, unknown> & { 0: Node })[0]; }
           } as unknown as NodeList,
           removedNodes: { 
             length: 0, 
@@ -71,15 +71,15 @@ describe('dom-observer debouncing mechanism', () => {
         });
         
         const node1 = document.createElement('div');
-        mutationCallback?.([createMutationRecord(node1)], mockObserver);
+        (mutationCallback as MutationCallback)([createMutationRecord(node1)], mockObserver);
         
         vi.advanceTimersByTime(100); // Less than debounce time
         const node2 = document.createElement('span');
-        mutationCallback?.([createMutationRecord(node2)], mockObserver);
+        (mutationCallback as MutationCallback)([createMutationRecord(node2)], mockObserver);
         
         vi.advanceTimersByTime(100); // Still less than debounce time
         const node3 = document.createElement('p');
-        mutationCallback?.([createMutationRecord(node3)], mockObserver);
+        (mutationCallback as MutationCallback)([createMutationRecord(node3)], mockObserver);
         
         expect(setTimeoutSpy).toHaveBeenCalledTimes(3);
         expect(clearTimeoutSpy).toHaveBeenCalledTimes(2);
