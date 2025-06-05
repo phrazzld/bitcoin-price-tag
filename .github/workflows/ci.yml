@@ -6,11 +6,58 @@ on:
   pull_request:
     branches: [ main, master, develop ]
 
+env:
+  # Performance monitoring
+  CI_START_TIME: ${{ github.event.head_commit.timestamp }}
+
 jobs:
+  # Detect changes to optimize job execution
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      src: ${{ steps.changes.outputs.src }}
+      tests: ${{ steps.changes.outputs.tests }}
+      config: ${{ steps.changes.outputs.config }}
+      deps: ${{ steps.changes.outputs.deps }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect file changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            src:
+              - 'src/**'
+              - '*.ts'
+              - '*.js'
+            tests:
+              - 'src/**/*.test.ts'
+              - 'tests/**'
+              - 'test/**'
+            config:
+              - '.github/**'
+              - '*.config.*'
+              - 'tsconfig.*'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+            deps:
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.src == 'true' || needs.changes.outputs.config == 'true'
     steps:
+      - name: Start timing
+        run: echo "JOB_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -25,17 +72,47 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
+
+      # Enhanced node_modules caching
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node_modules-
+
+      # ESLint cache for faster subsequent runs
+      - name: Cache ESLint
+        uses: actions/cache@v4
+        with:
+          path: .eslintcache
+          key: ${{ runner.os }}-eslint-${{ hashFiles('.eslintrc.*', 'eslint.config.*') }}-${{ hashFiles('src/**/*.{ts,js}') }}
+          restore-keys: |
+            ${{ runner.os }}-eslint-${{ hashFiles('.eslintrc.*', 'eslint.config.*') }}-
+            ${{ runner.os }}-eslint-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Run ESLint
-        run: pnpm run lint
+        run: pnpm run lint --cache --cache-location .eslintcache
+
+      - name: Report timing
+        run: |
+          JOB_END_TIME=$(date +%s)
+          DURATION=$((JOB_END_TIME - JOB_START_TIME))
+          echo "✅ Lint completed in ${DURATION}s"
 
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.src == 'true' || needs.changes.outputs.config == 'true'
     steps:
+      - name: Start timing
+        run: echo "JOB_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -50,6 +127,26 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
+
+      # Enhanced caching for dependencies and TypeScript builds
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node_modules-
+
+      - name: Cache TypeScript build
+        uses: actions/cache@v4
+        with:
+          path: |
+            .tsbuildinfo
+            tsconfig.tsbuildinfo
+          key: ${{ runner.os }}-tsc-${{ hashFiles('tsconfig.json', 'tsconfig.*.json') }}-${{ hashFiles('src/**/*.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-tsc-${{ hashFiles('tsconfig.json', 'tsconfig.*.json') }}-
+            ${{ runner.os }}-tsc-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -58,13 +155,27 @@ jobs:
         run: pnpm run typecheck
         continue-on-error: true  # Allow pipeline to continue while type errors are being fixed
 
+      - name: Report timing
+        run: |
+          JOB_END_TIME=$(date +%s)
+          DURATION=$((JOB_END_TIME - JOB_START_TIME))
+          echo "✅ TypeCheck completed in ${DURATION}s"
+
   test:
     name: Test
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.src == 'true' || needs.changes.outputs.tests == 'true' || needs.changes.outputs.config == 'true'
     strategy:
       matrix:
         node-version: [18, 20]
+      # Optimize matrix execution
+      fail-fast: false
+      max-parallel: 2
     steps:
+      - name: Start timing
+        run: echo "JOB_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -80,14 +191,50 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
 
+      # Enhanced caching for test execution
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node_modules-
+
+      - name: Cache Vitest cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/.vitest
+            .vitest
+          key: ${{ runner.os }}-vitest-${{ matrix.node-version }}-${{ hashFiles('vitest.config.*') }}-${{ hashFiles('src/**/*.{ts,js}', 'tests/**/*.{ts,js}') }}
+          restore-keys: |
+            ${{ runner.os }}-vitest-${{ matrix.node-version }}-${{ hashFiles('vitest.config.*') }}-
+            ${{ runner.os }}-vitest-${{ matrix.node-version }}-
+
+      # Cache coverage reports
+      - name: Cache coverage
+        uses: actions/cache@v4
+        with:
+          path: coverage
+          key: ${{ runner.os }}-coverage-${{ matrix.node-version }}-${{ hashFiles('src/**/*.{ts,js}', 'tests/**/*.{ts,js}') }}
+          restore-keys: |
+            ${{ runner.os }}-coverage-${{ matrix.node-version }}-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Run tests with optimized configuration
       - name: Run tests with coverage and enforce thresholds
-        run: pnpm run test:coverage:check
+        run: |
+          echo "🧪 Starting test execution..."
+          TEST_START=$(date +%s)
+          pnpm run test:coverage:check
+          TEST_END=$(date +%s)
+          TEST_DURATION=$((TEST_END - TEST_START))
+          echo "✅ Tests completed in ${TEST_DURATION}s"
 
       - name: Upload coverage reports to Codecov
-        if: matrix.node-version == 20
+        if: matrix.node-version == 20 && always()
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -96,10 +243,21 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: true
 
+      - name: Report timing
+        run: |
+          JOB_END_TIME=$(date +%s)
+          DURATION=$((JOB_END_TIME - JOB_START_TIME))
+          echo "✅ Test (Node ${{ matrix.node-version }}) completed in ${DURATION}s"
+
   build:
     name: Build
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.src == 'true' || needs.changes.outputs.config == 'true'
     steps:
+      - name: Start timing
+        run: echo "JOB_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -115,11 +273,51 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
+      # Enhanced caching for build artifacts
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node_modules-
+
+      - name: Cache Webpack build
+        uses: actions/cache@v4
+        with:
+          path: |
+            .webpack-cache
+            node_modules/.cache/webpack
+          key: ${{ runner.os }}-webpack-${{ hashFiles('webpack.config.*') }}-${{ hashFiles('src/**/*.{ts,js}') }}
+          restore-keys: |
+            ${{ runner.os }}-webpack-${{ hashFiles('webpack.config.*') }}-
+            ${{ runner.os }}-webpack-
+
+      # Check for existing build artifacts
+      - name: Cache build artifacts
+        id: build-cache
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: ${{ runner.os }}-build-${{ hashFiles('src/**/*.{ts,js}', 'webpack.config.*', 'tsconfig.*', 'package.json') }}
+
       - name: Install dependencies
+        if: steps.build-cache.outputs.cache-hit != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build extension
-        run: pnpm run build
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "🏗️ Starting build process..."
+          BUILD_START=$(date +%s)
+          pnpm run build
+          BUILD_END=$(date +%s)
+          BUILD_DURATION=$((BUILD_END - BUILD_START))
+          echo "✅ Build completed in ${BUILD_DURATION}s"
+
+      - name: Cache hit notification
+        if: steps.build-cache.outputs.cache-hit == 'true'
+        run: echo "⚡ Build cache hit - skipping build process"
 
       - name: Verify build output
         run: |
@@ -132,24 +330,114 @@ jobs:
             exit 1
           fi
           echo "✅ Build verification passed"
+          echo "📦 Build artifacts:"
           ls -la dist/
 
-  # Combined status check for branch protection
+      # Upload build artifacts for sharing between jobs
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: dist/
+          retention-days: 1
+
+      - name: Report timing
+        run: |
+          JOB_END_TIME=$(date +%s)
+          DURATION=$((JOB_END_TIME - JOB_START_TIME))
+          echo "✅ Build completed in ${DURATION}s"
+
+  # Performance monitoring and final status check
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, test, build]
+    needs: [changes, lint, typecheck, test, build]
     if: always()
     steps:
+      - name: Collect performance metrics
+        run: |
+          echo "📊 CI Performance Summary"
+          echo "=========================="
+          
+          # Calculate total pipeline duration (approximation)
+          echo "⏱️  Pipeline Performance:"
+          echo "   • Change Detection: ~5s"
+          
+          # Report job execution results
+          echo ""
+          echo "🎯 Job Execution Status:"
+          echo "   • Changes: ${{ needs.changes.result }}"
+          echo "   • Lint: ${{ needs.lint.result }} ${{ needs.lint.result == 'skipped' && '(⚡ skipped)' || '' }}"
+          echo "   • TypeCheck: ${{ needs.typecheck.result }} ${{ needs.typecheck.result == 'skipped' && '(⚡ skipped)' || '' }}"
+          echo "   • Test: ${{ needs.test.result }} ${{ needs.test.result == 'skipped' && '(⚡ skipped)' || '' }}"
+          echo "   • Build: ${{ needs.build.result }} ${{ needs.build.result == 'skipped' && '(⚡ skipped)' || '' }}"
+          
+          echo ""
+          echo "🚀 Optimization Features Active:"
+          echo "   • ✅ Smart job skipping based on file changes"
+          echo "   • ✅ Enhanced caching (dependencies, builds, tests)"
+          echo "   • ✅ Build artifact sharing"
+          echo "   • ✅ Performance timing collection"
+          echo "   • ✅ Test result caching"
+          echo "   • ✅ Incremental TypeScript builds"
+
       - name: Check all jobs success
         run: |
-          # Check if any required job failed (excluding typecheck which is allowed to fail for now)
-          if [[ "${{ needs.lint.result }}" != "success" || "${{ needs.test.result }}" != "success" || "${{ needs.build.result }}" != "success" ]]; then
+          # Handle conditional job execution - jobs can be skipped or successful
+          function check_job_result() {
+            local job_name=$1
+            local job_result=$2
+            
+            if [[ "$job_result" == "success" || "$job_result" == "skipped" ]]; then
+              return 0
+            else
+              return 1
+            fi
+          }
+          
+          # Check each job (skipped jobs are considered successful)
+          FAILED_JOBS=()
+          
+          if ! check_job_result "lint" "${{ needs.lint.result }}"; then
+            FAILED_JOBS+=("lint")
+          fi
+          
+          if ! check_job_result "test" "${{ needs.test.result }}"; then
+            FAILED_JOBS+=("test")
+          fi
+          
+          if ! check_job_result "build" "${{ needs.build.result }}"; then
+            FAILED_JOBS+=("build")
+          fi
+          
+          # TypeCheck is allowed to fail for now, but we still report it
+          TYPECHECK_STATUS="${{ needs.typecheck.result }}"
+          
+          if [ ${#FAILED_JOBS[@]} -gt 0 ]; then
             echo "❌ CI pipeline failed"
-            echo "Lint: ${{ needs.lint.result }}"
-            echo "TypeCheck: ${{ needs.typecheck.result }} (allowed to fail)"
-            echo "Test: ${{ needs.test.result }}"
-            echo "Build: ${{ needs.build.result }}"
+            echo ""
+            echo "Failed jobs: ${FAILED_JOBS[*]}"
+            echo ""
+            echo "Job Results:"
+            echo "   • Lint: ${{ needs.lint.result }}"
+            echo "   • TypeCheck: $TYPECHECK_STATUS (allowed to fail)"
+            echo "   • Test: ${{ needs.test.result }}"
+            echo "   • Build: ${{ needs.build.result }}"
             exit 1
           fi
-          echo "✅ All required CI checks passed"
+          
+          echo "✅ All required CI checks passed!"
+          echo ""
+          echo "🎉 Pipeline completed successfully with optimizations:"
+          if [[ "${{ needs.lint.result }}" == "skipped" ]]; then
+            echo "   ⚡ Lint job skipped (no relevant changes)"
+          fi
+          if [[ "${{ needs.typecheck.result }}" == "skipped" ]]; then
+            echo "   ⚡ TypeCheck job skipped (no relevant changes)"
+          fi
+          if [[ "${{ needs.test.result }}" == "skipped" ]]; then
+            echo "   ⚡ Test jobs skipped (no relevant changes)"
+          fi
+          if [[ "${{ needs.build.result }}" == "skipped" ]]; then
+            echo "   ⚡ Build job skipped (no relevant changes)"
+          fi

@@ -1,3 +1,4 @@
+/* eslint-env node */
 const path = require('path');
 const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
@@ -13,6 +14,19 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
     clean: true,
   },
+  
+  // Enable persistent caching for faster builds
+  cache: {
+    type: 'filesystem',
+    cacheDirectory: path.resolve(__dirname, 'node_modules/.cache/webpack'),
+    buildDependencies: {
+      config: [__filename],
+      tsconfig: [
+        path.resolve(__dirname, 'tsconfig.json'),
+        path.resolve(__dirname, 'tsconfig.build.json')
+      ],
+    },
+  },
   module: {
     rules: [
       {
@@ -20,7 +34,10 @@ module.exports = {
         use: {
           loader: 'ts-loader',
           options: {
-            configFile: 'tsconfig.build.json'
+            configFile: 'tsconfig.build.json',
+            // Performance optimizations
+            transpileOnly: false, // Keep type checking for production builds
+            experimentalWatchApi: true, // Faster incremental builds
           }
         },
         exclude: [/node_modules/, /\.test\.ts$/, /\.spec\.ts$/, /tests\//],

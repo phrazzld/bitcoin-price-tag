@@ -103,6 +103,7 @@ module.exports = tseslint.config(
         require: 'readonly',
         module: 'readonly',
         __dirname: 'readonly',
+        __filename: 'readonly',
         process: 'readonly',
         console: 'readonly',
       },

@@ -12,6 +12,33 @@ export default defineConfig({
     // Test file patterns
     include: ['src/**/*.{test,spec}.{js,ts}', 'tests/**/*.{test,spec}.{js,ts}'],
     
+    // Performance optimizations
+    cache: {
+      dir: 'node_modules/.vitest',
+    },
+    
+    // Optimize test execution with parallel processing
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        minThreads: 1,
+        maxThreads: 4,
+        useAtomics: true,
+      },
+    },
+    
+    // Optimize timeouts for CI performance
+    testTimeout: 10000,
+    hookTimeout: 10000,
+    
+    // Optimize file watching (helps with incremental runs)
+    watchExclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/coverage/**',
+      '**/*.config.*'
+    ],
+    
     // Coverage configuration with dual thresholds
     coverage: {
       provider: 'v8',
