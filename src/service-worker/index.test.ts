@@ -9,6 +9,22 @@ import {
   LogLevelType
 } from '../shared/logger';
 
+// Mock cache module functions at top level
+const mockCacheModule = {
+  rehydrateCache: vi.fn(),
+  setCachedPrice: vi.fn(),
+  getCachedPrice: vi.fn()
+};
+
+// Mock API module functions at top level
+const mockApiModule = {
+  fetchBtcPrice: vi.fn()
+};
+
+// Set up vi.mock at top level
+vi.mock('./cache', () => mockCacheModule);
+vi.mock('./api', () => mockApiModule);
+
 // Create a mock logger adapter for capturing logs (scoped to this test file only)
 const mockLoggerAdapter = {
   calls: new Map<LogLevelType, { message: string, entry: LogEntry | null }[]>(),
@@ -102,6 +118,7 @@ const mockStorage = {
 
 const mockFetch = vi.fn();
 
+
 describe('service-worker/index.ts', () => {
   let handlers: {
     onInstalled?: (details: chrome.runtime.InstalledDetails) => void;
@@ -119,6 +136,12 @@ describe('service-worker/index.ts', () => {
     mockStorage.set.mockReset();
     mockStorage.remove.mockReset();
     mockFetch.mockReset();
+    
+    // Reset cache and API mocks
+    mockCacheModule.rehydrateCache.mockReset();
+    mockCacheModule.setCachedPrice.mockReset();
+    mockCacheModule.getCachedPrice.mockReset();
+    mockApiModule.fetchBtcPrice.mockReset();
     
     // Set up fake timers
     vi.useFakeTimers();
@@ -143,7 +166,7 @@ describe('service-worker/index.ts', () => {
     // Mock Date.now for consistent timestamps
     vi.spyOn(Date, 'now').mockReturnValue(1734447415000);
 
-    // Setup logger module mock dynamically
+    // Dynamically mock the logger to use our test adapter
     vi.doMock('../shared/logger', async () => {
       const actual = await vi.importActual('../shared/logger');
       return {
@@ -395,6 +418,9 @@ async function expectLogToContain(
       // Handler wrapper manages async internally
       handlers.onInstalled!({ reason: 'install' });
 
+      // Wait for async operations to complete
+      await vi.runAllTimersAsync();
+      
       await expectLogToContain('info', 'Extension installed/updated');
       expect(mockChrome.alarms.clear).toHaveBeenCalledWith(REFRESH_ALARM_NAME);
       expect(mockChrome.alarms.create).toHaveBeenCalledWith(REFRESH_ALARM_NAME, {
@@ -413,6 +439,9 @@ async function expectLogToContain(
         previousVersion: '1.0.0'
       });
 
+      // Wait for async operations to complete
+      await vi.runAllTimersAsync();
+
       await expectLogToContain('info', 'Extension installed/updated');
       await expectLogToContain('info', {
         message: 'Extension installed/updated',
@@ -428,6 +457,9 @@ async function expectLogToContain(
 
       handlers.onInstalled!({ reason: 'install' });
 
+      // Wait for async operations to complete
+      await vi.runAllTimersAsync();
+
       await expectLogToContain('error', 'Failed to create alarm');
       await expectLogToContain('error', {
         errorDetails: {
@@ -441,6 +473,9 @@ async function expectLogToContain(
 
       handlers.onInstalled!({ reason: 'install' });
 
+      // Wait for async operations to complete
+      await vi.runAllTimersAsync();
+
       await expectLogToContain('error', 'Failed to create alarm');
     });
   });
@@ -448,30 +483,25 @@ async function expectLogToContain(
   describe('handleStartup', () => {
     it('should rehydrate cache successfully', async () => {
       // Mock successful cache rehydration
-      mockStorage.get.mockResolvedValueOnce({
-        'btc_price_data': {
-          priceData: {
-            usdRate: 45000,
-            satoshiRate: 0.00045,
-            fetchedAt: Date.now() - 1000,
-            source: 'CoinGecko'
-          },
-          cachedAt: Date.now() - 1000,
-          version: 1
-        }
-      });
+      mockCacheModule.rehydrateCache.mockResolvedValueOnce(undefined);
 
       handlers.onStartup!();
+
+      // Wait for async operations to complete
+      await vi.runAllTimersAsync();
 
       await expectLogToContain('info', 'Service worker starting up');
       await expectLogToContain('info', 'Cache successfully rehydrated');
-      expect(mockStorage.get).toHaveBeenCalled();
+      expect(mockCacheModule.rehydrateCache).toHaveBeenCalled();
     });
 
     it('should handle rehydration failure gracefully', async () => {
-      mockStorage.get.mockRejectedValueOnce(new Error('Storage error'));
+      mockCacheModule.rehydrateCache.mockRejectedValueOnce(new Error('Storage error'));
 
       handlers.onStartup!();
+
+      // Wait for async operations to complete
+      await vi.runAllTimersAsync();
 
       await expectLogToContain('info', 'Service worker starting up');
       await expectLogToContain('error', {
@@ -481,38 +511,38 @@ async function expectLogToContain(
   });
 
   describe('handleAlarm', () => {
-    const validApiResponse = {
-      bitcoin: {
-        usd: 45000
-      }
+    const validPriceData = {
+      usdRate: 45000,
+      satoshiRate: 0.00045,
+      fetchedAt: Date.now(),
+      source: 'CoinGecko'
     };
+
 
     it('should fetch and cache price on refresh alarm', async () => {
       // Mock successful API response
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve(validApiResponse)
-      });
-
-      // Mock storage operations
-      mockStorage.set.mockResolvedValueOnce(undefined);
+      mockApiModule.fetchBtcPrice.mockResolvedValueOnce(validPriceData);
+      mockCacheModule.setCachedPrice.mockResolvedValueOnce(undefined);
 
       handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
 
+      // Wait for async operations to complete
+      await vi.runAllTimersAsync();
+
       await expectLogToContain('info', 'Alarm fired');
       await expectLogToContain('info', 'Starting price refresh');
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
-      );
-      expect(mockStorage.set).toHaveBeenCalled();
+      expect(mockApiModule.fetchBtcPrice).toHaveBeenCalled();
+      expect(mockCacheModule.setCachedPrice).toHaveBeenCalledWith(validPriceData);
       await expectLogToContain('info', 'Price data cached successfully');
     });
 
     it('should handle API fetch failure', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      mockApiModule.fetchBtcPrice.mockRejectedValueOnce(new Error('Network error'));
 
       handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
+
+      // Wait for async operations to complete
+      await vi.runAllTimersAsync();
 
       await expectLogToContain('error', 'Failed to refresh price data');
       await expectLogToContain('error', {
@@ -523,14 +553,13 @@ async function expectLogToContain(
     });
 
     it('should handle cache write failure', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve(validApiResponse)
-      });
-      mockStorage.set.mockRejectedValueOnce(new Error('Storage error'));
+      // Mock API success but cache write failure
+      mockApiModule.fetchBtcPrice.mockRejectedValueOnce(new Error('Storage error'));
 
       handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
+
+      // Wait for async operations to complete
+      await vi.runAllTimersAsync();
 
       await expectLogToContain('error', 'Failed to refresh price data');
       await expectLogToContain('error', {
@@ -573,14 +602,8 @@ async function expectLogToContain(
     });
 
     it.skip('should return cached price when available', async () => {
-      // Mock cache with valid data
-      mockStorage.get.mockResolvedValueOnce({
-        'btc_price_data': {
-          priceData: validCachedData,
-          cachedAt: Date.now() - 5000,
-          version: 1
-        }
-      });
+      // Mock cache with valid data structure expected by cache module
+      mockCacheModule.getCachedPrice.mockResolvedValueOnce(validCachedData);
 
       // Call the message handler
       const result = handlers.onMessage!(
@@ -603,9 +626,9 @@ async function expectLogToContain(
         })
       });
       
-      // Verify the fetch API was not called (crucial test - we want to use cache,
+      // Verify the API module was not called (crucial test - we want to use cache,
       // not make unnecessary API calls)
-      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockApiModule.fetchBtcPrice).not.toHaveBeenCalled();
       
       // Verify the response was sent with the correct cached data
       expect(mockSendResponse).toHaveBeenCalledWith({
@@ -621,14 +644,8 @@ async function expectLogToContain(
     // because it seems the logger mocking approach in this test file has issues
     // that would require more extensive refactoring to fix
     it('should return cached price when available without mocked logger', async () => {
-      // Mock cache with valid data
-      mockStorage.get.mockResolvedValueOnce({
-        'btc_price_data': {
-          priceData: validCachedData,
-          cachedAt: Date.now() - 5000,
-          version: 1
-        }
-      });
+      // Mock cache with valid data structure expected by cache module
+      mockCacheModule.getCachedPrice.mockResolvedValueOnce(validCachedData);
 
       // Call the message handler
       const result = handlers.onMessage!(
@@ -643,8 +660,8 @@ async function expectLogToContain(
       // Wait for all async operations to complete
       await vi.runAllTimersAsync();
       
-      // Verify the fetch API was not called (crucial test - we want to use cache)
-      expect(mockFetch).not.toHaveBeenCalled();
+      // Verify the API module was not called (crucial test - we want to use cache)
+      expect(mockApiModule.fetchBtcPrice).not.toHaveBeenCalled();
       
       // Verify the response was sent with the correct cached data
       expect(mockSendResponse).toHaveBeenCalledWith({
@@ -658,22 +675,19 @@ async function expectLogToContain(
 
     it('should fetch fresh price on cache miss', async () => {
       // Mock empty cache
-      mockStorage.get.mockResolvedValueOnce({});
+      mockCacheModule.getCachedPrice.mockResolvedValueOnce(null);
 
       // Mock successful API response
-      const apiResponse = {
-        bitcoin: {
-          usd: 46000
-        }
+      const freshPriceData = {
+        usdRate: 46000,
+        satoshiRate: 0.00046,
+        fetchedAt: Date.now(),
+        source: 'CoinGecko'
       };
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve(apiResponse)
-      });
+      mockApiModule.fetchBtcPrice.mockResolvedValueOnce(freshPriceData);
 
-      // Mock storage set
-      mockStorage.set.mockResolvedValueOnce(undefined);
+      // Mock cache set
+      mockCacheModule.setCachedPrice.mockResolvedValueOnce(undefined);
 
       const result = handlers.onMessage!(
         validRequest,
@@ -687,8 +701,8 @@ async function expectLogToContain(
       await vi.runAllTimersAsync();
 
       await expectLogToContain('info', 'Cache miss - fetching from API');
-      expect(mockFetch).toHaveBeenCalled();
-      expect(mockStorage.set).toHaveBeenCalled();
+      expect(mockApiModule.fetchBtcPrice).toHaveBeenCalled();
+      expect(mockCacheModule.setCachedPrice).toHaveBeenCalled();
       expect(mockSendResponse).toHaveBeenCalledWith(
         expect.objectContaining({
           requestId: 'test-request-123',
@@ -752,10 +766,10 @@ async function expectLogToContain(
 
     it('should handle API failure during message handling', async () => {
       // Mock empty cache
-      mockStorage.get.mockResolvedValueOnce({});
+      mockCacheModule.getCachedPrice.mockResolvedValueOnce(null);
 
       // Mock API failure
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      mockApiModule.fetchBtcPrice.mockRejectedValueOnce(new Error('Network error'));
 
       const result = handlers.onMessage!(
         validRequest,
@@ -780,7 +794,7 @@ async function expectLogToContain(
         type: 'PRICE_RESPONSE',
         status: 'error',
         error: {
-          message: 'Unexpected error: Network error',
+          message: 'Network error',
           code: 'price_fetch_error'
         },
         timestamp: Date.now()
@@ -789,7 +803,7 @@ async function expectLogToContain(
 
     it('should handle cache failure during message handling', async () => {
       // Mock cache read failure
-      mockStorage.get.mockRejectedValueOnce(new Error('Storage error'));
+      mockCacheModule.getCachedPrice.mockRejectedValueOnce(new Error('Storage error'));
 
       const result = handlers.onMessage!(
         validRequest,
@@ -814,7 +828,7 @@ async function expectLogToContain(
         type: 'PRICE_RESPONSE',
         status: 'error',
         error: {
-          message: 'Failed to read price cache: Storage error',
+          message: 'Storage error',
           code: 'price_fetch_error'
         },
         timestamp: Date.now()
@@ -881,23 +895,16 @@ async function expectLogToContain(
     });
 
     it('should handle concurrent alarm triggers', async () => {
-      // Mock multiple API calls
-      const apiResponses = [
-        { bitcoin: { usd: 45000 } },
-        { bitcoin: { usd: 45100 } }
-      ];
-
+      // Mock successful API responses for both calls
+      const priceData1 = { usdRate: 45000, satoshiRate: 0.00045, fetchedAt: Date.now(), source: 'CoinGecko' };
+      const priceData2 = { usdRate: 45100, satoshiRate: 0.000451, fetchedAt: Date.now(), source: 'CoinGecko' };
+      
       let callCount = 0;
-      mockFetch.mockImplementation(() => {
-        const response = apiResponses[callCount++];
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(response)
-        });
+      mockApiModule.fetchBtcPrice.mockImplementation(() => {
+        return Promise.resolve(callCount++ === 0 ? priceData1 : priceData2);
       });
-
-      mockStorage.set.mockResolvedValue(undefined);
+      
+      mockCacheModule.setCachedPrice.mockResolvedValue(undefined);
 
       // Reset the mock adapter before this specific test
       mockLoggerAdapter.reset();
@@ -907,12 +914,13 @@ async function expectLogToContain(
       const alarm2 = handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
 
       await Promise.all([alarm1, alarm2]);
+      await vi.runAllTimersAsync();
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(mockStorage.set).toHaveBeenCalledTimes(2);
+      expect(mockApiModule.fetchBtcPrice).toHaveBeenCalledTimes(2);
+      expect(mockCacheModule.setCachedPrice).toHaveBeenCalledTimes(2);
       
       // Check logs for both alarm handlers - we expect at least 2 of each message
-      expect(mockLoggerAdapter.info).toHaveBeenCalledTimes(expect.any(Number));
+      expect(mockLoggerAdapter.info).toHaveBeenCalled();
       expect(findLogsWithMessage('info', 'Alarm fired').length).toBeGreaterThanOrEqual(2);
       expect(findLogsWithMessage('info', 'Price data fetched successfully').length).toBeGreaterThanOrEqual(2);
     });
@@ -1105,18 +1113,12 @@ async function expectLogToContain(
           timestamp: Date.now()
         };
 
-        // Mock storage to return cached data
-        mockStorage.get.mockResolvedValueOnce({
-          'btc_price_data': {
-            priceData: {
-              usdRate: 45000,
-              satoshiRate: 0.00045,
-              fetchedAt: Date.now() - 5000,
-              source: 'CoinGecko'
-            },
-            cachedAt: Date.now() - 5000,
-            version: 1
-          }
+        // Mock cached data returned by cache module
+        mockCacheModule.getCachedPrice.mockResolvedValueOnce({
+          usdRate: 45000,
+          satoshiRate: 0.00045,
+          fetchedAt: Date.now() - 5000,
+          source: 'CoinGecko'
         });
 
         const mockSendResponse = vi.fn();

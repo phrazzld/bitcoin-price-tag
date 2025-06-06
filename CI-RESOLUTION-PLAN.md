@@ -1,209 +1,222 @@
-# CI Resolution Plan
+# CI Failure Resolution Plan
 
-**Generated:** 2025-06-05T20:09:00Z  
-**Based on:** [CI-FAILURE-SUMMARY.md](CI-FAILURE-SUMMARY.md)  
-**Priority:** MEDIUM - TypeScript and test logic issues
+**Target:** Fix 9 failing test files and achieve 100% CI success  
+**Priority:** High (blocking PR merge)  
+**Estimated Effort:** 2-3 development cycles
 
-## Root Cause Summary
+## Resolution Strategy Overview
 
-✅ **Performance.now issue has been RESOLVED** - All Performance.now mocking incompatibilities fixed.
+This plan addresses CI failures through systematic improvements to test infrastructure, mock configurations, and async handling patterns. The approach prioritizes high-impact fixes that resolve multiple related failures.
 
-The CI pipeline is now failing due to:
-1. **TypeScript strict type checking errors** (5 specific locations)  
-2. **Service worker test logic failures** (spy expectations and module definitions)
+## Phase 1: Core Infrastructure Fixes (High Priority)
 
-## Resolution Strategy
+### 1.1 Chrome API Mock Standardization
+**Target Files:** All integration tests, service worker tests  
+**Problem:** Inconsistent Chrome API implementations causing communication failures
 
-### Phase 1: Fix TypeScript Type Annotations (Estimated: 20-30 minutes)
+**Actions:**
+- Standardize `ChromeRuntimeHarness` across all test environments
+- Implement complete Chrome storage API mock with proper async behavior
+- Add comprehensive Chrome runtime message handling with proper sendResponse patterns
+- Create centralized Chrome API mock factory for consistent behavior
 
-#### 1.1 Fix Integration Test Type Issues
-**Priority:** HIGH  
-**Estimated Time:** 10 minutes
+**Success Criteria:**
+- All integration tests pass Chrome API communication
+- Service worker message handling works consistently
+- No "Receiving end does not exist" errors
 
-**File:** `tests/integration/service-worker-persistence.test.ts:161:43`
-```typescript
-// Current (error): Parameter 'keys' implicitly has an 'any' type
-// Fix: Add explicit type annotation
-const mockKeys = (keys: string[]) => { /* implementation */ };
-```
+### 1.2 Timer and Async Operation Management
+**Target Files:** `api-retry.test.ts`, `messaging.integration.test.ts`  
+**Problem:** Race conditions and improper timer handling in async operations
 
-#### 1.2 Fix Playwright Fixture Type Issues  
-**Priority:** HIGH  
-**Estimated Time:** 10 minutes
+**Actions:**
+- Implement comprehensive timer utilities with CI-aware delays
+- Add proper async/await patterns for all timer-dependent operations
+- Create helper functions for timer advancement in retry scenarios
+- Ensure proper cleanup of all pending timers between tests
 
-**File:** `tests/playwright/fixtures/extension.ts`
-```typescript
-// Lines 44,27 & 44,38 - Add explicit types
-const fixture = async ({ context }: { context: BrowserContext }, use: (value: any) => Promise<void>) => {
-  // Line 47,19 - Add worker type
-  const worker: Worker = await context.serviceWorkers[0];
-};
-```
+**Success Criteria:**
+- API retry tests pass consistently with proper timing
+- No timer leakage between test executions
+- Async operations complete reliably in CI environment
 
-#### 1.3 Remove Unused Variables
-**Priority:** MEDIUM  
-**Estimated Time:** 5 minutes
+### 1.3 Test Isolation and Cleanup Enhancement
+**Target Files:** All test files  
+**Problem:** Cross-contamination between tests causing flaky behavior
 
-**File:** `tests/playwright/specs/edge-cases.test.ts:166:11`
-```typescript
-// Current: '_storagePromise' is declared but never used
-// Fix: Remove unused variable or use it appropriately
-```
+**Actions:**
+- Implement comprehensive `beforeEach`/`afterEach` cleanup in all test files
+- Add global state reset utilities for complete test isolation
+- Create mock factory reset patterns to prevent state persistence
+- Implement test execution order independence validation
 
-### Phase 2: Fix Service Worker Test Logic (Estimated: 30-45 minutes)
+**Success Criteria:**
+- Tests pass in any execution order
+- No state persistence between test files
+- Consistent behavior in both local and CI environments
 
-#### 2.1 Fix Service Worker Index Test Spy Expectations
-**Priority:** HIGH  
-**Estimated Time:** 20-25 minutes
+## Phase 2: Service Worker Test Fixes (High Priority)
 
-**File:** `src/service-worker/index.test.ts` (10 failed tests)
+### 2.1 API Error Handling Improvements
+**Target File:** `src/service-worker/api-error.test.ts`
 
-**Common Issues:**
-- Spy functions not being called as expected
-- Alarm creation expectations not met
-- Chrome API mocking configuration
+**Specific Issues:**
+- HTTP error response mock configuration
+- JSON parsing error simulation
+- Network error handling patterns
+- Error serialization in Chrome message context
 
-**Resolution Approach:**
-1. Review each failing test's spy expectations
-2. Verify Chrome API mocks are properly configured
-3. Ensure test setup matches actual implementation behavior
+**Resolution:**
+- Enhance mock fetch responses with complete Headers and Response interface
+- Improve error object serialization for Chrome messaging
+- Add proper async error handling patterns
+- Implement comprehensive error validation scenarios
 
-#### 2.2 Fix Cache Test Spy Mismatch
-**Priority:** MEDIUM  
-**Estimated Time:** 10 minutes
+### 2.2 API Retry Logic Stabilization  
+**Target File:** `src/service-worker/api-retry.test.ts`
 
-**File:** `src/service-worker/cache.test.ts` (1 failed test)
+**Specific Issues:**
+- Exponential backoff timer advancement
+- Network timeout simulation
+- Retry exhaustion scenarios
+- Progressive delay validation
 
-**Issue:** Spy call expectations not matching actual calls
-**Resolution:** Align test expectations with actual function behavior
+**Resolution:**
+- Implement robust timer advancement helpers for retry scenarios
+- Add proper network timeout simulation with realistic delays
+- Enhance retry exhaustion testing with comprehensive cleanup
+- Create deterministic delay validation patterns
 
-#### 2.3 Fix Integration Test Module Definitions
-**Priority:** HIGH  
-**Estimated Time:** 15 minutes
+### 2.3 Service Worker Index Test Fixes
+**Target File:** `src/service-worker/index.test.ts`
 
-**File:** `tests/integration/service-worker-persistence.test.ts` (11 failed tests)
+**Specific Issues:**
+- Event listener registration validation
+- Message handling in service worker context
+- Alarm management and persistence
+- Chrome API integration points
 
-**Issue:** "apiModule is not defined" errors
-**Resolution:** 
-1. Check module import statements
-2. Verify test setup and mocking configuration  
-3. Ensure proper module loading in test environment
+**Resolution:**
+- Implement complete service worker event simulation
+- Add proper Chrome API event handling mocks
+- Enhance alarm management testing with realistic timing
+- Create comprehensive service worker lifecycle testing
 
-### Phase 3: Validation and Testing (Estimated: 15-20 minutes)
+## Phase 3: Integration Test Resolution (Medium Priority)
 
-#### 3.1 Local TypeScript Validation
-**Priority:** HIGH  
-**Estimated Time:** 5 minutes
+### 3.1 Messaging Integration Stabilization
+**Target File:** `tests/integration/messaging.integration.test.ts`
 
-```bash
-# Verify TypeScript compilation passes
-pnpm run typecheck
-```
+**Specific Issues:**
+- Service Worker ↔ Content Script communication
+- Cache hit/miss scenarios
+- Storage error handling
+- Timeout management
 
-#### 3.2 Service Worker Test Validation  
-**Priority:** HIGH  
-**Estimated Time:** 10 minutes
+**Resolution:**
+- Implement complete bi-directional message flow testing
+- Add robust cache state management with proper TTL handling
+- Enhance storage error simulation and recovery testing
+- Create deterministic timeout scenarios with proper cleanup
 
-```bash
-# Test specific failing files
-pnpm run test src/service-worker/index.test.ts
-pnpm run test src/service-worker/cache.test.ts
-pnpm run test tests/integration/service-worker-persistence.test.ts
-```
+### 3.2 Promise-Based Messaging Fixes
+**Target File:** `tests/integration/messaging-promise.test.ts`
 
-#### 3.3 Full Test Suite Validation
-**Priority:** MEDIUM  
-**Estimated Time:** 5 minutes
+**Specific Issues:**
+- Promise resolution timing
+- Error propagation through message chain
+- Async operation coordination
 
-```bash
-# Ensure no regressions introduced
-pnpm run test --run
-```
+**Resolution:**
+- Implement proper promise chain testing with deterministic timing
+- Add comprehensive error propagation validation
+- Enhance async operation coordination with proper sequencing
 
-### Phase 4: CI Pipeline Verification (Estimated: 10 minutes)
+### 3.3 Simple Messaging Validation
+**Target File:** `tests/integration/messaging-simple.test.ts`
 
-#### 4.1 Push and Monitor
-**Priority:** HIGH  
-**Estimated Time:** 10 minutes
+**Specific Issues:**
+- Basic message format validation
+- Response structure verification
+- Error handling patterns
 
-1. Commit TypeScript and test logic fixes
-2. Push to trigger CI pipeline
-3. Monitor for complete CI success
+**Resolution:**
+- Implement complete message validation scenarios
+- Add comprehensive response structure testing
+- Enhance error handling pattern validation
 
-## Implementation Details
+## Phase 4: End-to-End Test Fixes (Lower Priority)
 
-### Specific Files to Modify
+### 4.1 Basic Functionality Testing
+**Target File:** `tests/playwright/specs/basic.test.ts`
 
-1. **TypeScript Issues:**
-   - `tests/integration/service-worker-persistence.test.ts` (line 161)
-   - `tests/playwright/fixtures/extension.ts` (lines 44, 47)
-   - `tests/playwright/specs/edge-cases.test.ts` (line 166)
+**Actions:**
+- Ensure extension loading works reliably
+- Validate DOM interaction patterns
+- Test price annotation functionality
 
-2. **Service Worker Test Logic:**
-   - `src/service-worker/index.test.ts` (spy expectations)
-   - `src/service-worker/cache.test.ts` (spy call mismatch)
-   - `tests/integration/service-worker-persistence.test.ts` (module definitions)
+### 4.2 Lifecycle Management Testing  
+**Target File:** `tests/playwright/specs/lifecycle.test.ts`
 
-### TypeScript Fix Patterns
+**Actions:**
+- Test service worker persistence
+- Validate extension state management
+- Ensure proper cleanup on page navigation
 
-```typescript
-// Explicit parameter typing
-function handler(keys: string[]) { }
+## Implementation Timeline
 
-// Playwright fixture typing
-const fixture = async (
-  { context }: { context: BrowserContext }, 
-  use: (value: Extension) => Promise<void>
-) => { };
+### Week 1: Infrastructure (Phase 1)
+- Day 1-2: Chrome API mock standardization
+- Day 3-4: Timer and async management improvements
+- Day 5: Test isolation enhancement and validation
 
-// Remove or use unused variables
-// const _storagePromise = ... // Remove if truly unused
-```
+### Week 2: Service Worker Tests (Phase 2)
+- Day 1-2: API error handling and retry logic fixes
+- Day 3-4: Service worker index test resolution
+- Day 5: Integration testing and validation
 
-## Risk Assessment
+### Week 3: Integration & E2E (Phases 3-4)
+- Day 1-3: Integration test fixes
+- Day 4-5: End-to-end test resolution and final validation
 
-### Low Risk
-- **Scope:** TypeScript annotations and test logic alignment
-- **Approach:** Standard TypeScript patterns and test fixes
-- **Impact:** No production code changes required
+## Risk Mitigation
 
-### Medium Risk
-- **Service Worker Tests:** May require deeper analysis of Chrome API mocking
-- **Integration Tests:** Module loading issues might indicate broader problems
+### High Risk Areas
+- **Chrome API Compatibility:** Test against multiple Chrome API versions
+- **Timing Dependencies:** Implement robust timing patterns with fallbacks
+- **CI Environment Differences:** Add CI-specific debugging and logging
 
-### Mitigation Strategies
-- **Incremental:** Fix TypeScript issues first, then test logic
-- **Validation:** Test each fix individually before moving to next
-- **Rollback:** Ready to revert if new issues emerge
+### Contingency Plans
+- **Fallback Implementations:** Provide alternative mock strategies for flaky components
+- **Incremental Rollout:** Fix and validate test files individually before batch integration
+- **Monitoring Enhancement:** Add comprehensive test execution logging for debugging
 
-## Success Criteria
+## Success Metrics
 
-### Phase 1 & 2 Success
-- [ ] TypeScript compilation passes (all 5 errors resolved)
-- [ ] Service worker index tests pass (10 currently failing)
-- [ ] Cache tests pass (1 currently failing)  
-- [ ] Integration tests pass (11 currently failing)
+### Primary Goals
+- ✅ 0/9 failing test files (100% success rate)
+- ✅ All CI checks passing consistently
+- ✅ Test execution time under 5 minutes total
 
-### CI Pipeline Success (Phase 4)
-- [ ] Type Check job passes
-- [ ] Test (Node 18) job passes
-- [ ] Test (Node 20) job passes
-- [ ] CI Success job passes
-- [ ] No regression in other CI jobs
+### Secondary Goals
+- ✅ Test flakiness rate < 1%
+- ✅ Consistent local vs CI behavior
+- ✅ Comprehensive test coverage maintained
 
-## Post-Resolution Tasks
+## Validation Process
 
-1. **Documentation:** Update TypeScript configuration guidelines
-2. **Best Practices:** Document service worker testing patterns
-3. **Review:** Add type annotation requirements to code review checklist
+### Per-Phase Validation
+1. Run affected test files individually
+2. Run complete test suite for regression detection
+3. Execute CI pipeline validation
+4. Monitor for 24-48 hours for stability
 
-## Expected Timeline
-
-- **Total Estimated Time:** 75-115 minutes
-- **Critical Path:** Service worker test logic fixes (Phase 2)
-- **Validation:** Incremental testing after each phase
-- **Completion Target:** Full CI pipeline success
+### Final Validation
+1. Complete CI pipeline success on multiple commits
+2. Parallel test execution validation
+3. Cross-platform compatibility verification (if applicable)
+4. Performance impact assessment
 
 ---
 
-*Note: This plan builds on the successful resolution of the Performance.now issue and focuses on the remaining TypeScript and test logic problems that are preventing CI success.*
+*This resolution plan provides a systematic approach to addressing all identified CI failures with clear priorities, timelines, and success criteria.*

@@ -22,20 +22,20 @@
   - [x] Timer management patterns unified (33/33 total API tests ✅)
 
 ### T039: Fix Service Worker Index Event Handling
-- **Status**: ❌ Pending 
+- **Status**: ✅ Completed
 - **Priority**: High
 - **Description**: Resolve service worker event listener and message handling test failures
 - **Files**: `src/service-worker/index.test.ts`
-- **Issues**:
+- **Issues**: 
   - Event listener registration validation failing
   - Message handling promise patterns inconsistent
   - Alarm management simulation incomplete
   - Chrome API integration mocks inadequate
 - **Acceptance Criteria**:
-  - [ ] Event listener tests pass consistently
-  - [ ] Message handling validation works
-  - [ ] Alarm management tests execute reliably
-  - [ ] Chrome API mocks complete and consistent
+  - [x] Event listener tests pass consistently
+  - [x] Message handling validation works
+  - [x] Alarm management tests execute reliably
+  - [x] Chrome API mocks complete and consistent
 
 ### T040: Fix Integration Test Message Communication
 - **Status**: ❌ Pending

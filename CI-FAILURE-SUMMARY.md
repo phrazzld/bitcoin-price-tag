@@ -1,100 +1,126 @@
-# CI Failure Summary
+# CI Failure Analysis Summary
 
-**Generated:** 2025-06-05T20:08:00Z  
-**CI Run:** [#15476157923](https://github.com/phrazzld/bitcoin-price-tag/actions/runs/15476157923)  
-**Branch:** `robust-content-script-initialization`  
-**Commit:** `76e46c8`
+**CI Run:** 15480233986  
+**PR:** #26 (robust-content-script-initialization)  
+**Status:** 3/7 checks failing  
+**Analysis Date:** 2025-01-06
 
-## Current Issues Identified
+## Overview
 
-### ✅ **RESOLVED: Performance.now readonly property error**
-**Status:** FIXED - The original Performance.now mocking issue has been completely resolved.
+The CI pipeline shows significant test failures across multiple test suites, with 9 failed test files out of 36 total test files (27 passing). The failures are concentrated in service worker tests, integration tests, and API-related components.
 
-### 🟡 **PRIMARY ISSUE: TypeScript Strict Type Errors**
+## Failed Test Files
 
-**Error Pattern:**
-- Parameter implicitly has 'any' type
-- Unused variable declarations
-- Missing type annotations
+### Service Worker Tests (4/6 failing)
+1. **src/service-worker/api-error.test.ts** - API error handling validation
+2. **src/service-worker/api-fetch.test.ts** - Core API fetching logic  
+3. **src/service-worker/api-retry.test.ts** - Retry mechanism and resilience
+4. **src/service-worker/index.test.ts** - Service worker event handling
 
-**Specific Errors:**
-1. `tests/integration/service-worker-persistence.test.ts(161,43)` - Parameter 'keys' implicitly has 'any' type
-2. `tests/playwright/fixtures/extension.ts(44,27)` - Binding element 'context' implicitly has 'any' type  
-3. `tests/playwright/fixtures/extension.ts(44,38)` - Parameter 'use' implicitly has 'any' type
-4. `tests/playwright/fixtures/extension.ts(47,19)` - Parameter 'worker' implicitly has 'any' type
-5. `tests/playwright/specs/edge-cases.test.ts(166,11)` - '_storagePromise' is declared but never used
+### Integration Tests (3/4 failing)
+1. **tests/integration/messaging.integration.test.ts** - Service Worker ↔ Content Script communication
+2. **tests/integration/messaging-promise.test.ts** - Promise-based messaging patterns
+3. **tests/integration/messaging-simple.test.ts** - Basic messaging functionality
 
-### 🔴 **SECONDARY ISSUE: Service Worker Test Logic Failures**
+### Playwright E2E Tests (2/5 failing)
+1. **tests/playwright/specs/basic.test.ts** - Basic extension functionality
+2. **tests/playwright/specs/lifecycle.test.ts** - Extension lifecycle management
 
-**Affected Files:**
-- `src/service-worker/index.test.ts` (10/22 tests failed) - Spy expectations not met
-- `src/service-worker/cache.test.ts` (1/36 tests failed) - Spy call mismatch
-- `tests/integration/service-worker-persistence.test.ts` (11/11 tests failed) - "apiModule is not defined"
+## Root Cause Analysis
 
-## Job Status Overview
+### 1. Chrome API Mocking Issues
+- **Problem:** Inconsistent Chrome API mock implementations across test environments
+- **Evidence:** Integration tests failing with "Receiving end does not exist" errors
+- **Impact:** Service Worker ↔ Content Script communication broken
 
-| Job Name | Status | Duration | Details |
-|----------|--------|----------|---------|
-| Detect Changes | ✅ PASS | 4s | File change detection working |
-| Lint | ✅ PASS | 26s | ESLint passing cleanly |
-| Type Check | ❌ FAIL | 19s | 5 TypeScript strict type errors |
-| Build | ✅ PASS | 13s | Webpack build successful |
-| Test (Node 18) | ❌ FAIL | 1m 59s | Service worker test logic issues |
-| Test (Node 20) | ❌ FAIL | 1m 55s | Service worker test logic issues |
-| CI Success | ❌ FAIL | 4s | Failed due to dependent job failures |
+### 2. Timer and Async Management
+- **Problem:** Fake timer handling in retry logic and timeout scenarios
+- **Evidence:** API retry tests failing on timer advancement and async operations
+- **Impact:** Race conditions in test execution
 
-## Detailed Failure Analysis
+### 3. Test Infrastructure Dependencies
+- **Problem:** Cross-contamination between test files and inadequate cleanup
+- **Evidence:** Tests pass individually but fail in CI batch execution
+- **Impact:** Flaky test behavior and unreliable CI results
 
-### 1. TypeScript Configuration Issues
+### 4. Storage Mock Configuration
+- **Problem:** Chrome storage API mocking inconsistencies
+- **Evidence:** Cache-related test failures in messaging integration
+- **Impact:** Price caching and data persistence tests unreliable
 
-**Root Cause:** Strict type checking is enforcing explicit type annotations
-**Impact:** Build pipeline failing on type check step
-**Scope:** Test files and Playwright fixtures
+## Failure Patterns
 
-### 2. Service Worker Test Failures
+### Service Worker Context
+- Event listener registration failures
+- Message handling promise rejections
+- Cache read/write operation timeouts
+- API error handling edge cases
 
-**Root Cause:** Test expectations not aligning with actual function behavior
-**Patterns:**
-- Spy functions not being called as expected
-- Module import/definition issues in integration tests  
-- Chrome API mocking not properly configured
+### Integration Context  
+- Chrome runtime communication breakdowns
+- Storage mock state persistence issues
+- Timeout handling in async operations
+- Message validation and response formatting
 
-### Impact Assessment
+### End-to-End Context
+- Extension loading and initialization
+- DOM interaction and price annotation
+- Service worker persistence across page loads
 
-**Severity:** MEDIUM - Infrastructure issues preventing CI success
-**Scope:** TypeScript configuration and service worker test logic
-**Regression Risk:** LOW - Core functionality works, tests need alignment
+## Test Environment Issues
 
-## Notable Progress
+### CI-Specific Problems
+- **Timing Sensitivity:** Tests that pass locally fail in CI due to different execution speeds
+- **Resource Constraints:** Limited memory/CPU affecting async operation completion
+- **Isolation Failures:** Test state bleeding between sequential test executions
 
-✅ **Major Infrastructure Fixed:**
-- **Performance.now readonly property error completely resolved**
-- All content-script tests passing (99/99)
-- DOM observer functionality working correctly
-- Test infrastructure now Node.js 18+ compatible
+### Mock Configuration
+- **Chrome API Completeness:** Missing or incomplete Chrome API method implementations
+- **Async Behavior:** Mocked promises not resolving in expected order
+- **Global State:** Improper cleanup leaving global state modifications
 
-✅ **Production Code Quality:**
-- Lint checks passing (0 errors)
-- Build process working correctly  
-- Package management stable
-- Core functionality intact
+## Dependencies and Interconnections
 
-✅ **CI Infrastructure:**
-- Smart job skipping working
-- Caching optimizations active
-- File change detection operational
-- Monitoring and alerting functional
+### Critical Test Dependencies
+1. **Chrome Runtime Harness** (`tests/harness/ChromeRuntimeHarness.ts`)
+   - Used by all integration tests
+   - Potential single point of failure
+
+2. **API Mocks** (`tests/utils/api-mocks.ts`)
+   - Shared across service worker tests
+   - Timer management utilities
+
+3. **Storage Mocks** (`tests/mocks/storage.ts`)
+   - Used by integration and service worker tests
+   - State persistence between operations
+
+### Test Execution Order Impact
+- Service worker tests may affect subsequent integration tests
+- Storage mock state persisting between test files
+- Timer state not properly reset between test suites
+
+## Severity Assessment
+
+### High Severity (Blocking Release)
+- Service Worker communication failures (core functionality)
+- API retry logic failures (resilience features)
+- Basic extension functionality failures (core user experience)
+
+### Medium Severity (Quality Concerns)
+- Integration test flakiness (CI reliability)
+- Lifecycle management issues (edge case handling)
+
+### Low Severity (Infrastructure)
+- Test cleanup and isolation improvements
+- Mock configuration refinements
 
 ## Next Steps Required
 
-1. **Fix TypeScript strict type annotations** (5 specific locations)
-2. **Resolve service worker test expectations** (spy mocking issues)
-3. **Fix integration test module definitions** (apiModule undefined errors)
-4. **Validate complete test suite** after fixes
+1. **Immediate Fixes:** Address Chrome API mock configuration and timer management
+2. **Infrastructure Improvements:** Enhance test isolation and cleanup procedures  
+3. **Systematic Validation:** Implement comprehensive test environment validation
+4. **Monitoring Setup:** Add CI-specific logging and debugging capabilities
 
-## Test Environment Details
+---
 
-- **Node Versions:** 18.20.8, 20.x
-- **Test Framework:** Vitest 3.1.3
-- **TypeScript:** Strict mode with implicit any detection
-- **Affected Test Categories:** Integration tests, service worker functionality
+*This analysis provides the foundation for developing targeted resolution strategies for each category of failures.*
