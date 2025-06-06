@@ -34,7 +34,6 @@ import {
   createMockFetchSequence,
   expectApiCall,
   advanceTimersForRetry,
-  runAllTimers,
   TEST_PRICES,
   API_URL
 } from '../../tests/utils/api-mocks';
@@ -225,35 +224,33 @@ describe('API retry logic', () => {
       );
       global.fetch = mockFetch;
 
-      try {
-        // Start the test
-        const fetchPromise = fetchBtcPrice(mockLogger);
-        
-        // Fast-forward through all retries
-        await runAllTimers();
-        
-        try {
-          await fetchPromise;
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(ApiError);
-          expect((error as ApiError).code).toBe(ApiErrorCode.HTTP_ERROR);
-          // Check that mockFetch was called at least once
-          expect(mockFetch).toHaveBeenCalled();
-          // Check that error was logged
-          expect(mockLogger.error).toHaveBeenCalled();
-        }
-      } finally {
-        // Ensure all pending operations are cleaned up
-        try {
-          if (vi.getMockedSystemTime() !== null) {
-            await vi.runAllTimersAsync();
-          }
-        } catch (_error) {
-          // Timer cleanup failed, continue
-        }
-        await new Promise(resolve => setImmediate(resolve));
-      }
+      // Start the API call
+      const fetchPromise = fetchBtcPrice(mockLogger);
+      
+      // Advance through each retry step: 1000ms + 2000ms + 4000ms
+      await advanceTimersForRetry(1000); // First retry
+      await advanceTimersForRetry(2000); // Second retry  
+      await advanceTimersForRetry(4000); // Final attempt
+      
+      // Should throw after exhausting retries
+      await expect(fetchPromise).rejects.toThrow(ApiError);
+      await expect(fetchPromise).rejects.toMatchObject({
+        code: ApiErrorCode.HTTP_ERROR,
+        statusCode: 503
+      });
+      
+      // Verify all retry attempts were made (initial + 3 retries = 4 total)
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+      
+      // Verify retry exhaustion was logged
+      expect(mockLogger.error).toHaveBeenCalledWith('API call failed after max retries', 
+        expect.objectContaining({
+          attempts: 3,
+          url: API_URL,
+          errorCode: ApiErrorCode.HTTP_ERROR,
+          httpStatus: 503
+        }) as Record<string, unknown>
+      );
     });
 
     it('should throw ApiError for network errors after exhausting retries', async () => {
@@ -261,130 +258,106 @@ describe('API retry logic', () => {
       const mockFetch = vi.fn().mockRejectedValue(new TypeError('Network failure'));
       global.fetch = mockFetch;
 
-      try {
-        // Start the API call
-        const fetchPromise = fetchBtcPrice(mockLogger);
-        
-        // Fast-forward through all retries
-        await runAllTimers();
-        
-        try {
-          await fetchPromise;
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(ApiError);
-          expect((error as ApiError).code).toBe(ApiErrorCode.NETWORK_ERROR);
-          expect((error as ApiError).message).toBe('Network error: Network failure');
-          // Check that mockFetch was called at least once
-          expect(mockFetch).toHaveBeenCalled();
-          // Check that error was logged
-          expect(mockLogger.error).toHaveBeenCalled();
-        }
-      } finally {
-        // Ensure all pending operations are cleaned up
-        try {
-          if (vi.getMockedSystemTime() !== null) {
-            await vi.runAllTimersAsync();
-          }
-        } catch (_error) {
-          // Timer cleanup failed, continue
-        }
-        await new Promise(resolve => setImmediate(resolve));
-      }
+      // Start the API call
+      const fetchPromise = fetchBtcPrice(mockLogger);
+      
+      // Advance through each retry step: 1000ms + 2000ms + 4000ms
+      await advanceTimersForRetry(1000); // First retry
+      await advanceTimersForRetry(2000); // Second retry
+      await advanceTimersForRetry(4000); // Final attempt
+      
+      // Should throw after exhausting retries
+      await expect(fetchPromise).rejects.toThrow(ApiError);
+      await expect(fetchPromise).rejects.toMatchObject({
+        code: ApiErrorCode.NETWORK_ERROR,
+        message: 'Network error: Network failure'
+      });
+      
+      // Verify all retry attempts were made (initial + 3 retries = 4 total)
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+      
+      // Verify retry exhaustion was logged
+      expect(mockLogger.error).toHaveBeenCalledWith('API call failed after max retries', 
+        expect.objectContaining({
+          attempts: 3,
+          url: API_URL,
+          errorCode: ApiErrorCode.NETWORK_ERROR
+        }) as Record<string, unknown>
+      );
     });
   });
 
   describe('exponential backoff', () => {
     it('should use exponential backoff for retries', async () => {
-      // Store original setTimeout before mocking
-      const originalSetTimeout = global.setTimeout;
+      // All attempts fail with 503
+      const mockFetch = vi.fn().mockResolvedValue(
+        createFailedHttpResponse(503, 'Service Unavailable')
+      );
+      global.fetch = mockFetch;
+
+      // Start the API call
+      const fetchPromise = fetchBtcPrice(mockLogger);
       
-      // Spy on setTimeout to capture delay values
-      const timeoutSpy = vi.spyOn(global, 'setTimeout');
-      const delays: number[] = [];
+      // Advance through each retry step to verify exponential backoff
+      await advanceTimersForRetry(1000); // First retry delay: 1000ms * 2^0 = 1000ms
+      await advanceTimersForRetry(2000); // Second retry delay: 1000ms * 2^1 = 2000ms
+      await advanceTimersForRetry(4000); // Third retry delay: 1000ms * 2^2 = 4000ms
       
-      try {
-        // Custom mock implementation to track delays but still use original setTimeout
-        timeoutSpy.mockImplementation((callback: () => void, delay?: number) => {
-          delays.push(delay || 0);
-          // Use the original setTimeout to avoid recursion
-          return originalSetTimeout(callback, delay);
-        });
-
-        // All attempts fail
-        const mockFetch = vi.fn().mockResolvedValue(
-          createFailedHttpResponse(503, 'Service Unavailable')
-        );
-        global.fetch = mockFetch;
-
-        // Start the API call
-        const promise = fetchBtcPrice(mockLogger);
-        
-        // Advance timer for all retries
-        await runAllTimers();
-        
-        try {
-          await promise;
-          expect.fail('Should have thrown');
-        } catch (_error) {
-          // Expected to throw
-        }
-
-        // Verify exponential backoff: 1000ms, 2000ms
-        expect(delays.slice(0, 2)).toEqual([1000, 2000]);
-      } finally {
-        // Restore the timeout spy and ensure cleanup
-        timeoutSpy.mockRestore();
-        try {
-          if (vi.getMockedSystemTime() !== null) {
-            await vi.runAllTimersAsync();
-          }
-        } catch (_error) {
-          // Timer cleanup failed, continue
-        }
-        await new Promise(resolve => setImmediate(resolve));
-      }
+      // Should throw after exhausting retries
+      await expect(fetchPromise).rejects.toThrow(ApiError);
+      
+      // Verify retry logging shows exponential backoff delays
+      expect(mockLogger.info).toHaveBeenCalledWith('Retrying API call', 
+        expect.objectContaining({
+          attempt: 2,
+          delayMs: 1000
+        }) as Record<string, unknown>
+      );
+      expect(mockLogger.info).toHaveBeenCalledWith('Retrying API call', 
+        expect.objectContaining({
+          attempt: 3,
+          delayMs: 2000
+        }) as Record<string, unknown>
+      );
+      expect(mockLogger.info).toHaveBeenCalledWith('Retrying API call', 
+        expect.objectContaining({
+          attempt: 4,
+          delayMs: 4000
+        }) as Record<string, unknown>
+      );
     });
   });
 
   describe('network timeout handling', () => {
     it('should handle network timeout errors with retries', async () => {
-      try {
-        // Create a network timeout error with setTimeout
-        global.fetch = vi.fn().mockImplementation(() => {
-          return new Promise((_, reject) => {
-            const error = new TypeError('Network request failed: timeout');
-            setTimeout(() => reject(error), 10);
-          });
-        });
-        
-        // Start the API call
-        const fetchPromise = fetchBtcPrice(mockLogger);
-        
-        // Advance timer to trigger the error and handle retries
-        await vi.advanceTimersByTimeAsync(10);
-        await runAllTimers();
-        
-        try {
-          await fetchPromise;
-          expect.fail('Should have thrown');
-        } catch (error) {
-          expect(error).toBeInstanceOf(ApiError);
-          expect((error as ApiError).code).toBe(ApiErrorCode.NETWORK_ERROR);
-          expect((error as ApiError).message).toContain('Network error:');
-          expect((error as ApiError).message).toContain('timeout');
-        }
-      } finally {
-        // Ensure all pending operations are cleaned up
-        try {
-          if (vi.getMockedSystemTime() !== null) {
-            await vi.runAllTimersAsync();
-          }
-        } catch (_error) {
-          // Timer cleanup failed, continue
-        }
-        await new Promise(resolve => setImmediate(resolve));
-      }
+      // Create a network timeout error that rejects immediately
+      const mockFetch = vi.fn().mockRejectedValue(
+        new TypeError('Network request failed: timeout')
+      );
+      global.fetch = mockFetch;
+      
+      // Start the API call
+      const fetchPromise = fetchBtcPrice(mockLogger);
+      
+      // Advance through each retry step for network errors
+      await advanceTimersForRetry(1000); // First retry
+      await advanceTimersForRetry(2000); // Second retry
+      await advanceTimersForRetry(4000); // Final attempt
+      
+      // Should throw after exhausting retries
+      await expect(fetchPromise).rejects.toThrow(ApiError);
+      await expect(fetchPromise).rejects.toMatchObject({
+        code: ApiErrorCode.NETWORK_ERROR,
+        message: expect.stringContaining('Network error:')
+      });
+      
+      // Verify all retry attempts were made (initial + 3 retries = 4 total)
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+      
+      // Verify the error message contains timeout info
+      const rejectedPromise = fetchPromise.catch(error => error);
+      const error = await rejectedPromise;
+      expect(error.message).toContain('timeout');
     });
   });
 });

@@ -33,7 +33,7 @@ import {
   cleanupApiTest,
   createMockFetchSequence,
   expectApiCall,
-  runAllTimers,
+  advanceTimersForRetry,
   API_URL
 } from '../../tests/utils/api-mocks';
 
@@ -276,14 +276,23 @@ describe('API error handling', () => {
       const mockFetch = vi.fn().mockRejectedValue(domException);
       global.fetch = mockFetch;
       
+      // Start the API call
       const fetchPromise = fetchBtcPrice(mockLogger);
-      await runAllTimers();
       
+      // DOMException errors are retryable, so advance through retry delays
+      await advanceTimersForRetry(1000); // First retry
+      await advanceTimersForRetry(2000); // Second retry
+      await advanceTimersForRetry(4000); // Final attempt
+      
+      // Should throw after exhausting retries
       await expect(fetchPromise).rejects.toThrow(ApiError);
       await expect(fetchPromise).rejects.toMatchObject({
         code: ApiErrorCode.NETWORK_ERROR,
         message: expect.stringContaining('Network error:')
       });
+      
+      // Verify all retry attempts were made (initial + 3 retries = 4 total)
+      expect(mockFetch).toHaveBeenCalledTimes(4);
       
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Error fetching BTC price', 
