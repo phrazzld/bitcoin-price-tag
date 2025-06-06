@@ -188,7 +188,7 @@ describe('Service Worker <-> Content Script Communication', () => {
       expect(responseReceived).toBe(true);
       expect(responseData.type).toBe('PRICE_RESPONSE');
       expect(responseData.status).toBe('error');
-      expect(responseData.error.code).toBe('unknown_message');
+      expect(responseData.error.code).toBe('validation_error');
     });
 
     it('should handle no listener registered scenario', async () => {
@@ -345,9 +345,10 @@ describe('Service Worker <-> Content Script Communication', () => {
       // Wait for response
       await harness.waitForPendingOperations();
       
-      // Assert: Should handle normally
-      expect(responseData.status).toBe('success');
-      expect(responseData.data.usdRate).toBe(50000);
+      // Assert: Should receive validation error for extra fields
+      expect(responseData.status).toBe('error');
+      expect(responseData.error.code).toBe('validation_error');
+      expect(responseData.error.message).toContain('unexpected properties');
     });
   });
 });

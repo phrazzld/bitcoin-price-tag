@@ -7,6 +7,11 @@
 import { vi } from 'vitest';
 // Use chrome global instead of @types/chrome import
 
+// Make vi available globally for harness detection
+declare global {
+  const vi: typeof import('vitest').vi;
+}
+
 type MessageListener = (
   message: any,
   sender: chrome.runtime.MessageSender,
@@ -162,8 +167,11 @@ export class ChromeRuntimeHarness {
       // No listeners registered
       this.lastError = new Error('Could not establish connection. Receiving end does not exist.');
       
-      // Chrome calls the callback with undefined when there's an error - use faster timing in CI
-      if (process.env.CI) {
+      // Chrome calls the callback with undefined when there's an error
+      if (typeof vi !== 'undefined' && vi.isFakeTimers && vi.isFakeTimers()) {
+        // In test environment, call immediately
+        responseCallback(undefined);
+      } else if (process.env.CI) {
         setImmediate(() => responseCallback(undefined));
       } else {
         setTimeout(() => responseCallback(undefined), 0);
@@ -211,17 +219,24 @@ export class ChromeRuntimeHarness {
         
         console.log(`[Harness] sendResponse called with:`, response);
 
-        // Simulate async callback - use setImmediate in CI for faster response
-        if (process.env.CI) {
-          setImmediate(() => {
-            console.log(`[Harness] Calling responseCallback with:`, response);
-            responseCallback(response);
-          });
+        // Check if we're in a test environment with fake timers
+        if (typeof vi !== 'undefined' && vi.isFakeTimers && vi.isFakeTimers()) {
+          // In test environment, call immediately to avoid timer issues
+          console.log(`[Harness] Calling responseCallback immediately (fake timers):`, response);
+          responseCallback(response);
         } else {
-          setTimeout(() => {
-            console.log(`[Harness] Calling responseCallback with:`, response);
-            responseCallback(response);
-          }, 0);
+          // In real environment, use async callback - setImmediate in CI for faster response
+          if (process.env.CI) {
+            setImmediate(() => {
+              console.log(`[Harness] Calling responseCallback with:`, response);
+              responseCallback(response);
+            });
+          } else {
+            setTimeout(() => {
+              console.log(`[Harness] Calling responseCallback with:`, response);
+              responseCallback(response);
+            }, 0);
+          }
         }
       };
 
@@ -240,7 +255,10 @@ export class ChromeRuntimeHarness {
 
     // If no async response is expected and none was sent, call callback with undefined
     if (!asyncResponseExpected && !responseHandled) {
-      if (process.env.CI) {
+      if (typeof vi !== 'undefined' && vi.isFakeTimers && vi.isFakeTimers()) {
+        // In test environment, call immediately
+        responseCallback(undefined);
+      } else if (process.env.CI) {
         setImmediate(() => responseCallback(undefined));
       } else {
         setTimeout(() => responseCallback(undefined), 0);
@@ -257,9 +275,17 @@ export class ChromeRuntimeHarness {
 
   /**
    * Wait for any pending async operations
-   * CI environment gets longer wait time for stability
+   * Handle both real and fake timer environments
    */
   async waitForPendingOperations(): Promise<void> {
+    // In test environment with fake timers, use immediate resolution
+    if (typeof vi !== 'undefined' && vi.isFakeTimers && vi.isFakeTimers()) {
+      // Allow microtasks to complete
+      await Promise.resolve();
+      await Promise.resolve();
+      return;
+    }
+    
     // Give async operations a chance to complete - longer wait in CI
     const waitTime = process.env.CI ? 50 : 10;
     await new Promise(resolve => setTimeout(resolve, waitTime));

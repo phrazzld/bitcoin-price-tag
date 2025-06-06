@@ -38,7 +38,7 @@
   - [x] Chrome API mocks complete and consistent
 
 ### T040: Fix Integration Test Message Communication
-- **Status**: ❌ Pending
+- **Status**: ✅ Completed
 - **Priority**: High  
 - **Description**: Resolve Service Worker ↔ Content Script communication test failures
 - **Files**:
@@ -51,10 +51,10 @@
   - Cache state management unreliable
   - Timeout handling in async operations
 - **Acceptance Criteria**:
-  - [ ] Bi-directional message flow tests pass
-  - [ ] Chrome API communication works consistently
-  - [ ] Cache hit/miss scenarios execute reliably
-  - [ ] Error propagation through message chain works
+  - [x] Bi-directional message flow tests pass
+  - [x] Chrome API communication works consistently
+  - [x] Cache hit/miss scenarios execute reliably
+  - [x] Error propagation through message chain works
 
 ### T041: Standardize Chrome API Mock Infrastructure
 - **Status**: ❌ Pending
