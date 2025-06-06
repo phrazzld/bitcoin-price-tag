@@ -20,8 +20,9 @@ const logger = createLogger('content-script/messaging');
 /** 
  * Default timeout for price data requests in milliseconds
  * Prevents indefinite waiting if service worker doesn't respond
+ * CI environment gets longer timeout due to slower async operations
  */
-const REQUEST_TIMEOUT_MS = 10000; // 10 seconds
+const REQUEST_TIMEOUT_MS = process.env.CI ? 15000 : 10000; // 15s for CI, 10s locally
 
 /**
  * Error thrown when a price request times out

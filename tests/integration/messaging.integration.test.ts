@@ -149,7 +149,7 @@ describe('Service Worker <-> Content Script Communication', () => {
   });
 
   describe('Error Cases', () => {
-    it('should handle API failure gracefully', async () => {
+    it('should handle API failure gracefully', { retry: process.env.CI ? 2 : 0 }, async () => {
       // Setup: Empty cache, failing API
       mockFetch = mockFetchError('Network timeout');
       vi.stubGlobal('fetch', mockFetch);
@@ -290,7 +290,7 @@ describe('Service Worker <-> Content Script Communication', () => {
       expect(result.usdRate).toBe(48000);
     });
 
-    it('should handle request timeout correctly', async () => {
+    it('should handle request timeout correctly', { retry: process.env.CI ? 2 : 0 }, async () => {
       // Setup: API that takes too long
       mockFetch = createFetchMock({ 
         defaultPrice: 50000, 

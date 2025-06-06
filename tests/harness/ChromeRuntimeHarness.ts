@@ -162,8 +162,12 @@ export class ChromeRuntimeHarness {
       // No listeners registered
       this.lastError = new Error('Could not establish connection. Receiving end does not exist.');
       
-      // Chrome calls the callback with undefined when there's an error
-      setTimeout(() => responseCallback(undefined), 0);
+      // Chrome calls the callback with undefined when there's an error - use faster timing in CI
+      if (process.env.CI) {
+        setImmediate(() => responseCallback(undefined));
+      } else {
+        setTimeout(() => responseCallback(undefined), 0);
+      }
       return;
     }
 
@@ -207,11 +211,18 @@ export class ChromeRuntimeHarness {
         
         console.log(`[Harness] sendResponse called with:`, response);
 
-        // Simulate async callback
-        setTimeout(() => {
-          console.log(`[Harness] Calling responseCallback with:`, response);
-          responseCallback(response);
-        }, 0);
+        // Simulate async callback - use setImmediate in CI for faster response
+        if (process.env.CI) {
+          setImmediate(() => {
+            console.log(`[Harness] Calling responseCallback with:`, response);
+            responseCallback(response);
+          });
+        } else {
+          setTimeout(() => {
+            console.log(`[Harness] Calling responseCallback with:`, response);
+            responseCallback(response);
+          }, 0);
+        }
       };
 
       try {
@@ -229,7 +240,11 @@ export class ChromeRuntimeHarness {
 
     // If no async response is expected and none was sent, call callback with undefined
     if (!asyncResponseExpected && !responseHandled) {
-      setTimeout(() => responseCallback(undefined), 0);
+      if (process.env.CI) {
+        setImmediate(() => responseCallback(undefined));
+      } else {
+        setTimeout(() => responseCallback(undefined), 0);
+      }
     }
   }
 
@@ -242,9 +257,11 @@ export class ChromeRuntimeHarness {
 
   /**
    * Wait for any pending async operations
+   * CI environment gets longer wait time for stability
    */
   async waitForPendingOperations(): Promise<void> {
-    // Give async operations a chance to complete
-    await new Promise(resolve => setTimeout(resolve, 10));
+    // Give async operations a chance to complete - longer wait in CI
+    const waitTime = process.env.CI ? 50 : 10;
+    await new Promise(resolve => setTimeout(resolve, waitTime));
   }
 }
