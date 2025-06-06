@@ -266,6 +266,113 @@ Validate that all CI issues are resolved and pipeline achieves full success.
 
 ---
 
+## Current CI Test Infrastructure Resolution Tasks (Generated: 2025-06-05T13:55:00Z)
+
+### T034 - Fix Service Worker Test Infrastructure CI Compatibility
+**Status:** COMPLETED  
+**Priority:** HIGH  
+**Estimate:** 25-30 minutes  
+**Dependencies:** None  
+**Context:** CI-RESOLUTION-PLAN.md Phase 1  
+
+**Description:**
+Resolve service worker test infrastructure failures caused by logger mock adapter timing incompatibility in CI environment.
+
+**Acceptance Criteria:**
+- [ ] Fix `expectLogToContain` helper CI timing issues in `src/service-worker/index.test.ts:248-303`
+- [ ] Implement CI-aware wait mechanism for logger mock calls
+- [ ] Add fallback assertions using direct Chrome API mock verification  
+- [ ] Service worker handleInstalled, handleStartup, and handleAlarm tests pass in CI
+- [ ] Local test functionality preserved
+
+**Technical Implementation:**
+- Add `process.env.CI` detection in `expectLogToContain` helper
+- Implement `vi.waitFor()` with 2s timeout for CI log capture
+- Create fallback verification using `mockChrome.alarms.create` calls when logger mocks fail
+- Improve mock cleanup in `beforeEach` with `vi.runAllTimersAsync()`
+
+---
+
+### T035 - Optimize Integration Test Chrome Runtime Harness for CI
+**Status:** PENDING  
+**Priority:** HIGH  
+**Estimate:** 20-25 minutes  
+**Dependencies:** None  
+**Context:** CI-RESOLUTION-PLAN.md Phase 2  
+
+**Description:**
+Fix integration test timeout failures in Chrome runtime harness communication for CI environment.
+
+**Acceptance Criteria:**
+- [ ] Resolve messaging integration test timeouts in `tests/integration/messaging.integration.test.ts`
+- [ ] Implement CI-specific timeout configuration (15s vs 10s)
+- [ ] Improve Chrome runtime mock response timing for CI environment
+- [ ] Add test retry mechanism for CI environment only
+- [ ] "should handle request timeout correctly" and "should handle API failure gracefully" tests pass
+
+**Technical Implementation:**
+- Update `REQUEST_TIMEOUT` to be environment-aware: `process.env.CI ? 15000 : 10000`
+- Modify Chrome runtime mock to use `setImmediate()` for immediate responses in CI
+- Add `test.retry(process.env.CI ? 2 : 0)` for flaky integration tests
+- Optimize `tests/harness/ChromeRuntimeHarness.ts` timing for CI environment
+
+---
+
+### T036 - Improve API Error Test Isolation and Cleanup
+**Status:** PENDING  
+**Priority:** MEDIUM  
+**Estimate:** 15-20 minutes  
+**Dependencies:** None  
+**Context:** CI-RESOLUTION-PLAN.md Phase 3  
+
+**Description:**
+Fix API error test cross-contamination affecting other tests through async operation leakage.
+
+**Acceptance Criteria:**
+- [ ] Eliminate error test scenarios affecting other tests in CI
+- [ ] Improve async cleanup in `src/service-worker/api-error.test.ts`
+- [ ] Enhance test isolation in `src/service-worker/api-retry.test.ts`
+- [ ] Add comprehensive `afterEach` cleanup for error tests
+- [ ] Prevent `ApiError` exceptions from bleeding into other test execution
+
+**Technical Implementation:**
+- Add comprehensive async cleanup in `afterEach`: `vi.clearAllTimers()`, `vi.runAllTimersAsync()`, `vi.restoreAllMocks()`
+- Implement test-specific mock setups using `describe.each()` for isolation
+- Add pending promise cleanup: `await new Promise(resolve => setImmediate(resolve))`
+- Consider test sequencing for error scenarios to prevent contamination
+
+---
+
+### T037 - Validate Complete CI Test Infrastructure Resolution
+**Status:** PENDING  
+**Priority:** MEDIUM  
+**Estimate:** 15-20 minutes  
+**Dependencies:** T034, T035, T036  
+**Context:** CI-RESOLUTION-PLAN.md Phase 4 & 5  
+
+**Description:**
+Validate that all CI test infrastructure issues are resolved and pipeline achieves complete success.
+
+**Acceptance Criteria:**
+- [ ] Local validation passes:
+  - [ ] `npm test src/service-worker/index.test.ts` - Service worker infrastructure tests pass
+  - [ ] `npm test tests/integration/messaging.integration.test.ts` - Integration timeouts resolved
+  - [ ] `npm test src/service-worker/api-error.test.ts` - Error test isolation working
+  - [ ] `npm test src/service-worker/api-retry.test.ts` - API retry tests isolated
+- [ ] CI Pipeline complete success:
+  - [ ] Test (Node 18) job passes
+  - [ ] Test (Node 20) job passes
+  - [ ] CI Success job passes
+- [ ] No regressions in Type Check, Build, Lint jobs (maintain current passing status)
+
+**Technical Notes:**
+- Deploy fixes incrementally: service worker tests first, then integration tests
+- Monitor CI pipeline between pushes to identify most effective fixes
+- Maintain current passing status of core pipeline jobs (TypeCheck ✅, Build ✅, Lint ✅)
+- Document CI-specific test configuration patterns for future reference
+
+---
+
 ## Completed Tickets
 
 ### T023 - Conventional Commits Enforcement ✅
