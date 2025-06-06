@@ -140,10 +140,22 @@ export const setupApiTest = () => {
 };
 
 /**
- * Cleanup test environment
+ * Enhanced cleanup test environment to prevent cross-contamination
  */
 export const cleanupApiTest = () => {
+  // Clear all timers immediately to prevent leakage
+  vi.clearAllTimers();
+  
+  // Restore all mocks to prevent cross-contamination
   vi.restoreAllMocks();
+  vi.clearAllMocks();
+  
+  // Clean up global fetch if it was mocked
+  if (global.fetch && vi.isMockFunction(global.fetch)) {
+    delete (global as unknown as { fetch?: unknown }).fetch;
+  }
+  
+  // Use real timers for next test
   vi.useRealTimers();
 };
 

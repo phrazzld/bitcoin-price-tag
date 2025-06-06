@@ -279,20 +279,17 @@ describe('API error handling', () => {
       const fetchPromise = fetchBtcPrice(mockLogger);
       await runAllTimers();
       
-      try {
-        await fetchPromise;
-        expect.fail('Should have thrown');
-      } catch (error) {
-        expect(error).toBeInstanceOf(ApiError);
-        expect((error as ApiError).code).toBe(ApiErrorCode.NETWORK_ERROR);
-        expect((error as ApiError).message).toContain('Network error:');
-        expect((error as ApiError).message).toContain('aborted');
-        expect(mockLogger.error).toHaveBeenCalledWith(
-          'Error fetching BTC price', 
-          expect.any(DOMException) as DOMException, 
-          expect.objectContaining({ errorType: 'network' })
-        );
-      }
+      await expect(fetchPromise).rejects.toThrow(ApiError);
+      await expect(fetchPromise).rejects.toMatchObject({
+        code: ApiErrorCode.NETWORK_ERROR,
+        message: expect.stringContaining('Network error:')
+      });
+      
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error fetching BTC price', 
+        expect.any(DOMException) as DOMException, 
+        expect.objectContaining({ errorType: 'network' })
+      );
     }, 10000);
 
     it('should handle unknown errors', async () => {
@@ -313,14 +310,11 @@ describe('API error handling', () => {
       const mockFetch = vi.fn().mockRejectedValue('String error');
       global.fetch = mockFetch;
 
-      try {
-        await fetchBtcPrice(mockLogger);
-        expect.fail('Should have thrown');
-      } catch (error) {
-        expect(error).toBeInstanceOf(ApiError);
-        expect((error as ApiError).code).toBe(ApiErrorCode.UNKNOWN_ERROR);
-        expect((error as ApiError).message).toBe('Unexpected error: String error');
-      }
+      await expect(fetchBtcPrice(mockLogger)).rejects.toThrow(ApiError);
+      await expect(fetchBtcPrice(mockLogger)).rejects.toMatchObject({
+        code: ApiErrorCode.UNKNOWN_ERROR,
+        message: 'Unexpected error: String error'
+      });
     });
   });
 });

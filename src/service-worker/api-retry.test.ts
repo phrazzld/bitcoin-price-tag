@@ -225,22 +225,34 @@ describe('API retry logic', () => {
       );
       global.fetch = mockFetch;
 
-      // Start the test
-      const fetchPromise = fetchBtcPrice(mockLogger);
-      
-      // Fast-forward through all retries
-      await runAllTimers();
-      
       try {
-        await fetchPromise;
-        expect.fail('Should have thrown');
-      } catch (error) {
-        expect(error).toBeInstanceOf(ApiError);
-        expect((error as ApiError).code).toBe(ApiErrorCode.HTTP_ERROR);
-        // Check that mockFetch was called at least once
-        expect(mockFetch).toHaveBeenCalled();
-        // Check that error was logged
-        expect(mockLogger.error).toHaveBeenCalled();
+        // Start the test
+        const fetchPromise = fetchBtcPrice(mockLogger);
+        
+        // Fast-forward through all retries
+        await runAllTimers();
+        
+        try {
+          await fetchPromise;
+          expect.fail('Should have thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe(ApiErrorCode.HTTP_ERROR);
+          // Check that mockFetch was called at least once
+          expect(mockFetch).toHaveBeenCalled();
+          // Check that error was logged
+          expect(mockLogger.error).toHaveBeenCalled();
+        }
+      } finally {
+        // Ensure all pending operations are cleaned up
+        try {
+          if (vi.getMockedSystemTime() !== null) {
+            await vi.runAllTimersAsync();
+          }
+        } catch (_error) {
+          // Timer cleanup failed, continue
+        }
+        await new Promise(resolve => setImmediate(resolve));
       }
     });
 
@@ -249,23 +261,35 @@ describe('API retry logic', () => {
       const mockFetch = vi.fn().mockRejectedValue(new TypeError('Network failure'));
       global.fetch = mockFetch;
 
-      // Start the API call
-      const fetchPromise = fetchBtcPrice(mockLogger);
-      
-      // Fast-forward through all retries
-      await runAllTimers();
-      
       try {
-        await fetchPromise;
-        expect.fail('Should have thrown');
-      } catch (error) {
-        expect(error).toBeInstanceOf(ApiError);
-        expect((error as ApiError).code).toBe(ApiErrorCode.NETWORK_ERROR);
-        expect((error as ApiError).message).toBe('Network error: Network failure');
-        // Check that mockFetch was called at least once
-        expect(mockFetch).toHaveBeenCalled();
-        // Check that error was logged
-        expect(mockLogger.error).toHaveBeenCalled();
+        // Start the API call
+        const fetchPromise = fetchBtcPrice(mockLogger);
+        
+        // Fast-forward through all retries
+        await runAllTimers();
+        
+        try {
+          await fetchPromise;
+          expect.fail('Should have thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe(ApiErrorCode.NETWORK_ERROR);
+          expect((error as ApiError).message).toBe('Network error: Network failure');
+          // Check that mockFetch was called at least once
+          expect(mockFetch).toHaveBeenCalled();
+          // Check that error was logged
+          expect(mockLogger.error).toHaveBeenCalled();
+        }
+      } finally {
+        // Ensure all pending operations are cleaned up
+        try {
+          if (vi.getMockedSystemTime() !== null) {
+            await vi.runAllTimersAsync();
+          }
+        } catch (_error) {
+          // Timer cleanup failed, continue
+        }
+        await new Promise(resolve => setImmediate(resolve));
       }
     });
   });
@@ -279,62 +303,87 @@ describe('API retry logic', () => {
       const timeoutSpy = vi.spyOn(global, 'setTimeout');
       const delays: number[] = [];
       
-      // Custom mock implementation to track delays but still use original setTimeout
-      timeoutSpy.mockImplementation((callback: () => void, delay?: number) => {
-        delays.push(delay || 0);
-        // Use the original setTimeout to avoid recursion
-        return originalSetTimeout(callback, delay);
-      });
-
-      // All attempts fail
-      const mockFetch = vi.fn().mockResolvedValue(
-        createFailedHttpResponse(503, 'Service Unavailable')
-      );
-      global.fetch = mockFetch;
-
-      // Start the API call
-      const promise = fetchBtcPrice(mockLogger);
-      
-      // Advance timer for all retries
-      await runAllTimers();
-      
       try {
-        await promise;
-        expect.fail('Should have thrown');
-      } catch (_error) {
-        // Expected to throw
-      }
+        // Custom mock implementation to track delays but still use original setTimeout
+        timeoutSpy.mockImplementation((callback: () => void, delay?: number) => {
+          delays.push(delay || 0);
+          // Use the original setTimeout to avoid recursion
+          return originalSetTimeout(callback, delay);
+        });
 
-      // Verify exponential backoff: 1000ms, 2000ms
-      expect(delays.slice(0, 2)).toEqual([1000, 2000]);
+        // All attempts fail
+        const mockFetch = vi.fn().mockResolvedValue(
+          createFailedHttpResponse(503, 'Service Unavailable')
+        );
+        global.fetch = mockFetch;
+
+        // Start the API call
+        const promise = fetchBtcPrice(mockLogger);
+        
+        // Advance timer for all retries
+        await runAllTimers();
+        
+        try {
+          await promise;
+          expect.fail('Should have thrown');
+        } catch (_error) {
+          // Expected to throw
+        }
+
+        // Verify exponential backoff: 1000ms, 2000ms
+        expect(delays.slice(0, 2)).toEqual([1000, 2000]);
+      } finally {
+        // Restore the timeout spy and ensure cleanup
+        timeoutSpy.mockRestore();
+        try {
+          if (vi.getMockedSystemTime() !== null) {
+            await vi.runAllTimersAsync();
+          }
+        } catch (_error) {
+          // Timer cleanup failed, continue
+        }
+        await new Promise(resolve => setImmediate(resolve));
+      }
     });
   });
 
   describe('network timeout handling', () => {
     it('should handle network timeout errors with retries', async () => {
-      // Create a network timeout error with setTimeout
-      global.fetch = vi.fn().mockImplementation(() => {
-        return new Promise((_, reject) => {
-          const error = new TypeError('Network request failed: timeout');
-          setTimeout(() => reject(error), 10);
-        });
-      });
-      
-      // Start the API call
-      const fetchPromise = fetchBtcPrice(mockLogger);
-      
-      // Advance timer to trigger the error and handle retries
-      await vi.advanceTimersByTimeAsync(10);
-      await runAllTimers();
-      
       try {
-        await fetchPromise;
-        expect.fail('Should have thrown');
-      } catch (error) {
-        expect(error).toBeInstanceOf(ApiError);
-        expect((error as ApiError).code).toBe(ApiErrorCode.NETWORK_ERROR);
-        expect((error as ApiError).message).toContain('Network error:');
-        expect((error as ApiError).message).toContain('timeout');
+        // Create a network timeout error with setTimeout
+        global.fetch = vi.fn().mockImplementation(() => {
+          return new Promise((_, reject) => {
+            const error = new TypeError('Network request failed: timeout');
+            setTimeout(() => reject(error), 10);
+          });
+        });
+        
+        // Start the API call
+        const fetchPromise = fetchBtcPrice(mockLogger);
+        
+        // Advance timer to trigger the error and handle retries
+        await vi.advanceTimersByTimeAsync(10);
+        await runAllTimers();
+        
+        try {
+          await fetchPromise;
+          expect.fail('Should have thrown');
+        } catch (error) {
+          expect(error).toBeInstanceOf(ApiError);
+          expect((error as ApiError).code).toBe(ApiErrorCode.NETWORK_ERROR);
+          expect((error as ApiError).message).toContain('Network error:');
+          expect((error as ApiError).message).toContain('timeout');
+        }
+      } finally {
+        // Ensure all pending operations are cleaned up
+        try {
+          if (vi.getMockedSystemTime() !== null) {
+            await vi.runAllTimersAsync();
+          }
+        } catch (_error) {
+          // Timer cleanup failed, continue
+        }
+        await new Promise(resolve => setImmediate(resolve));
       }
     });
   });
