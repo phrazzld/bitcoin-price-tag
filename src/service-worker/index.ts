@@ -8,6 +8,12 @@ import { PriceRequestMessage, PriceResponseMessage } from '../common/types';
 import { rehydrateCache, setCachedPrice, getCachedPrice } from './cache';
 import { fetchBtcPrice } from './api';
 import { createLogger } from '../shared/logger';
+import {
+  isObject,
+  isValidTimestamp,
+  hasOnlyExpectedProperties,
+  hasRequiredProperties
+} from '../common/validation-helpers';
 
 /** Logger instance for this module */
 const logger = createLogger('service-worker');
@@ -139,60 +145,136 @@ function handleMessage(
     }
   });
 
-  // Type check and handle price request messages
-  if (isPriceRequestMessage(message)) {
-    handlePriceRequest(message, sendResponse).catch(error => {
-      logger.error('Unhandled error in handlePriceRequest', error, {
-        function_name: 'handleMessage',
-        requestId: message.requestId
-      });
-      // Send error response as fallback
-      sendResponse({
-        requestId: message.requestId,
-        type: 'PRICE_RESPONSE',
-        status: 'error',
-        error: {
-          message: 'Internal error processing request',
-          code: 'internal_error'
-        },
-        timestamp: Date.now()
-      });
+  // Perform deep validation first (security-focused approach)
+  const validationResult = validatePriceRequestMessage(message);
+  
+  if (!validationResult.isValid) {
+    // Log security-relevant validation failure
+    logger.warn('Message validation failed', {
+      function_name: 'handleMessage',
+      validationError: validationResult.error,
+      messageType: isObject(message) ? message.type : typeof message,
+      sender: {
+        tab: sender.tab ? { id: sender.tab.id } : undefined,
+        origin: sender.origin
+      }
     });
-    // Return true to indicate we'll send a response asynchronously
-    return true;
+
+    // Extract requestId for response correlation if possible (best effort)
+    const requestId = isObject(message) && typeof message.requestId === 'string' 
+      ? message.requestId 
+      : 'unknown';
+
+    sendResponse({
+      requestId,
+      type: 'PRICE_RESPONSE',
+      status: 'error',
+      error: {
+        message: validationResult.error || 'Invalid message format',
+        code: 'validation_error'
+      },
+      timestamp: Date.now()
+    } as PriceResponseMessage);
+
+    return true; // We've handled the message
   }
 
-  // Unknown message type - send error response
-  logger.warn('Unknown message type received', {
-    function_name: 'handleMessage',
-    messageType: (message as Record<string, unknown>)?.type ?? 'unknown'
+  // Safe to proceed - message is validated as PriceRequestMessage
+  const validMessage = message as PriceRequestMessage;
+  
+  handlePriceRequest(validMessage, sendResponse).catch(error => {
+    logger.error('Unhandled error in handlePriceRequest', error, {
+      function_name: 'handleMessage',
+      requestId: validMessage.requestId
+    });
+    // Send error response as fallback
+    sendResponse({
+      requestId: validMessage.requestId,
+      type: 'PRICE_RESPONSE',
+      status: 'error',
+      error: {
+        message: 'Internal error processing request',
+        code: 'internal_error'
+      },
+      timestamp: Date.now()
+    });
   });
   
-  sendResponse({
-    type: 'PRICE_RESPONSE',
-    status: 'error',
-    error: {
-      message: 'Unknown message type',
-      code: 'unknown_message'
-    },
-    timestamp: Date.now()
-  } as PriceResponseMessage);
-
-  return false;
+  // Return true to indicate we'll send a response asynchronously
+  return true;
 }
 
 /**
- * Type guard to check if a message is a PriceRequestMessage
+ * Type guard to check if value is a valid request ID
  */
-function isPriceRequestMessage(message: unknown): message is PriceRequestMessage {
-  return (
-    message !== null &&
-    typeof message === 'object' &&
-    'type' in message &&
-    message.type === 'PRICE_REQUEST' &&
-    'requestId' in message &&
-    'timestamp' in message
-  );
+function isValidRequestId(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+/**
+ * Deep validation result for message validation
+ */
+interface ValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
+
+/**
+ * Comprehensive deep validation for PriceRequestMessage
+ * Returns detailed validation results for security logging
+ */
+function validatePriceRequestMessage(message: unknown): ValidationResult {
+  // Check if message is an object
+  if (!isObject(message)) {
+    return {
+      isValid: false,
+      error: 'Message must be a non-null object'
+    };
+  }
+
+  // Check required properties presence
+  const requiredProps = ['type', 'requestId', 'timestamp'];
+  if (!hasRequiredProperties(message, requiredProps)) {
+    const missingProps = requiredProps.filter(prop => !(prop in message));
+    return {
+      isValid: false,
+      error: `Message missing required properties: ${missingProps.join(', ')}`
+    };
+  }
+
+  // Check for unexpected properties (security: prevent property injection)
+  if (!hasOnlyExpectedProperties(message, requiredProps)) {
+    const extraProps = Object.keys(message).filter(key => !requiredProps.includes(key));
+    return {
+      isValid: false,
+      error: `Message contains unexpected properties: ${extraProps.join(', ')}`
+    };
+  }
+
+  // Deep validation of property types and values
+  if (message.type !== 'PRICE_REQUEST') {
+    return {
+      isValid: false,
+      error: `Invalid message type: expected 'PRICE_REQUEST', got '${String(message.type)}'`
+    };
+  }
+
+  if (!isValidRequestId(message.requestId)) {
+    return {
+      isValid: false,
+      error: 'Invalid requestId: must be a non-empty string'
+    };
+  }
+
+  if (!isValidTimestamp(message.timestamp)) {
+    return {
+      isValid: false,
+      error: 'Invalid timestamp: must be a positive number'
+    };
+  }
+
+  return { isValid: true };
 }
 
 /**

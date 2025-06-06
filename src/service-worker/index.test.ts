@@ -637,17 +637,16 @@ function expectLogToContain(
         mockSendResponse
       );
 
-      expect(result).toBe(false);
-      expectLogToContain('warn', 'Unknown message type received');
-      expect(mockSendResponse).toHaveBeenCalledWith({
-        type: 'PRICE_RESPONSE',
-        status: 'error',
-        error: {
-          message: 'Unknown message type',
-          code: 'unknown_message'
-        },
-        timestamp: Date.now()
-      });
+      expect(result).toBe(true);
+      expect(mockSendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'PRICE_RESPONSE',
+          status: 'error',
+          error: expect.objectContaining({
+            code: 'validation_error'
+          })
+        })
+      );
     });
 
     it('should handle missing required fields in message', () => {
@@ -662,14 +661,13 @@ function expectLogToContain(
         mockSendResponse
       );
 
-      expect(result).toBe(false);
-      expectLogToContain('info', 'Message received');
+      expect(result).toBe(true);
       expect(mockSendResponse).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'PRICE_RESPONSE',
           status: 'error',
           error: expect.objectContaining({
-            code: 'unknown_message'
+            code: 'validation_error'
           })
         })
       );
@@ -749,36 +747,60 @@ function expectLogToContain(
 
   describe('Edge Cases', () => {
     it('should handle null message', () => {
+      const mockSendResponse = vi.fn();
       const result = handlers.onMessage!(
         null,
         { tab: createMockTab(1) },
-        vi.fn()
+        mockSendResponse
       );
 
-      expect(result).toBe(false);
-      expectLogToContain('info', 'Message received');
+      expect(result).toBe(true);
+      expect(mockSendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'error',
+          error: expect.objectContaining({
+            code: 'validation_error'
+          })
+        })
+      );
     });
 
     it('should handle non-object message', () => {
+      const mockSendResponse = vi.fn();
       const result = handlers.onMessage!(
         'string message',
         { tab: createMockTab(1) },
-        vi.fn()
+        mockSendResponse
       );
 
-      expect(result).toBe(false);
-      expectLogToContain('info', 'Message received');
+      expect(result).toBe(true);
+      expect(mockSendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'error',
+          error: expect.objectContaining({
+            code: 'validation_error'
+          })
+        })
+      );
     });
 
     it('should handle message with wrong type field', () => {
+      const mockSendResponse = vi.fn();
       const result = handlers.onMessage!(
         { type: 123, requestId: 'test' },
         { tab: createMockTab(1) },
-        vi.fn()
+        mockSendResponse
       );
 
-      expect(result).toBe(false);
-      expectLogToContain('info', 'Message received');
+      expect(result).toBe(true);
+      expect(mockSendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'error',
+          error: expect.objectContaining({
+            code: 'validation_error'
+          })
+        })
+      );
     });
 
     it('should handle concurrent alarm triggers', async () => {
@@ -816,6 +838,229 @@ function expectLogToContain(
       expect(mockLoggerAdapter.info).toHaveBeenCalledTimes(expect.any(Number));
       expect(findLogsWithMessage('info', 'Alarm fired').length).toBeGreaterThanOrEqual(2);
       expect(findLogsWithMessage('info', 'Price data fetched successfully').length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('Deep Message Validation Security', () => {
+    let messageHandler: (message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => void;
+    
+    beforeEach(() => {
+      messageHandler = handlers.onMessage!;
+    });
+
+    describe('PriceRequestMessage Deep Validation', () => {
+      it('should reject messages with invalid requestId type', () => {
+        const invalidMessage = {
+          type: 'PRICE_REQUEST',
+          requestId: 123, // Should be string
+          timestamp: Date.now()
+        };
+
+        const mockSendResponse = vi.fn();
+        const result = messageHandler(invalidMessage, { tab: createMockTab(1) }, mockSendResponse);
+
+        expect(result).toBe(true);
+        expect(mockSendResponse).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'PRICE_RESPONSE',
+            status: 'error',
+            error: expect.objectContaining({
+              code: 'validation_error',
+              message: 'Invalid requestId: must be a non-empty string'
+            })
+          })
+        );
+      });
+
+      it('should reject messages with empty requestId', () => {
+        const invalidMessage = {
+          type: 'PRICE_REQUEST',
+          requestId: '', // Should be non-empty string
+          timestamp: Date.now()
+        };
+
+        const mockSendResponse = vi.fn();
+        messageHandler(invalidMessage, { tab: createMockTab(1) }, mockSendResponse);
+
+        expect(mockSendResponse).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'error',
+            error: expect.objectContaining({
+              code: 'validation_error'
+            })
+          })
+        );
+      });
+
+      it('should reject messages with invalid timestamp type', () => {
+        const invalidMessage = {
+          type: 'PRICE_REQUEST',
+          requestId: 'test-123',
+          timestamp: 'invalid' // Should be number
+        };
+
+        const mockSendResponse = vi.fn();
+        messageHandler(invalidMessage, { tab: createMockTab(1) }, mockSendResponse);
+
+        expect(mockSendResponse).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'error',
+            error: expect.objectContaining({
+              code: 'validation_error'
+            })
+          })
+        );
+      });
+
+      it('should reject messages with negative timestamp', () => {
+        const invalidMessage = {
+          type: 'PRICE_REQUEST',
+          requestId: 'test-123',
+          timestamp: -1 // Should be positive
+        };
+
+        const mockSendResponse = vi.fn();
+        messageHandler(invalidMessage, { tab: createMockTab(1) }, mockSendResponse);
+
+        expect(mockSendResponse).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'error',
+            error: expect.objectContaining({
+              code: 'validation_error'
+            })
+          })
+        );
+      });
+
+      it('should reject messages with extra properties', () => {
+        const invalidMessage = {
+          type: 'PRICE_REQUEST',
+          requestId: 'test-123',
+          timestamp: Date.now(),
+          maliciousProperty: 'should-not-exist' // Extra property
+        };
+
+        const mockSendResponse = vi.fn();
+        messageHandler(invalidMessage, { tab: createMockTab(1) }, mockSendResponse);
+
+        expect(mockSendResponse).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'error',
+            error: expect.objectContaining({
+              code: 'validation_error',
+              message: expect.stringContaining('unexpected properties')
+            })
+          })
+        );
+      });
+
+      it('should reject messages with missing required properties', () => {
+        const invalidMessage = {
+          type: 'PRICE_REQUEST',
+          requestId: 'test-123'
+          // Missing timestamp
+        };
+
+        const mockSendResponse = vi.fn();
+        messageHandler(invalidMessage, { tab: createMockTab(1) }, mockSendResponse);
+
+        expect(mockSendResponse).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'error',
+            error: expect.objectContaining({
+              code: 'validation_error',
+              message: expect.stringContaining('missing required properties')
+            })
+          })
+        );
+      });
+
+      it('should reject non-object messages', () => {
+        const invalidMessages = [
+          null,
+          undefined,
+          'string',
+          123,
+          true,
+          [],
+          () => {}
+        ];
+
+        invalidMessages.forEach(invalidMessage => {
+          const mockSendResponse = vi.fn();
+          messageHandler(invalidMessage, { tab: createMockTab(1) }, mockSendResponse);
+
+          expect(mockSendResponse).toHaveBeenCalledWith(
+            expect.objectContaining({
+              status: 'error',
+              error: expect.objectContaining({
+                code: 'validation_error'
+              })
+            })
+          );
+        });
+      });
+
+      it('should reject messages with wrong type', () => {
+        const invalidMessage = {
+          type: 'WRONG_TYPE',
+          requestId: 'test-123',
+          timestamp: Date.now()
+        };
+
+        const mockSendResponse = vi.fn();
+        messageHandler(invalidMessage, { tab: createMockTab(1) }, mockSendResponse);
+
+        expect(mockSendResponse).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'error',
+            error: expect.objectContaining({
+              code: 'validation_error'
+            })
+          })
+        );
+      });
+
+      it('should accept valid PriceRequestMessage', async () => {
+        const validMessage = {
+          type: 'PRICE_REQUEST',
+          requestId: 'test-123',
+          timestamp: Date.now()
+        };
+
+        // Mock storage to return cached data
+        mockStorage.get.mockResolvedValueOnce({
+          'btc_price_data': {
+            priceData: {
+              usdRate: 45000,
+              satoshiRate: 0.00045,
+              fetchedAt: Date.now() - 5000,
+              source: 'CoinGecko'
+            },
+            cachedAt: Date.now() - 5000,
+            version: 1
+          }
+        });
+
+        const mockSendResponse = vi.fn();
+        const result = messageHandler(validMessage, { tab: createMockTab(1) }, mockSendResponse);
+
+        expect(result).toBe(true);
+        
+        // Wait for async processing
+        await vi.runAllTimersAsync();
+
+        expect(mockSendResponse).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'PRICE_RESPONSE',
+            status: 'success',
+            requestId: 'test-123',
+            data: expect.objectContaining({
+              usdRate: 45000
+            })
+          })
+        );
+      });
     });
   });
 });
