@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures/extension';
+import { finalTest as test, expect } from '../fixtures/extension-final';
 import { 
   forceServiceWorkerRestart, 
   getStateFromSW, 
@@ -22,7 +22,7 @@ test.describe('Combined State and Alarm Persistence', () => {
     await clearAllAlarmsInSW(serviceWorker);
   });
 
-  test('should persist state and alarms together', async ({ context, extensionId, serviceWorker }) => {
+  test('should persist state and alarms together', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Set state
     const testData = {
       priceCache: { usdRate: 55000, timestamp: Date.now() },
@@ -36,10 +36,10 @@ test.describe('Combined State and Alarm Persistence', () => {
     await createAlarmInSW(serviceWorker, 'cleanup', { delayInMinutes: 60 });
 
     // Force restart
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 
@@ -57,7 +57,7 @@ test.describe('Combined State and Alarm Persistence', () => {
     expect(cleanupAlarm).toBeTruthy();
   });
 
-  test('should handle alarm trigger updating state after restart', async ({ context, extensionId, serviceWorker }) => {
+  test('should handle alarm trigger updating state after restart', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Set initial state
     await setStateInSW(serviceWorker, 'updateCount', 0);
 
@@ -76,10 +76,10 @@ test.describe('Combined State and Alarm Persistence', () => {
     });
 
     // Force restart
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 
@@ -102,7 +102,7 @@ test.describe('Combined State and Alarm Persistence', () => {
     expect(count).toBe(1);
   });
 
-  test('should maintain cache rehydration pattern', async ({ context, extensionId, serviceWorker }) => {
+  test('should maintain cache rehydration pattern', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Simulate cache structure as used by the extension
     const cacheData = {
       btc_price: {
@@ -117,10 +117,10 @@ test.describe('Combined State and Alarm Persistence', () => {
     await setStateInSW(serviceWorker, 'cache_ttl', cacheData.cache_ttl);
 
     // Force restart
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 
@@ -132,7 +132,7 @@ test.describe('Combined State and Alarm Persistence', () => {
     expect(ttl).toBe(cacheData.cache_ttl);
   });
 
-  test('should handle rapid updates before restart', async ({ context, extensionId, serviceWorker }) => {
+  test('should handle rapid updates before restart', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Perform rapid updates
     for (let i = 0; i < 5; i++) {
       await setStateInSW(serviceWorker, 'counter', i);
@@ -145,10 +145,10 @@ test.describe('Combined State and Alarm Persistence', () => {
     }
 
     // Force restart
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 

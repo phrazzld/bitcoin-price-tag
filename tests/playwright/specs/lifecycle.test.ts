@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures/extension';
+import { finalTest as test, expect } from '../fixtures/extension-final';
 import { 
   forceServiceWorkerRestart, 
   getStateFromSW, 
@@ -15,7 +15,7 @@ test.describe('Service Worker State Persistence', () => {
     await clearStorageInSW(serviceWorker);
   });
 
-  test('should persist price data across service worker restart', async ({ context, extensionId, serviceWorker }) => {
+  test('should persist price data across service worker restart', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Set test data
     const testPriceData = {
       usdRate: 45000,
@@ -30,10 +30,10 @@ test.describe('Service Worker State Persistence', () => {
     expect(dataBeforeRestart).toEqual(testPriceData);
 
     // Force service worker restart
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker instance
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 
@@ -42,7 +42,7 @@ test.describe('Service Worker State Persistence', () => {
     expect(dataAfterRestart).toEqual(testPriceData);
   });
 
-  test('should maintain cache TTL values across restart', async ({ context, extensionId, serviceWorker }) => {
+  test('should maintain cache TTL values across restart', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Set cache with TTL
     const cacheEntry = {
       data: { usdRate: 50000 },
@@ -52,10 +52,10 @@ test.describe('Service Worker State Persistence', () => {
     await setStateInSW(serviceWorker, 'price_cache', cacheEntry);
 
     // Force restart
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 
@@ -65,16 +65,16 @@ test.describe('Service Worker State Persistence', () => {
     expect(cachedData.data).toEqual(cacheEntry.data);
   });
 
-  test('should handle empty storage across restart', async ({ context, extensionId, serviceWorker }) => {
+  test('should handle empty storage across restart', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Ensure storage is empty
     const emptyData = await getStateFromSW(serviceWorker, 'nonexistent_key');
     expect(emptyData).toBeUndefined();
 
     // Force restart
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 
@@ -83,17 +83,17 @@ test.describe('Service Worker State Persistence', () => {
     expect(stillEmpty).toBeUndefined();
   });
 
-  test('should preserve multiple storage entries', async ({ context, extensionId, serviceWorker }) => {
+  test('should preserve multiple storage entries', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Set multiple entries
     await setStateInSW(serviceWorker, 'entry1', { value: 'test1' });
     await setStateInSW(serviceWorker, 'entry2', { value: 'test2' });
     await setStateInSW(serviceWorker, 'entry3', { value: 'test3' });
 
     // Force restart
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 
@@ -107,7 +107,7 @@ test.describe('Service Worker State Persistence', () => {
     expect(entry3).toEqual({ value: 'test3' });
   });
 
-  test('should handle updated values across restart', async ({ context, extensionId, serviceWorker }) => {
+  test('should handle updated values across restart', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Set initial value
     await setStateInSW(serviceWorker, 'updateTest', { version: 1 });
 
@@ -115,10 +115,10 @@ test.describe('Service Worker State Persistence', () => {
     await setStateInSW(serviceWorker, 'updateTest', { version: 2, updated: true });
 
     // Force restart
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 
