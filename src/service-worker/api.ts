@@ -4,6 +4,7 @@
 
 import { CoinGeckoApiResponse, PriceData } from '../common/types';
 import { Logger, createLogger } from '../shared/logger';
+import { SecureValidation, MessageValidators } from '../common/schema-validation';
 
 /** 
  * CoinGecko API endpoint for fetching current Bitcoin price in USD
@@ -62,70 +63,65 @@ export class ApiError extends Error {
 }
 
 /**
- * Validates that the API response has the expected structure
+ * Validates that the API response has the expected structure using comprehensive schema validation
  * @param data The parsed JSON response to validate
  * @throws ApiError if validation fails
  */
 function validateApiResponse(data: unknown): asserts data is CoinGeckoApiResponse {
-  if (!data || typeof data !== 'object') {
-    baseLogger.error('API response data validation failed', new Error('Response is not an object'), {
+  // Use comprehensive security validation for API responses
+  const validationResult = SecureValidation.validateApiResponse(
+    data,
+    (value, strictMode) => MessageValidators.validateCoinGeckoApiResponse(value, strictMode),
+    'CoinGecko'
+  );
+
+  if (!validationResult.isValid) {
+    // Log detailed validation errors for security monitoring
+    const primaryError = validationResult.errors[0];
+    const errorMessage = primaryError 
+      ? `${primaryError.message} (${primaryError.code} at ${primaryError.path})`
+      : 'Invalid API response structure';
+
+    baseLogger.error('API response validation failed', new Error(errorMessage), {
       url: API_URL,
-      dataType: typeof data
+      validationErrors: validationResult.errors.map(err => ({
+        path: err.path,
+        code: err.code,
+        message: err.message,
+        actualValue: err.actualValue ? typeof err.actualValue : undefined
+      }))
     });
+
     throw new ApiError(
-      'Invalid API response: not an object',
+      `Invalid API response: ${errorMessage}`,
       ApiErrorCode.INVALID_RESPONSE
     );
   }
 
-  const response = data as Record<string, unknown>;
+  // Additional security check: validate the resulting price data will be valid
+  const response = validationResult.data!;
+  const tempPriceData = {
+    usdRate: response.bitcoin.usd,
+    satoshiRate: response.bitcoin.usd / 100000000,
+    fetchedAt: Date.now(),
+    source: 'CoinGecko'
+  };
 
-  // Check for required bitcoin property
-  if (!response.bitcoin) {
-    baseLogger.error('API response data validation failed', new Error('Missing bitcoin data'), {
-      url: API_URL,
-      hasBitcoin: !!response.bitcoin
-    });
-    throw new ApiError(
-      'Invalid API response: missing bitcoin data',
-      ApiErrorCode.INVALID_RESPONSE
-    );
-  }
+  const priceDataValidation = MessageValidators.validatePriceData(tempPriceData);
+  if (!priceDataValidation.isValid) {
+    const priceError = priceDataValidation.errors[0];
+    const errorMessage = priceError 
+      ? `Generated price data invalid: ${priceError.message} (${priceError.code})`
+      : 'Generated price data structure invalid';
 
-  // Validate bitcoin object structure
-  const bitcoin = response.bitcoin as Record<string, unknown>;
-  if (typeof bitcoin !== 'object') {
-    baseLogger.error('API response data validation failed', new Error('bitcoin is not an object'), {
+    baseLogger.error('Generated price data validation failed', new Error(errorMessage), {
       url: API_URL,
-      bitcoinType: typeof bitcoin
+      priceData: tempPriceData,
+      validationErrors: priceDataValidation.errors
     });
-    throw new ApiError(
-      'Invalid API response: bitcoin must be an object',
-      ApiErrorCode.INVALID_RESPONSE
-    );
-  }
 
-  // Check for USD property in bitcoin
-  if (typeof bitcoin.usd !== 'number') {
-    baseLogger.error('API response data validation failed', new Error('Missing or invalid USD data'), {
-      url: API_URL,
-      hasUsd: 'usd' in bitcoin,
-      usdType: typeof bitcoin.usd
-    });
     throw new ApiError(
-      'Invalid API response: usd must be a number',
-      ApiErrorCode.INVALID_RESPONSE
-    );
-  }
-
-  // Validate that USD price is positive
-  if (bitcoin.usd <= 0) {
-    baseLogger.error('API response data validation failed', new Error('Invalid USD price'), {
-      url: API_URL,
-      usdValue: bitcoin.usd
-    });
-    throw new ApiError(
-      'Invalid API response: USD price must be positive',
+      `API response produces invalid price data: ${errorMessage}`,
       ApiErrorCode.INVALID_RESPONSE
     );
   }

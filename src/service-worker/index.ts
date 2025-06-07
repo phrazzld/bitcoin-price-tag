@@ -8,12 +8,7 @@ import { PriceRequestMessage, PriceResponseMessage } from '../common/types';
 import { rehydrateCache, setCachedPrice, getCachedPrice } from './cache';
 import { fetchBtcPrice } from './api';
 import { createLogger } from '../shared/logger';
-import {
-  isObject,
-  isValidTimestamp,
-  hasOnlyExpectedProperties,
-  hasRequiredProperties
-} from '../common/validation-helpers';
+import { SecureValidation } from '../common/schema-validation';
 
 /** Logger instance for this module */
 const logger = createLogger('service-worker');
@@ -145,32 +140,27 @@ function handleMessage(
     }
   });
 
-  // Perform deep validation first (security-focused approach)
-  const validationResult = validatePriceRequestMessage(message);
+  // Perform comprehensive security validation
+  const validationResult = SecureValidation.validateChromeMessage(message, sender, 'PRICE_REQUEST');
   
   if (!validationResult.isValid) {
-    // Log security-relevant validation failure
-    logger.warn('Message validation failed', {
-      function_name: 'handleMessage',
-      validationError: validationResult.error,
-      messageType: isObject(message) ? message.type : typeof message,
-      sender: {
-        tab: sender.tab ? { id: sender.tab.id } : undefined,
-        origin: sender.origin
-      }
-    });
-
     // Extract requestId for response correlation if possible (best effort)
-    const requestId = isObject(message) && typeof message.requestId === 'string' 
+    const requestId = typeof message === 'object' && message !== null && 'requestId' in message && typeof message.requestId === 'string' 
       ? message.requestId 
       : 'unknown';
+
+    // Create error summary from validation errors
+    const primaryError = validationResult.errors[0];
+    const errorMessage = primaryError 
+      ? `${primaryError.message} (${primaryError.code})`
+      : 'Invalid message format';
 
     sendResponse({
       requestId,
       type: 'PRICE_RESPONSE',
       status: 'error',
       error: {
-        message: validationResult.error || 'Invalid message format',
+        message: errorMessage,
         code: 'validation_error'
       },
       timestamp: Date.now()
@@ -180,7 +170,7 @@ function handleMessage(
   }
 
   // Safe to proceed - message is validated as PriceRequestMessage
-  const validMessage = message as PriceRequestMessage;
+  const validMessage = validationResult.data as PriceRequestMessage;
   
   handlePriceRequest(validMessage, sendResponse).catch(error => {
     logger.error('Unhandled error in handlePriceRequest', error, {
@@ -204,78 +194,6 @@ function handleMessage(
   return true;
 }
 
-/**
- * Type guard to check if value is a valid request ID
- */
-function isValidRequestId(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0;
-}
-
-/**
- * Deep validation result for message validation
- */
-interface ValidationResult {
-  isValid: boolean;
-  error?: string;
-}
-
-
-/**
- * Comprehensive deep validation for PriceRequestMessage
- * Returns detailed validation results for security logging
- */
-function validatePriceRequestMessage(message: unknown): ValidationResult {
-  // Check if message is an object
-  if (!isObject(message)) {
-    return {
-      isValid: false,
-      error: 'Message must be a non-null object'
-    };
-  }
-
-  // Check required properties presence
-  const requiredProps = ['type', 'requestId', 'timestamp'];
-  if (!hasRequiredProperties(message, requiredProps)) {
-    const missingProps = requiredProps.filter(prop => !(prop in message));
-    return {
-      isValid: false,
-      error: `Message missing required properties: ${missingProps.join(', ')}`
-    };
-  }
-
-  // Check for unexpected properties (security: prevent property injection)
-  if (!hasOnlyExpectedProperties(message, requiredProps)) {
-    const extraProps = Object.keys(message).filter(key => !requiredProps.includes(key));
-    return {
-      isValid: false,
-      error: `Message contains unexpected properties: ${extraProps.join(', ')}`
-    };
-  }
-
-  // Deep validation of property types and values
-  if (message.type !== 'PRICE_REQUEST') {
-    return {
-      isValid: false,
-      error: `Invalid message type: expected 'PRICE_REQUEST', got '${String(message.type)}'`
-    };
-  }
-
-  if (!isValidRequestId(message.requestId)) {
-    return {
-      isValid: false,
-      error: 'Invalid requestId: must be a non-empty string'
-    };
-  }
-
-  if (!isValidTimestamp(message.timestamp)) {
-    return {
-      isValid: false,
-      error: 'Invalid timestamp: must be a positive number'
-    };
-  }
-
-  return { isValid: true };
-}
 
 /**
  * Handles price request messages by checking cache and fetching from API if needed

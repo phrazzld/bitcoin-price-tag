@@ -213,6 +213,170 @@ describe('logger.ts', () => {
       const call3 = JSON.parse(mockConsole.error.mock.calls[2][0]);
       expect(call3.errorDetails.message).toBe('null');
     });
+
+    it('should handle custom Error subclasses', () => {
+      const log = new Logger({ level: LogLevel.INFO });
+      
+      class CustomError extends Error {
+        constructor(message: string) {
+          super(message);
+          this.name = 'CustomError';
+        }
+      }
+      
+      class ValidationError extends Error {
+        constructor(message: string, public field: string) {
+          super(message);
+          this.name = 'ValidationError';
+        }
+      }
+      
+      const customError = new CustomError('Custom error occurred');
+      const validationError = new ValidationError('Field is required', 'email');
+      
+      log.error('Custom error test', customError);
+      log.error('Validation error test', validationError);
+      
+      expect(mockConsole.error).toHaveBeenCalledTimes(2);
+      
+      const call1 = JSON.parse(mockConsole.error.mock.calls[0][0]);
+      expect(call1.errorDetails).toMatchObject({
+        type: 'CustomError',
+        message: 'Custom error occurred'
+      });
+      expect(call1.errorDetails.stack).toBeDefined();
+      
+      const call2 = JSON.parse(mockConsole.error.mock.calls[1][0]);
+      expect(call2.errorDetails).toMatchObject({
+        type: 'ValidationError', 
+        message: 'Field is required'
+      });
+      expect(call2.errorDetails.stack).toBeDefined();
+    });
+
+    it('should handle nested error objects with context', () => {
+      const log = new Logger({ level: LogLevel.INFO });
+      
+      const rootError = new Error('Root cause error');
+      const wrappedError = new Error('Wrapped error');
+      
+      const context = {
+        operation: 'data processing',
+        userId: 12345,
+        nested: {
+          originalError: rootError,
+          attempts: 3
+        }
+      };
+      
+      log.error('Complex error scenario', wrappedError, context);
+      
+      expect(mockConsole.error).toHaveBeenCalledOnce();
+      const call = JSON.parse(mockConsole.error.mock.calls[0][0]);
+      
+      expect(call.errorDetails).toMatchObject({
+        type: 'Error',
+        message: 'Wrapped error'
+      });
+      expect(call.errorDetails.stack).toBeDefined();
+      
+      expect(call.context).toMatchObject({
+        operation: 'data processing',
+        userId: 12345,
+        nested: {
+          attempts: 3
+        }
+      });
+      
+      // The nested error should be serialized as a string representation
+      expect(call.context.nested.originalError).toBeDefined();
+    });
+
+    it('should verify error message readability in logs', () => {
+      const log = new Logger({ level: LogLevel.INFO });
+      
+      const testError = new Error('This is a readable error message');
+      testError.stack = `Error: This is a readable error message
+    at testFunction (/path/to/file.js:123:45)
+    at anotherFunction (/path/to/file.js:67:89)`;
+      
+      log.error('Readable error test', testError, { component: 'test-component' });
+      
+      expect(mockConsole.error).toHaveBeenCalledOnce();
+      const logOutput = mockConsole.error.mock.calls[0][0];
+      const parsedLog = JSON.parse(logOutput);
+      
+      // Verify the log entry structure
+      expect(parsedLog).toMatchObject({
+        level: 'error',
+        message: 'Readable error test',
+        errorDetails: {
+          type: 'Error',
+          message: 'This is a readable error message',
+          stack: expect.stringContaining('at testFunction')
+        },
+        context: {
+          component: 'test-component'
+        }
+      });
+      
+      // Verify readability: error message should not be "[object Object]"
+      expect(parsedLog.errorDetails.message).not.toBe('[object Object]');
+      expect(parsedLog.errorDetails.message).toBe('This is a readable error message');
+      
+      // Verify stack trace is preserved and readable
+      expect(parsedLog.errorDetails.stack).toContain('at testFunction');
+      expect(parsedLog.errorDetails.stack).toContain('/path/to/file.js:123:45');
+      
+      // Verify the entire log output is valid JSON (can be parsed)
+      expect(() => JSON.parse(logOutput)).not.toThrow();
+    });
+
+    it('should handle Error objects with missing stack traces', () => {
+      const log = new Logger({ level: LogLevel.INFO });
+      
+      const errorWithoutStack = new Error('Error without stack');
+      delete errorWithoutStack.stack;
+      
+      log.error('Error without stack test', errorWithoutStack);
+      
+      expect(mockConsole.error).toHaveBeenCalledOnce();
+      const call = JSON.parse(mockConsole.error.mock.calls[0][0]);
+      
+      expect(call.errorDetails).toMatchObject({
+        type: 'Error',
+        message: 'Error without stack'
+      });
+      
+      // Stack should be undefined when not present
+      expect(call.errorDetails.stack).toBeUndefined();
+    });
+
+    it('should handle Error objects with complex properties', () => {
+      const log = new Logger({ level: LogLevel.INFO });
+      
+      const complexError = new Error('Complex error');
+      (complexError as any).code = 'ERR_NETWORK';
+      (complexError as any).status = 500;
+      (complexError as any).details = { endpoint: '/api/data', method: 'POST' };
+      
+      log.error('Complex error test', complexError);
+      
+      expect(mockConsole.error).toHaveBeenCalledOnce();
+      const call = JSON.parse(mockConsole.error.mock.calls[0][0]);
+      
+      // Standard error properties should be in errorDetails
+      expect(call.errorDetails).toMatchObject({
+        type: 'Error',
+        message: 'Complex error'
+      });
+      
+      // Custom properties are not included in errorDetails by design
+      // The logger only extracts standard Error properties (type, message, stack)
+      expect(call.errorDetails.code).toBeUndefined();
+      expect(call.errorDetails.status).toBeUndefined();
+      expect(call.errorDetails.details).toBeUndefined();
+    });
   });
 
   describe('getEnvironmentLogLevel', () => {

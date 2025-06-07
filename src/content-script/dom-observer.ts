@@ -214,10 +214,9 @@ export function createDomObserver(
           annotationFunction(node, currentPriceData, processedNodes);
           processedCount++;
         } catch (error) {
-          logger.error('Error processing individual node:', {
+          logger.error('Error processing individual node:', error, {
             nodeName: node.nodeName,
-            nodeType: node.nodeType,
-            error: error instanceof Error ? error.message : String(error)
+            nodeType: node.nodeType
           });
         }
       }
@@ -232,10 +231,7 @@ export function createDomObserver(
         processedNodesSize: processedNodes.size
       });
     } catch (error) {
-      logger.error('Error in processDebouncedNodes:', {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      logger.error('Error in processDebouncedNodes:', error);
     } finally {
       // Always clear state regardless of success or failure
       pendingNodes.clear();
@@ -278,10 +274,7 @@ export function createDomObserver(
       // window.setTimeout returns number in browser environment
       timeoutId = window.setTimeout(processDebouncedNodes, debounceMilliseconds);
     } catch (error) {
-      logger.error('Error scheduling debounced processing.', {
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorStack: error instanceof Error ? error.stack : undefined
-      });
+      logger.error('Error scheduling debounced processing.', error);
     }
   }
   
@@ -343,10 +336,7 @@ export function createDomObserver(
     
       scheduleProcessing(addedNodes);
     } catch (error) {
-      logger.error('Error in MutationObserver callback.', {
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorStack: error instanceof Error ? error.stack : undefined
-      });
+      logger.error('Error in MutationObserver callback.', error);
     }
   }
   
@@ -369,10 +359,7 @@ export function createDomObserver(
           rootElementNodeName: rootElementToObserve.nodeName
         });
       } catch (error) {
-        logger.error('Error starting DOM Observer.', {
-          errorMessage: error instanceof Error ? error.message : String(error),
-          errorStack: error instanceof Error ? error.stack : undefined
-        });
+        logger.error('Error starting DOM Observer.', error);
         throw error; // Re-throw to notify caller of the failure
       }
     },
@@ -393,10 +380,7 @@ export function createDomObserver(
       
         logger.info('DOM Observer stopped.');
       } catch (error) {
-        logger.error('Error stopping DOM Observer.', {
-          errorMessage: error instanceof Error ? error.message : String(error),
-          errorStack: error instanceof Error ? error.stack : undefined
-        });
+        logger.error('Error stopping DOM Observer.', error);
       }
     }
   };

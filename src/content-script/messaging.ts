@@ -4,12 +4,7 @@
 
 import { PriceData, PriceRequestMessage, PriceResponseMessage } from '../common/types';
 import { createLogger } from '../shared/logger';
-import {
-  isObject,
-  isValidTimestamp,
-  hasOnlyExpectedProperties,
-  hasRequiredProperties
-} from '../common/validation-helpers';
+import { SecureValidation } from '../common/schema-validation';
 
 /** 
  * Logger instance for this module
@@ -111,53 +106,70 @@ export async function requestPriceData(timeoutMs = REQUEST_TIMEOUT_MS): Promise<
         return;
       }
       
-      // Type check the response
-      if (!isPriceResponseMessage(response)) {
-        logger.error('Invalid response format', new Error('Response does not match expected format'), {
+      // Comprehensive security validation of response
+      const validationResult = SecureValidation.validateChromeMessage(
+        response, 
+        { origin: 'service-worker' } as chrome.runtime.MessageSender, 
+        'PRICE_RESPONSE'
+      );
+      
+      if (!validationResult.isValid) {
+        const primaryError = validationResult.errors[0];
+        const errorMessage = primaryError 
+          ? `Response validation failed: ${primaryError.message} (${primaryError.code})`
+          : 'Invalid response format';
+          
+        logger.error('Response validation failed', new Error(errorMessage), {
           function_name: 'requestPriceData',
           requestId,
-          response
+          validationErrors: validationResult.errors.map(err => ({
+            path: err.path,
+            code: err.code,
+            message: err.message
+          }))
         });
-        reject(new Error('Invalid response format'));
+        reject(new Error(errorMessage));
         return;
       }
       
+      const validResponse = validationResult.data as PriceResponseMessage;
+      
       // Check if this response is for our request
-      if (response.requestId !== requestId) {
+      if (validResponse.requestId !== requestId) {
         logger.error('Response requestId mismatch', new Error('Response ID does not match request ID'), {
           function_name: 'requestPriceData',
           requestId,
-          responseId: response.requestId
+          responseId: validResponse.requestId
         });
         reject(new Error('Response requestId mismatch'));
         return;
       }
       
       // Handle the response based on status
-      if (response.status === 'success' && response.data) {
+      if (validResponse.status === 'success' && validResponse.data) {
         logger.info('Price request successful', {
           function_name: 'requestPriceData',
           requestId,
-          responseTime: response.timestamp - request.timestamp,
+          responseTime: validResponse.timestamp - request.timestamp,
           priceData: {
-            usdRate: response.data.usdRate,
-            fetchedAt: response.data.fetchedAt,
-            source: response.data.source
+            usdRate: validResponse.data.usdRate,
+            fetchedAt: validResponse.data.fetchedAt,
+            source: validResponse.data.source
           }
         });
-        resolve(response.data);
-      } else if (response.status === 'error' && response.error) {
-        logger.error('Price request failed', new PriceRequestError(response.error.message, response.error.code), {
+        resolve(validResponse.data);
+      } else if (validResponse.status === 'error' && validResponse.error) {
+        logger.error('Price request failed', new PriceRequestError(validResponse.error.message, validResponse.error.code), {
           function_name: 'requestPriceData',
           requestId,
-          errorCode: response.error.code
+          errorCode: validResponse.error.code
         });
-        reject(new PriceRequestError(response.error.message, response.error.code));
+        reject(new PriceRequestError(validResponse.error.message, validResponse.error.code));
       } else {
         logger.error('Invalid response status', new Error('Response has neither success nor error status'), {
           function_name: 'requestPriceData',
           requestId,
-          status: response.status
+          status: validResponse.status
         });
         reject(new Error('Invalid response format'));
       }
@@ -165,87 +177,3 @@ export async function requestPriceData(timeoutMs = REQUEST_TIMEOUT_MS): Promise<
   });
 }
 
-/**
- * Type guard to check if value is a valid status
- */
-function isValidStatus(value: unknown): value is 'success' | 'error' {
-  return value === 'success' || value === 'error';
-}
-
-/**
- * Type guard to check if value is a valid request ID
- */
-function isValidRequestId(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0;
-}
-
-/**
- * Type guard to check if value is valid PriceData
- */
-function isValidPriceData(value: unknown): value is PriceData {
-  if (!isObject(value)) return false;
-  
-  const requiredProps = ['usdRate', 'satoshiRate', 'fetchedAt', 'source'];
-  if (!hasRequiredProperties(value, requiredProps)) return false;
-  if (!hasOnlyExpectedProperties(value, requiredProps)) return false;
-  
-  return (
-    typeof value.usdRate === 'number' && value.usdRate > 0 &&
-    typeof value.satoshiRate === 'number' && value.satoshiRate > 0 &&
-    isValidTimestamp(value.fetchedAt) &&
-    typeof value.source === 'string' && value.source.length > 0
-  );
-}
-
-/**
- * Type guard to check if value is valid error object
- */
-function isValidError(value: unknown): value is { message: string; code: string } {
-  if (!isObject(value)) return false;
-  
-  const requiredProps = ['message', 'code'];
-  if (!hasRequiredProperties(value, requiredProps)) return false;
-  if (!hasOnlyExpectedProperties(value, requiredProps)) return false;
-  
-  return (
-    typeof value.message === 'string' && value.message.length > 0 &&
-    typeof value.code === 'string' && value.code.length > 0
-  );
-}
-
-/**
- * Type guard to check if a message is a PriceResponseMessage
- * @internal Exported for testing only
- */
-export function isPriceResponseMessage(message: unknown): message is PriceResponseMessage {
-  if (!isObject(message)) return false;
-  
-  const requiredProps = ['requestId', 'type', 'status', 'timestamp'];
-  if (!hasRequiredProperties(message, requiredProps)) return false;
-  
-  // Check core properties
-  if (message.type !== 'PRICE_RESPONSE') return false;
-  if (!isValidRequestId(message.requestId)) return false;
-  if (!isValidStatus(message.status)) return false;
-  if (!isValidTimestamp(message.timestamp)) return false;
-  
-  // Check optional properties based on status
-  if (message.status === 'success') {
-    if (!('data' in message) || !isValidPriceData(message.data)) return false;
-    // Success responses should not have error property
-    if ('error' in message) return false;
-    
-    const allowedProps = ['requestId', 'type', 'status', 'timestamp', 'data'];
-    if (!hasOnlyExpectedProperties(message, allowedProps)) return false;
-  } else {
-    // status === 'error'
-    if (!('error' in message) || !isValidError(message.error)) return false;
-    // Error responses should not have data property
-    if ('data' in message) return false;
-    
-    const allowedProps = ['requestId', 'type', 'status', 'timestamp', 'error'];
-    if (!hasOnlyExpectedProperties(message, allowedProps)) return false;
-  }
-  
-  return true;
-}

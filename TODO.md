@@ -134,6 +134,56 @@
   - [x] Service worker lifecycle tests execute reliably (with clear headed mode requirement)
   - [x] DOM interaction patterns work in CI environment
 
+### T046: Fix Logger Error Serialization in CI Tests
+- **Status**: ✅ Completed
+- **Priority**: Critical
+- **Description**: Resolve CI test failures caused by Error objects being serialized as "[object Object]" in logger output
+- **Files**: `src/shared/logger.ts`, DOM observer tests
+- **Issues**:
+  - Error objects lose message and stack properties during JSON serialization
+  - Tests fail when error logging occurs (Node 18 and Node 20)
+  - Logger at line 259 not properly handling Error object properties
+- **Acceptance Criteria**:
+  - [x] Logger properly serializes Error objects with message and stack
+  - [x] DOM observer error handling tests pass in CI
+  - [x] Test (18) and Test (20) CI checks pass
+  - [x] All 7/7 CI checks pass successfully
+
+### T047: Add Logger Error Serialization Unit Tests
+- **Status**: ✅ Completed
+- **Priority**: Medium
+- **Description**: Add comprehensive unit tests for logger error handling to prevent regression
+- **Files**: `src/shared/logger.test.ts` (enhanced existing file)
+- **Depends on**: T046
+- **Acceptance Criteria**:
+  - [x] Test standard Error objects serialization
+  - [x] Test custom Error subclasses
+  - [x] Test non-Error objects passed to logger
+  - [x] Test nested error objects
+  - [x] Verify error message readability in logs
+
+### T048: Validate DOM Observer Error Test Objects
+- **Status**: ✅ Completed
+- **Priority**: Low
+- **Description**: Ensure DOM observer tests use proper Error objects and update assertions if needed
+- **Files**: `src/content-script/dom-observer.test.ts`
+- **Depends on**: T046
+- **Acceptance Criteria**:
+  - [x] All test errors use proper Error constructor
+  - [x] Test assertions match new logger error format
+  - [x] Error handling behavior validation remains accurate
+
+### T049: Clean Up CI Analysis Temporary Files
+- **Status**: ✅ Completed
+- **Priority**: Low
+- **Description**: Remove temporary CI analysis files after resolution
+- **Files**: `test-results/`, `playwright-report/` directories
+- **Depends on**: T046
+- **Acceptance Criteria**:
+  - [x] CI analysis files removed after successful fix
+  - [x] Repository remains clean with only production code
+  - [x] Documentation updated if needed
+
 ## Completed Tasks
 
 ### T034: Fix Service Worker Test Infrastructure CI Compatibility ✅
