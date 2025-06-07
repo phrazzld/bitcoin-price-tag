@@ -361,7 +361,7 @@ describe('schema-validation.ts', () => {
 
   describe('SecureValidation.validateChromeMessage', () => {
     const mockSender: chrome.runtime.MessageSender = {
-      tab: { id: 123, url: 'https://example.com' },
+      tab: { id: 123, url: 'https://example.com' } as chrome.tabs.Tab,
       frameId: 0,
       origin: 'https://example.com'
     };

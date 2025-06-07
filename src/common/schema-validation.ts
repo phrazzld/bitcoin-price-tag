@@ -358,7 +358,7 @@ export class MessageValidators {
     // If we get here, the message is valid
     return {
       isValid: true,
-      data: obj as PriceRequestMessage,
+      data: obj as unknown as PriceRequestMessage,
       errors: []
     };
   }
@@ -421,7 +421,7 @@ export class MessageValidators {
 
     return {
       isValid: true,
-      data: obj as PriceData,
+      data: obj as unknown as PriceData,
       errors: []
     };
   }
@@ -553,7 +553,7 @@ export class MessageValidators {
 
     return {
       isValid: true,
-      data: obj as PriceResponseMessage,
+      data: obj as unknown as PriceResponseMessage,
       errors: []
     };
   }
@@ -666,7 +666,7 @@ export class MessageValidators {
 
     return {
       isValid: true,
-      data: obj as CoinGeckoApiResponse,
+      data: obj as unknown as CoinGeckoApiResponse,
       errors: []
     };
   }

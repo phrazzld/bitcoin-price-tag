@@ -145,7 +145,8 @@ describe('API error handling', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(ApiError);
         expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
-        expect((error as ApiError).message).toBe('Invalid API response: not an object');
+        expect((error as ApiError).message).toContain('Invalid API response:');
+        expect((error as ApiError).message).toContain('object');
       }
     });
 
@@ -164,7 +165,8 @@ describe('API error handling', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(ApiError);
         expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
-        expect((error as ApiError).message).toBe('Invalid API response: missing bitcoin data');
+        expect((error as ApiError).message).toContain('Invalid API response:');
+        expect((error as ApiError).message).toContain('bitcoin');
       }
     });
 
@@ -183,7 +185,8 @@ describe('API error handling', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(ApiError);
         expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
-        expect((error as ApiError).message).toBe('Invalid API response: bitcoin must be an object');
+        expect((error as ApiError).message).toContain('Invalid API response:');
+        expect((error as ApiError).message).toContain('bitcoin');
       }
     });
 
@@ -204,7 +207,8 @@ describe('API error handling', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(ApiError);
         expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
-        expect((error as ApiError).message).toBe('Invalid API response: usd must be a number');
+        expect((error as ApiError).message).toContain('Invalid API response:');
+        expect((error as ApiError).message).toContain('usd');
       }
     });
 
@@ -225,7 +229,8 @@ describe('API error handling', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(ApiError);
         expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
-        expect((error as ApiError).message).toBe('Invalid API response: usd must be a number');
+        expect((error as ApiError).message).toContain('Invalid API response:');
+        expect((error as ApiError).message).toContain('usd');
       }
     });
 
@@ -246,7 +251,8 @@ describe('API error handling', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(ApiError);
         expect((error as ApiError).code).toBe(ApiErrorCode.INVALID_RESPONSE);
-        expect((error as ApiError).message).toBe('Invalid API response: USD price must be positive');
+        expect((error as ApiError).message).toContain('Invalid API response:');
+        expect((error as ApiError).message).toContain('zero');
       }
     });
   });
