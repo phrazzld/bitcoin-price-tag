@@ -32,5 +32,9 @@ T[0-9]*-task.md
 # Temporary files
 *.tmp
 
+# Test artifacts
+playwright-report/
+test-results/
+
 # Build artifacts
 *.zip

@@ -106,7 +106,7 @@
 - **Root Cause**: Content scripts don't auto-inject in Playwright, service worker events unreliable
 
 ### T044: Fix ESLint Issues in Playwright Test Files  
-- **Status**: 🔄 Pending
+- **Status**: ✅ Completed
 - **Priority**: Low  
 - **Description**: Resolve linting errors in newly created Playwright test fixtures
 - **Files**:
