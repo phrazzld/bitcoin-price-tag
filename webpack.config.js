@@ -50,6 +50,9 @@ module.exports = {
   plugins: [
     new webpack.DefinePlugin({
       'process.env.LOG_LEVEL': JSON.stringify('INFO'),
+      'process.env.CI': JSON.stringify(false),
+      'typeof process': JSON.stringify('undefined'),
+      'process': 'undefined',
     }),
     new CopyWebpackPlugin({
       patterns: [
