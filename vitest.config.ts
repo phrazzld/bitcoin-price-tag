@@ -11,6 +11,7 @@ export default defineConfig({
     
     // Test file patterns
     include: ['src/**/*.{test,spec}.{js,ts}', 'tests/**/*.{test,spec}.{js,ts}'],
+    exclude: ['tests/playwright/**/*'],
     
     // Performance optimizations
     cache: {

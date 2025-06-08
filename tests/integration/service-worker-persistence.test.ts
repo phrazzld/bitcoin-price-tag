@@ -228,7 +228,8 @@ describe('Service Worker Persistence Integration Tests', () => {
       });
       global.fetch = mockFetch;
 
-      // Import service worker
+      // Ensure fresh module state and import service worker
+      vi.resetModules();
       await import('../../src/service-worker/index');
 
       // Trigger alarm
@@ -236,6 +237,9 @@ describe('Service Worker Persistence Integration Tests', () => {
       expect(alarmHandler).toBeDefined();
 
       await alarmHandler({ name: REFRESH_ALARM_NAME });
+
+      // Wait for all async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       // Verify API was called
       expect(mockFetch).toHaveBeenCalled();
