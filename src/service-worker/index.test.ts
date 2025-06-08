@@ -951,7 +951,7 @@ async function expectLogToContain(
             status: 'error',
             error: expect.objectContaining({
               code: 'validation_error',
-              message: 'Invalid requestId: must be a non-empty string'
+              message: 'Expected string, got number (invalid_type)'
             })
           })
         );
@@ -1033,7 +1033,7 @@ async function expectLogToContain(
             status: 'error',
             error: expect.objectContaining({
               code: 'validation_error',
-              message: expect.stringContaining('unexpected properties')
+              message: expect.stringContaining('Unexpected property')
             })
           })
         );
@@ -1054,7 +1054,7 @@ async function expectLogToContain(
             status: 'error',
             error: expect.objectContaining({
               code: 'validation_error',
-              message: expect.stringContaining('missing required properties')
+              message: expect.stringContaining('Required property')
             })
           })
         );

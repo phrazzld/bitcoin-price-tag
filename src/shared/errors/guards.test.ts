@@ -189,7 +189,9 @@ describe('Error Type Guards', () => {
 
   describe('Type narrowing', () => {
     it('should properly narrow types in conditionals', () => {
-      const error: unknown = new ApiError(ApiErrorCode.HTTP_ERROR, 'Error');
+      const error: unknown = new ApiError(ApiErrorCode.HTTP_ERROR, 'Error', {
+        context: { statusCode: 404 }
+      });
       
       if (isApiError(error)) {
         // TypeScript should know this is ApiError

@@ -202,7 +202,7 @@ describe('Service Worker <-> Content Script Communication', () => {
       const messagingModule = await import('../../src/content-script/messaging');
       
       // Act & Assert: Should fail - Chrome will call the callback with undefined when no handler exists
-      await expect(messagingModule.requestPriceData(100)).rejects.toThrow('Invalid response format');
+      await expect(messagingModule.requestPriceData(100)).rejects.toThrow('Response validation failed');
       
       // Verify lastError was set
       expect(harness.getLastError()).toBeTruthy();
@@ -348,7 +348,7 @@ describe('Service Worker <-> Content Script Communication', () => {
       // Assert: Should receive validation error for extra fields
       expect(responseData.status).toBe('error');
       expect(responseData.error.code).toBe('validation_error');
-      expect(responseData.error.message).toContain('unexpected properties');
+      expect(responseData.error.message).toContain('Unexpected property');
     });
   });
 });
