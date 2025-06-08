@@ -174,7 +174,9 @@ describe('Enhanced Test Lifecycle Management', () => {
         const resetModulesSpy = vi.spyOn(vi, 'resetModules').mockImplementation(() => {});
         
         const manager = new TestLifecycleManager({
-          resetModules: true
+          resetModules: true,
+          clearMocks: false,   // Prevent clearing spy call counts
+          restoreMocks: false  // Prevent restoring spy
         });
         
         await manager.setup();
@@ -192,7 +194,8 @@ describe('Enhanced Test Lifecycle Management', () => {
     describe('Custom Cleanup Functions', () => {
       it('should execute custom cleanup functions', async () => {
         const manager = new TestLifecycleManager({
-          restoreMocks: false // Prevent clearing of spy during cleanup
+          restoreMocks: false, // Prevent clearing of spy during cleanup
+          clearMocks: false    // Prevent clearing spy call counts
         });
         const cleanupSpy = vi.fn();
         
@@ -220,7 +223,8 @@ describe('Enhanced Test Lifecycle Management', () => {
 
       it('should continue cleanup even if one function fails', async () => {
         const manager = new TestLifecycleManager({
-          restoreMocks: false // Prevent clearing of spy during cleanup
+          restoreMocks: false, // Prevent clearing of spy during cleanup
+          clearMocks: false    // Prevent clearing spy call counts
         });
         const workingCleanup = vi.fn();
         const failingCleanup = vi.fn(() => { throw new Error('Cleanup failed'); });

@@ -282,17 +282,18 @@ describe('API error handling', () => {
       const mockFetch = vi.fn().mockRejectedValue(domException);
       global.fetch = mockFetch;
       
-      // Start the API call
-      const fetchPromise = fetchBtcPrice(mockLogger);
+      // Start the API call but handle rejection immediately
+      const fetchPromise = fetchBtcPrice(mockLogger).catch(e => e);
       
       // DOMException errors are retryable, so advance through retry delays
       await advanceTimersForRetry(1000); // First retry
       await advanceTimersForRetry(2000); // Second retry
       await advanceTimersForRetry(4000); // Final attempt
       
-      // Should throw after exhausting retries
-      await expect(fetchPromise).rejects.toThrow(ApiError);
-      await expect(fetchPromise).rejects.toMatchObject({
+      // Get the error result
+      const error = await fetchPromise;
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({
         code: ApiErrorCode.NETWORK_ERROR,
         message: expect.stringContaining('Network error:')
       });
@@ -325,8 +326,10 @@ describe('API error handling', () => {
       const mockFetch = vi.fn().mockRejectedValue('String error');
       global.fetch = mockFetch;
 
-      await expect(fetchBtcPrice(mockLogger)).rejects.toThrow(ApiError);
-      await expect(fetchBtcPrice(mockLogger)).rejects.toMatchObject({
+      const fetchPromise = fetchBtcPrice(mockLogger).catch(e => e);
+      const error = await fetchPromise;
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({
         code: ApiErrorCode.UNKNOWN_ERROR,
         message: 'Unexpected error: String error'
       });

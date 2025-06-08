@@ -154,14 +154,15 @@ describe('Service Worker <-> Content Script Communication', () => {
       mockFetch = mockFetchError('Network timeout');
       vi.stubGlobal('fetch', mockFetch);
       
-      // Start the API call
-      const requestPromise = requestPriceData();
+      // Start the API call and handle rejection immediately
+      const requestPromise = requestPriceData().catch(e => e);
       
       // Fast-forward through all timeouts
       await vi.runAllTimersAsync();
       
       // Act & Assert: Should throw error
-      await expect(requestPromise).rejects.toThrow();
+      const error = await requestPromise;
+      expect(error).toBeInstanceOf(Error);
       
       // Verify API was attempted
       expect(mockFetch).toHaveBeenCalled();
@@ -298,14 +299,16 @@ describe('Service Worker <-> Content Script Communication', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
       
-      // Start the request with a shorter timeout
-      const requestPromise = requestPriceData(100);
+      // Start the request with a shorter timeout and handle rejection immediately
+      const requestPromise = requestPriceData(100).catch(e => e);
       
       // Advance timer to trigger timeout but not fetch response
       await vi.advanceTimersByTimeAsync(100);
       
       // Act & Assert: Should timeout before response
-      await expect(requestPromise).rejects.toThrow('Price request timed out');
+      const error = await requestPromise;
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Price request timed out');
       
       // Advance remaining time to clean up any pending timers
       await vi.advanceTimersByTimeAsync(100);

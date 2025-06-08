@@ -224,17 +224,18 @@ describe('API retry logic', () => {
       );
       global.fetch = mockFetch;
 
-      // Start the API call
-      const fetchPromise = fetchBtcPrice(mockLogger);
+      // Start the API call but handle rejection immediately
+      const fetchPromise = fetchBtcPrice(mockLogger).catch(e => e);
       
       // Advance through each retry step: 1000ms + 2000ms + 4000ms
       await advanceTimersForRetry(1000); // First retry
       await advanceTimersForRetry(2000); // Second retry  
       await advanceTimersForRetry(4000); // Final attempt
       
-      // Should throw after exhausting retries
-      await expect(fetchPromise).rejects.toThrow(ApiError);
-      await expect(fetchPromise).rejects.toMatchObject({
+      // Get the error result
+      const error = await fetchPromise;
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({
         code: ApiErrorCode.HTTP_ERROR,
         statusCode: 503
       });
@@ -258,23 +259,25 @@ describe('API retry logic', () => {
       const mockFetch = vi.fn().mockRejectedValue(new TypeError('Network failure'));
       global.fetch = mockFetch;
 
-      // Start the API call
-      const fetchPromise = fetchBtcPrice(mockLogger);
+      // Start the API call but handle rejection immediately
+      const fetchPromise = fetchBtcPrice(mockLogger).catch(e => e);
       
       // Advance through each retry step: 1000ms + 2000ms + 4000ms
       await advanceTimersForRetry(1000); // First retry
       await advanceTimersForRetry(2000); // Second retry
       await advanceTimersForRetry(4000); // Final attempt
       
-      // Should throw after exhausting retries
-      await expect(fetchPromise).rejects.toThrow(ApiError);
-      await expect(fetchPromise).rejects.toMatchObject({
+      // Get the error result
+      const error = await fetchPromise;
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({
         code: ApiErrorCode.NETWORK_ERROR,
         message: 'Network error: Network failure'
       });
       
       // Verify all retry attempts were made (initial + 3 retries = 4 total)
       expect(mockFetch).toHaveBeenCalledTimes(4);
+      
       
       // Verify retry exhaustion was logged
       expect(mockLogger.error).toHaveBeenCalledWith('API call failed after max retries', 
@@ -295,16 +298,17 @@ describe('API retry logic', () => {
       );
       global.fetch = mockFetch;
 
-      // Start the API call
-      const fetchPromise = fetchBtcPrice(mockLogger);
+      // Start the API call but handle rejection immediately
+      const fetchPromise = fetchBtcPrice(mockLogger).catch(e => e);
       
       // Advance through each retry step to verify exponential backoff
       await advanceTimersForRetry(1000); // First retry delay: 1000ms * 2^0 = 1000ms
       await advanceTimersForRetry(2000); // Second retry delay: 1000ms * 2^1 = 2000ms
       await advanceTimersForRetry(4000); // Third retry delay: 1000ms * 2^2 = 4000ms
       
-      // Should throw after exhausting retries
-      await expect(fetchPromise).rejects.toThrow(ApiError);
+      // Get the error result
+      const error = await fetchPromise;
+      expect(error).toBeInstanceOf(ApiError);
       
       // Verify retry logging shows exponential backoff delays
       expect(mockLogger.info).toHaveBeenCalledWith('Retrying API call', 
@@ -336,17 +340,18 @@ describe('API retry logic', () => {
       );
       global.fetch = mockFetch;
       
-      // Start the API call
-      const fetchPromise = fetchBtcPrice(mockLogger);
+      // Start the API call but handle rejection immediately
+      const fetchPromise = fetchBtcPrice(mockLogger).catch(e => e);
       
       // Advance through each retry step for network errors
       await advanceTimersForRetry(1000); // First retry
       await advanceTimersForRetry(2000); // Second retry
       await advanceTimersForRetry(4000); // Final attempt
       
-      // Should throw after exhausting retries
-      await expect(fetchPromise).rejects.toThrow(ApiError);
-      await expect(fetchPromise).rejects.toMatchObject({
+      // Get the error result
+      const error = await fetchPromise;
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({
         code: ApiErrorCode.NETWORK_ERROR,
         message: expect.stringContaining('Network error:')
       });
@@ -355,8 +360,6 @@ describe('API retry logic', () => {
       expect(mockFetch).toHaveBeenCalledTimes(4);
       
       // Verify the error message contains timeout info
-      const rejectedPromise = fetchPromise.catch(error => error);
-      const error = await rejectedPromise;
       expect(error.message).toContain('timeout');
     });
   });

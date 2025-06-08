@@ -2,10 +2,10 @@
 
 ## High Priority
 
-### Fix TestLifecycleManager test failures
+- [x] ### Fix TestLifecycleManager test failures
 - **Priority**: Medium
 - **Issue**: 3 tests failing in `tests/utils/test-lifecycle.test.ts`
-- **Details**: 
+- **Details**:
   - `should reset modules when configured` - vi.resetModules spy not being called as expected
   - `should execute custom cleanup functions` - cleanup function spy not being called
   - `should continue cleanup even if one function fails` - failing cleanup spy not being called
