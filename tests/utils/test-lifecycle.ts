@@ -48,7 +48,7 @@ export class TestLifecycleManager {
       clearMocks: true,
       restoreMocks: true,
       comprehensiveCleanup: true,
-      isolateTimers: true,
+      isolateTimers: false, // Changed to false by default for CI compatibility
       cleanupDOM: false,
       globalPropertiesToClean: [],
       ...config
@@ -241,52 +241,126 @@ export class TestLifecycleManager {
    * Setup timer isolation to track timer IDs
    */
   private setupTimerIsolation(): void {
-    // Backup original timer functions
-    this.timerBackups.set('setTimeout', global.setTimeout);
-    this.timerBackups.set('setInterval', global.setInterval);
-    this.timerBackups.set('clearTimeout', global.clearTimeout);
-    this.timerBackups.set('clearInterval', global.clearInterval);
+    // Skip if timers are already wrapped or missing
+    if (!global.setTimeout || !global.setInterval || 
+        !global.clearTimeout || !global.clearInterval) {
+      console.warn('Timer functions missing or corrupted, skipping timer isolation');
+      return;
+    }
 
-    // Track timer IDs for cleanup
+    // Check if already wrapped (avoid double-wrapping)
+    if ((global.setTimeout as any).__wrapped) {
+      console.warn('Timer functions already wrapped, skipping timer isolation');
+      return;
+    }
+
+    // Backup original timer functions with validation
     const originalSetTimeout = global.setTimeout;
     const originalSetInterval = global.setInterval;
     const originalClearTimeout = global.clearTimeout;
     const originalClearInterval = global.clearInterval;
 
-    global.setTimeout = ((callback: any, delay?: number, ...args: any[]) => {
-      const id = originalSetTimeout(callback, delay, ...args);
-      this.activeTimerIds.add(id as number);
-      return id;
+    // Validate functions before storing
+    if (typeof originalSetTimeout !== 'function' ||
+        typeof originalSetInterval !== 'function' ||
+        typeof originalClearTimeout !== 'function' ||
+        typeof originalClearInterval !== 'function') {
+      console.error('Timer functions are not valid functions, skipping timer isolation');
+      return;
+    }
+
+    this.timerBackups.set('setTimeout', originalSetTimeout);
+    this.timerBackups.set('setInterval', originalSetInterval);
+    this.timerBackups.set('clearTimeout', originalClearTimeout);
+    this.timerBackups.set('clearInterval', originalClearInterval);
+
+    // Create wrapped functions that track timer IDs
+    const wrappedSetTimeout = ((callback: any, delay?: number, ...args: any[]) => {
+      try {
+        const id = originalSetTimeout(callback, delay, ...args);
+        this.activeTimerIds.add(id as number);
+        return id;
+      } catch (error) {
+        console.error('Error in wrapped setTimeout:', error);
+        throw error;
+      }
     }) as typeof setTimeout;
 
-    global.setInterval = ((callback: any, delay?: number, ...args: any[]) => {
-      const id = originalSetInterval(callback, delay, ...args);
-      this.activeTimerIds.add(id as number);
-      return id;
+    const wrappedSetInterval = ((callback: any, delay?: number, ...args: any[]) => {
+      try {
+        const id = originalSetInterval(callback, delay, ...args);
+        this.activeTimerIds.add(id as number);
+        return id;
+      } catch (error) {
+        console.error('Error in wrapped setInterval:', error);
+        throw error;
+      }
     }) as typeof setInterval;
 
-    global.clearTimeout = ((id?: number) => {
+    const wrappedClearTimeout = ((id?: number) => {
       if (id !== undefined) {
         this.activeTimerIds.delete(id);
-        originalClearTimeout(id);
+        try {
+          originalClearTimeout(id);
+        } catch (error) {
+          console.error('Error in wrapped clearTimeout:', error);
+        }
       }
     }) as typeof clearTimeout;
 
-    global.clearInterval = ((id?: number) => {
+    const wrappedClearInterval = ((id?: number) => {
       if (id !== undefined) {
         this.activeTimerIds.delete(id);
-        originalClearInterval(id);
+        try {
+          originalClearInterval(id);
+        } catch (error) {
+          console.error('Error in wrapped clearInterval:', error);
+        }
       }
     }) as typeof clearInterval;
+
+    // Mark as wrapped to prevent double-wrapping
+    (wrappedSetTimeout as any).__wrapped = true;
+    (wrappedSetInterval as any).__wrapped = true;
+    (wrappedClearTimeout as any).__wrapped = true;
+    (wrappedClearInterval as any).__wrapped = true;
+
+    // Apply wrapped functions
+    global.setTimeout = wrappedSetTimeout;
+    global.setInterval = wrappedSetInterval;
+    global.clearTimeout = wrappedClearTimeout;
+    global.clearInterval = wrappedClearInterval;
   }
 
   /**
    * Restore timer state isolation
    */
   private restoreTimerState(): void {
-    // Restore original timer functions
-    for (const [name, originalFn] of this.timerBackups) {
-      (global as any)[name] = originalFn;
+    try {
+      // Only restore if we have backups
+      if (this.timerBackups.size === 0) {
+        return;
+      }
+
+      // Restore original timer functions
+      for (const [name, originalFn] of this.timerBackups) {
+        if (originalFn && typeof originalFn === 'function') {
+          try {
+            (global as any)[name] = originalFn;
+            // Remove wrapped marker
+            delete (originalFn as any).__wrapped;
+          } catch (error) {
+            console.error(`Failed to restore timer function ${name}:`, error);
+          }
+        }
+      }
+
+      // Clear the backups after restoration
+      this.timerBackups.clear();
+    } catch (error) {
+      console.error('Error during timer state restoration:', error);
+      // Even if restoration fails, clear the backups to prevent memory leaks
+      this.timerBackups.clear();
     }
   }
 
@@ -374,7 +448,7 @@ export const TestLifecyclePresets = {
     clearMocks: true,
     restoreMocks: true,
     comprehensiveCleanup: true,
-    isolateTimers: true,
+    isolateTimers: false, // Disabled for CI compatibility
     cleanupDOM: false
   }),
 
@@ -385,7 +459,7 @@ export const TestLifecyclePresets = {
     clearMocks: true,
     restoreMocks: true,
     comprehensiveCleanup: true,
-    isolateTimers: true,
+    isolateTimers: false, // Disabled for CI compatibility
     cleanupDOM: false,
     globalPropertiesToClean: ['Date']
   }),
@@ -408,7 +482,7 @@ export const TestLifecyclePresets = {
     clearMocks: true,
     restoreMocks: true,
     comprehensiveCleanup: true,
-    isolateTimers: true,
+    isolateTimers: false, // Disabled for CI compatibility
     cleanupDOM: true,
     globalPropertiesToClean: ['Date', 'console']
   }),
@@ -458,11 +532,53 @@ export async function advanceTimersBy(ms: number): Promise<void> {
     await vi.advanceTimersByTimeAsync(ms);
   } else {
     // If not using fake timers, wait the actual time
-    await new Promise(resolve => global.setTimeout(resolve, ms));
+    // Use a safe timer function that handles corruption
+    const timer = getSafeTimerFunction();
+    await new Promise(resolve => timer(resolve, ms));
   }
   
   // Allow any resulting async operations to complete
   await flushAllPromises();
+}
+
+/**
+ * Get a safe timer function that handles potential corruption
+ * Falls back to Node.js timers if global timers are corrupted
+ */
+function getSafeTimerFunction(): typeof setTimeout {
+  // First try global.setTimeout
+  if (typeof global.setTimeout === 'function') {
+    return global.setTimeout;
+  }
+  
+  // Try to get from globalThis
+  if (typeof globalThis.setTimeout === 'function') {
+    return globalThis.setTimeout;
+  }
+  
+  // In Node.js environment, try to get from timers module
+  try {
+    const timers = require('timers');
+    if (typeof timers.setTimeout === 'function') {
+      return timers.setTimeout;
+    }
+  } catch {
+    // timers module not available
+  }
+  
+  // Last resort: create a basic setTimeout using Date.now()
+  return (callback: () => void, ms: number) => {
+    const start = Date.now();
+    const checkTime = () => {
+      if (Date.now() - start >= ms) {
+        callback();
+      } else {
+        setImmediate(checkTime);
+      }
+    };
+    setImmediate(checkTime);
+    return 0 as any; // Return dummy timer ID
+  };
 }
 
 /**

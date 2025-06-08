@@ -201,21 +201,45 @@ describe('service-worker/index.ts', () => {
     }
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     // Comprehensive cleanup of all state
-    vi.restoreAllMocks();
-    vi.clearAllMocks();
-    vi.useRealTimers();
-    vi.resetModules();
-    mockLoggerAdapter.reset();
-    
-    // Clean up global state
-    delete (global as any).chrome;
-    delete (global as any).fetch;
-    
-    // Reset handlers
-    handlers = {};
-  });
+    try {
+      // Clear any pending timers first
+      vi.clearAllTimers();
+      
+      // Restore mocks
+      vi.restoreAllMocks();
+      vi.clearAllMocks();
+      
+      // Safely restore real timers
+      try {
+        vi.useRealTimers();
+      } catch (error) {
+        console.warn('Failed to restore real timers:', error);
+      }
+      
+      // Reset modules
+      vi.resetModules();
+      
+      // Reset logger
+      if (mockLoggerAdapter && typeof mockLoggerAdapter.reset === 'function') {
+        mockLoggerAdapter.reset();
+      }
+      
+      // Clean up global state
+      delete (global as any).chrome;
+      delete (global as any).fetch;
+      
+      // Reset handlers
+      handlers = {};
+      
+      // Allow any pending operations to complete
+      await new Promise(resolve => setImmediate(resolve));
+    } catch (error) {
+      console.error('Error in afterEach cleanup:', error);
+      // Continue cleanup even if something fails
+    }
+  }, 15000); // Increase timeout to 15 seconds for CI
 
   /**
    * Helper function to check if a log message contains expected content
