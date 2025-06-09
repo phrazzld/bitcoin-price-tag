@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest",
-    "test:ci": "vitest run",
+    "test:smart": "node scripts/smart-test.js",
+    "test:ci": "vitest run --config vitest.ci.config.ts",
+    "test:ci:smoke": "vitest run --config vitest.smoke.config.ts",
+    "test:ci:full": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:coverage:check": "vitest --coverage && echo '✅ Coverage thresholds met'",
