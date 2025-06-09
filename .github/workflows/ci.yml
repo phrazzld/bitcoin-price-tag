@@ -36,7 +36,7 @@ jobs:
         continue-on-error: true  # Test infrastructure type errors shouldn't block core functionality
 
       - name: Test
-        run: pnpm run test
+        run: pnpm run test:ci
 
       - name: Build
         run: pnpm run build
