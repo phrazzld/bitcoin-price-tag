@@ -99,10 +99,23 @@ export class TestLifecycleManager {
     if (process.env.CI) {
       // Clear any lingering timers
       vi.clearAllTimers();
-      // Advance any pending async operations
-      if (vi.isFakeTimers()) {
-        await vi.runAllTimersAsync();
+      
+      // Advance any pending async operations, but avoid hanging on timer tests
+      if (vi.isFakeTimers() && !this.isTimerTest()) {
+        try {
+          // Add timeout protection for CI timer flushing
+          await Promise.race([
+            vi.runAllTimersAsync(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Timer flush timeout')), 3000)
+            )
+          ]);
+        } catch (error) {
+          // Log but don't fail - timer flushing is best-effort in CI
+          console.warn('CI timer flush failed:', (error as Error).message);
+        }
       }
+      
       // Small delay to allow any pending async operations to complete
       await new Promise(resolve => setImmediate(resolve));
     }
@@ -196,6 +209,27 @@ export class TestLifecycleManager {
    */
   updateConfig(config: Partial<TestLifecycleConfig>): void {
     this.config = { ...this.config, ...config };
+  }
+
+  /**
+   * Detect if current test is specifically testing timer functionality
+   * This helps avoid CI timer conflicts during timer-specific tests
+   */
+  private isTimerTest(): boolean {
+    try {
+      // Get current test context from Vitest
+      const testContext = vi.getCurrentTest?.();
+      const testName = testContext?.name || '';
+      
+      // Check if test name indicates timer testing
+      const timerKeywords = ['timer', 'fake', 'clock', 'timeout', 'interval', 'delay'];
+      return timerKeywords.some(keyword => 
+        testName.toLowerCase().includes(keyword)
+      );
+    } catch {
+      // If we can't determine test context, assume it's not a timer test
+      return false;
+    }
   }
 
   /**
