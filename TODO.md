@@ -17,7 +17,7 @@
   - Make timer isolation opt-in for CI compatibility
 - **Resolution**: ✅ Implemented robust timer handling with fallback mechanisms, disabled timer isolation by default, and added protection against double-wrapping. Service worker tests updated with safer cleanup handling.
 
-- [~] ### Fix service worker test cleanup timeouts
+- [x] ### Fix service worker test cleanup timeouts ✅ COMPLETED
 - **Priority**: Critical (CI Blocker)
 - **Issue**: afterEach hooks timing out in service worker tests
 - **Location**: `src/service-worker/index.test.ts:130`
@@ -30,8 +30,9 @@
   - Ensure cleanup doesn't depend on potentially corrupted timers
   - Add try-catch error boundaries in cleanup
   - Implement force cleanup mechanism for CI
+- **Resolution**: ✅ The timeout issues were resolved by the previous timer corruption fixes. A related linting error (`require()` import) was also fixed, allowing CI to pass. Service worker tests now run consistently (30 passed | 1 skipped) without timeouts.
 
-- [ ] ### Fix test lifecycle manager timer validation
+- [x] ### Fix test lifecycle manager timer validation ✅ COMPLETED
 - **Priority**: High
 - **Issue**: Assertion failure in timer state validation
 - **Location**: `tests/utils/test-lifecycle.test.ts:221`
@@ -44,6 +45,7 @@
   - Add CI-specific timer handling
   - Ensure cleanup functions execute even without timers
   - Add diagnostic logging for CI debugging
+- **Resolution**: ✅ Resolved by the timer corruption fixes. All TestLifecycleManager tests now pass (31 passed) with proper async cleanup execution and timer handling.
 
 - [ ] ### Add CI-specific timer safeguards
 - **Priority**: High
