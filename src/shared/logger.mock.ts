@@ -47,7 +47,7 @@ export function createMockLoggerAdapter() {
 function tryParseJson(jsonString: string): LogEntry | null {
   try {
     return JSON.parse(jsonString) as LogEntry;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -89,7 +89,7 @@ export function setupLoggerMock() {
     
     return {
       ...actual,
-      createLogger: vi.fn((_module: string, _config?: any, _adapter?: any) => testLogger),
+      createLogger: vi.fn((_module: string, _config?: Record<string, unknown>, _adapter?: unknown) => testLogger),
       logger: testLogger
     };
   });

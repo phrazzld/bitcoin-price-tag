@@ -7,7 +7,7 @@ describe('Service Worker Persistence Integration Tests', () => {
   let mockStorage: any;
   let mockAlarms: any;
   let mockRuntime: any;
-  let serviceWorkerHandlers: any = {
+  const serviceWorkerHandlers: any = {
     onInstalled: null,
     onStartup: null,
     onAlarm: null,
@@ -16,7 +16,6 @@ describe('Service Worker Persistence Integration Tests', () => {
 
   // Mock cache module
   let cacheModule: any;
-  let apiModule: any;
 
   beforeEach(async () => {
     // Clear all mocks
@@ -76,11 +75,22 @@ describe('Service Worker Persistence Integration Tests', () => {
     // Import fresh modules
     vi.resetModules();
     cacheModule = await import('../../src/service-worker/cache');
-    apiModule = await import('../../src/service-worker/api');
   });
 
   afterEach(() => {
+    // Comprehensive cleanup
     vi.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.resetModules();
+    
+    // Clean up global state
+    delete (global as any).chrome;
+    
+    // Reset handlers
+    serviceWorkerHandlers.onInstalled = null;
+    serviceWorkerHandlers.onStartup = null;
+    serviceWorkerHandlers.onAlarm = null;
+    serviceWorkerHandlers.onMessage = null;
   });
 
   describe('Chrome Storage Persistence', () => {
@@ -146,7 +156,7 @@ describe('Service Worker Persistence Integration Tests', () => {
         'custom_setting_2': { value: 'test2' },
       };
 
-      mockStorage.get.mockImplementation((keys) => {
+      mockStorage.get.mockImplementation((keys: string | string[] | null) => {
         if (keys === PRICE_CACHE_KEY) {
           return Promise.resolve({ [PRICE_CACHE_KEY]: multipleEntries[PRICE_CACHE_KEY] });
         }
@@ -218,7 +228,8 @@ describe('Service Worker Persistence Integration Tests', () => {
       });
       global.fetch = mockFetch;
 
-      // Import service worker
+      // Ensure fresh module state and import service worker
+      vi.resetModules();
       await import('../../src/service-worker/index');
 
       // Trigger alarm
@@ -226,6 +237,9 @@ describe('Service Worker Persistence Integration Tests', () => {
       expect(alarmHandler).toBeDefined();
 
       await alarmHandler({ name: REFRESH_ALARM_NAME });
+
+      // Wait for all async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       // Verify API was called
       expect(mockFetch).toHaveBeenCalled();

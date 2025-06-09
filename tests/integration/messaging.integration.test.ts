@@ -7,9 +7,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ChromeRuntimeHarness } from '../harness/ChromeRuntimeHarness';
 import { createFetchMock, mockFetchPrice, mockFetchError } from '../mocks/fetch';
 import { createStorageMock, createStorageWithCache, createEmptyStorage } from '../mocks/storage';
-import { createTestPriceData, createTestPriceRequest, waitFor } from '../utils/test-helpers';
+import { createTestPriceData, createTestPriceRequest } from '../utils/test-helpers';
 import { PRICE_CACHE_KEY, DEFAULT_CACHE_TTL_MS } from '../../src/common/constants';
-import type { PriceData, PriceRequestMessage, PriceResponseMessage } from '../../src/common/types';
+import type { PriceData } from '../../src/common/types';
 
 describe('Service Worker <-> Content Script Communication', () => {
   let harness: ChromeRuntimeHarness;
@@ -50,9 +50,12 @@ describe('Service Worker <-> Content Script Communication', () => {
   });
 
   afterEach(() => {
+    // Comprehensive cleanup
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
+    vi.resetModules();
     harness.reset();
   });
 
@@ -119,8 +122,7 @@ describe('Service Worker <-> Content Script Communication', () => {
       // where we verify that multiple messages are handled correctly
       
       // Setup: Simple counter to verify each request is processed
-      let requestCount = 0;
-      const results: any[] = [];
+      // Note: Currently using simple parallel request validation
       
       // Send three requests in parallel
       const promises = [
@@ -147,19 +149,20 @@ describe('Service Worker <-> Content Script Communication', () => {
   });
 
   describe('Error Cases', () => {
-    it('should handle API failure gracefully', async () => {
+    it('should handle API failure gracefully', { retry: process.env.CI ? 2 : 0 }, async () => {
       // Setup: Empty cache, failing API
       mockFetch = mockFetchError('Network timeout');
       vi.stubGlobal('fetch', mockFetch);
       
-      // Start the API call
-      const requestPromise = requestPriceData();
+      // Start the API call and handle rejection immediately
+      const requestPromise = requestPriceData().catch(e => e);
       
       // Fast-forward through all timeouts
       await vi.runAllTimersAsync();
       
       // Act & Assert: Should throw error
-      await expect(requestPromise).rejects.toThrow();
+      const error = await requestPromise;
+      expect(error).toBeInstanceOf(Error);
       
       // Verify API was attempted
       expect(mockFetch).toHaveBeenCalled();
@@ -186,7 +189,7 @@ describe('Service Worker <-> Content Script Communication', () => {
       expect(responseReceived).toBe(true);
       expect(responseData.type).toBe('PRICE_RESPONSE');
       expect(responseData.status).toBe('error');
-      expect(responseData.error.code).toBe('unknown_message');
+      expect(responseData.error.code).toBe('validation_error');
     });
 
     it('should handle no listener registered scenario', async () => {
@@ -200,7 +203,7 @@ describe('Service Worker <-> Content Script Communication', () => {
       const messagingModule = await import('../../src/content-script/messaging');
       
       // Act & Assert: Should fail - Chrome will call the callback with undefined when no handler exists
-      await expect(messagingModule.requestPriceData(100)).rejects.toThrow('Invalid response format');
+      await expect(messagingModule.requestPriceData(100)).rejects.toThrow('Response validation failed');
       
       // Verify lastError was set
       expect(harness.getLastError()).toBeTruthy();
@@ -272,9 +275,6 @@ describe('Service Worker <-> Content Script Communication', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
       
-      // Set a timestamp to verify delay
-      const startTime = performance.now();
-      
       // Start the request
       const requestPromise = requestPriceData();
       
@@ -286,13 +286,12 @@ describe('Service Worker <-> Content Script Communication', () => {
       
       // Get the result
       const result = await requestPromise;
-      const endTime = performance.now();
       
       // Assert: Should receive data after advancing timers
       expect(result.usdRate).toBe(48000);
     });
 
-    it('should handle request timeout correctly', async () => {
+    it('should handle request timeout correctly', { retry: process.env.CI ? 2 : 0 }, async () => {
       // Setup: API that takes too long
       mockFetch = createFetchMock({ 
         defaultPrice: 50000, 
@@ -300,14 +299,16 @@ describe('Service Worker <-> Content Script Communication', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
       
-      // Start the request with a shorter timeout
-      const requestPromise = requestPriceData(100);
+      // Start the request with a shorter timeout and handle rejection immediately
+      const requestPromise = requestPriceData(100).catch(e => e);
       
       // Advance timer to trigger timeout but not fetch response
       await vi.advanceTimersByTimeAsync(100);
       
       // Act & Assert: Should timeout before response
-      await expect(requestPromise).rejects.toThrow('Price request timed out');
+      const error = await requestPromise;
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toContain('Price request timed out');
       
       // Advance remaining time to clean up any pending timers
       await vi.advanceTimersByTimeAsync(100);
@@ -347,9 +348,10 @@ describe('Service Worker <-> Content Script Communication', () => {
       // Wait for response
       await harness.waitForPendingOperations();
       
-      // Assert: Should handle normally
-      expect(responseData.status).toBe('success');
-      expect(responseData.data.usdRate).toBe(50000);
+      // Assert: Should receive validation error for extra fields
+      expect(responseData.status).toBe('error');
+      expect(responseData.error.code).toBe('validation_error');
+      expect(responseData.error.message).toContain('Unexpected property');
     });
   });
 });

@@ -16,6 +16,9 @@ node_modules/
 # Build output
 dist/
 
+# Test coverage
+coverage/
+
 # Environment variables
 .env
 .env.local
@@ -28,6 +31,10 @@ T[0-9]*-task.md
 
 # Temporary files
 *.tmp
+
+# Test artifacts
+playwright-report/
+test-results/
 
 # Build artifacts
 *.zip

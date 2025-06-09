@@ -3,6 +3,7 @@
  * Used to simulate external API calls in tests
  */
 
+import { vi } from 'vitest';
 import type { CoinGeckoApiResponse } from '../../src/common/types';
 
 /**

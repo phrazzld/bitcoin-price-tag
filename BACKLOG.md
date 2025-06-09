@@ -4,7 +4,7 @@
 
 ### 🐛 Core Functionality & Reliability
 
-- **[Refactor] Implement Robust Content Script Initialization for Dynamic Pages**
+- [x] **[Refactor] Implement Robust Content Script Initialization for Dynamic Pages**
   - **Type**: Refactor
   - **Complexity**: High
   - **Rationale**: The current fixed `setTimeout` (2500ms) for content script initialization (`src/content-script/index.ts:30`) is fragile and unreliable. It frequently misses price annotations on dynamic, single-page applications (SPAs), or slow-loading pages, significantly degrading user experience and the extension's core value.

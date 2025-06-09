@@ -1,6 +1,5 @@
 // Quick verification script to check the build
 const fs = require('fs');
-const path = require('path');
 
 console.log('Verifying Bitcoin Price Tag build...\n');
 

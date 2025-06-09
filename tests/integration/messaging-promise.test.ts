@@ -91,9 +91,14 @@ describe('Promise-based Messaging Test', () => {
   });
   
   afterEach(() => {
+    // Comprehensive cleanup
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     vi.useRealTimers();
+    
+    // Reset message listeners
+    messageListeners = [];
   });
   
   it('should handle the content script messaging pattern', async () => {
@@ -162,7 +167,7 @@ describe('Promise-based Messaging Test', () => {
       mockChrome.runtime.onMessage.addListener(handleResponse);
       
       // Send the message
-      mockChrome.runtime.sendMessage(request).catch((error) => {
+      mockChrome.runtime.sendMessage(request).catch((error: Error) => {
         clearTimeout(timeout);
         mockChrome.runtime.onMessage.removeListener(handleResponse);
         reject(error);

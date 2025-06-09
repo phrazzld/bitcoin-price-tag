@@ -1,0 +1,54 @@
+coverage:
+  status:
+    project:
+      default:
+        # Allow small decreases but prevent major regressions
+        threshold: 1%
+        target: auto
+        base: auto
+        # Block PRs that significantly reduce coverage
+        if_not_found: success
+        if_ci_failed: error
+    patch:
+      default:
+        # Require new code to have high coverage
+        target: 80%
+        threshold: 5%
+        base: auto
+        # More lenient for refactoring and fixes
+        if_not_found: success
+        if_ci_failed: error
+
+# Configure how coverage is calculated
+coverage:
+  precision: 2
+  round: down
+  range: "60...95"
+
+# PR comments configuration
+comment:
+  layout: "reach,diff,flags,tree,reach"
+  behavior: default
+  require_changes: false
+  require_base: no
+  require_head: yes
+
+# GitHub integration
+github_checks:
+  annotations: true
+
+# Ignore files that shouldn't affect coverage
+ignore:
+  - "test/**/*"
+  - "tests/**/*"
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+  - "**/*.d.ts"
+  - "*.config.js"
+  - "*.config.ts"
+  - "webpack.config.js"
+  - "eslint.config.js"
+  - "playwright.config.ts"
+  - "vitest.config.ts"
+  - ".commitlintrc.js"
+  - "verify-build.js"

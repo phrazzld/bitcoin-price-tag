@@ -15,6 +15,46 @@ export const LogLevel = {
 
 export type LogLevelType = typeof LogLevel[keyof typeof LogLevel];
 
+/**
+ * Get the log level from environment variable
+ * Reads LOG_LEVEL environment variable and validates it
+ * @returns LogLevelType - defaults to INFO if not set or invalid
+ */
+export function getEnvironmentLogLevel(): LogLevelType {
+  // Try to get LOG_LEVEL from environment
+  let envLogLevel: string | undefined;
+  
+  try {
+    // In Chrome extension context, check if process.env is available
+    if (typeof process !== 'undefined' && process.env) {
+      envLogLevel = process.env.LOG_LEVEL;
+    }
+  } catch {
+    // Silently fallback if process.env is not available
+  }
+  
+  // Validate and return the log level
+  if (envLogLevel) {
+    const normalizedLevel = envLogLevel.toLowerCase();
+    switch (normalizedLevel) {
+      case 'debug':
+        return LogLevel.DEBUG;
+      case 'info':
+        return LogLevel.INFO;
+      case 'warn':
+        return LogLevel.WARN;
+      case 'error':
+        return LogLevel.ERROR;
+      default:
+        // Invalid value, fallback to default
+        return LogLevel.INFO;
+    }
+  }
+  
+  // Default to INFO if not specified
+  return LogLevel.INFO;
+}
+
 /** 
  * Structure of a log entry
  * Represents the complete format of a structured log message
@@ -30,7 +70,7 @@ export interface LogEntry {
     readonly message: string;
     readonly stack?: string;
   };
-  readonly context?: any;
+  readonly context?: Record<string, unknown>;
 }
 
 /** 
@@ -59,12 +99,13 @@ export interface LoggerOutputAdapter {
 /**
  * Default console-based output adapter
  * Uses standard console methods for output
+ * Note: Methods are defined as functions to pick up mocked console in tests
  */
 export const consoleOutputAdapter: LoggerOutputAdapter = {
-  debug: console.debug,
-  info: console.info,
-  warn: console.warn,
-  error: console.error
+  debug: (message: string) => console.debug(message),
+  info: (message: string) => console.info(message),
+  warn: (message: string) => console.warn(message),
+  error: (message: string) => console.error(message)
 };
 
 /**
@@ -91,7 +132,7 @@ export class Logger {
   ) {
     this.config = {
       enabled: true,
-      level: LogLevel.INFO,
+      level: getEnvironmentLogLevel(),
       ...config,
     };
     this.outputAdapter = outputAdapter;
@@ -113,7 +154,7 @@ export class Logger {
   private shouldLog(level: LogLevelType): boolean {
     if (!this.config.enabled) return false;
     
-    const currentLevelPriority = this.levelPriority[this.config.level || LogLevel.INFO];
+    const currentLevelPriority = this.levelPriority[this.config.level || getEnvironmentLogLevel()];
     const messageLevelPriority = this.levelPriority[level];
     
     return messageLevelPriority >= currentLevelPriority;
@@ -122,7 +163,7 @@ export class Logger {
   /**
    * Format a log entry as JSON
    */
-  private formatEntry(level: LogLevelType, message: string, context?: any, error?: Error): LogEntry {
+  private formatEntry(level: LogLevelType, message: string, context?: Record<string, unknown>, error?: Error): LogEntry {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -183,7 +224,7 @@ export class Logger {
   /**
    * Log a debug message
    */
-  debug(message: string, context?: any): void {
+  debug(message: string, context?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
       const entry = this.formatEntry(LogLevel.DEBUG, message, context);
       this.output(LogLevel.DEBUG, entry);
@@ -193,7 +234,7 @@ export class Logger {
   /**
    * Log an info message
    */
-  info(message: string, context?: any): void {
+  info(message: string, context?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.INFO)) {
       const entry = this.formatEntry(LogLevel.INFO, message, context);
       this.output(LogLevel.INFO, entry);
@@ -203,7 +244,7 @@ export class Logger {
   /**
    * Log a warning message
    */
-  warn(message: string, context?: any): void {
+  warn(message: string, context?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.WARN)) {
       const entry = this.formatEntry(LogLevel.WARN, message, context);
       this.output(LogLevel.WARN, entry);
@@ -213,7 +254,7 @@ export class Logger {
   /**
    * Log an error message
    */
-  error(message: string, error?: Error | unknown, context?: any): void {
+  error(message: string, error?: unknown, context?: Record<string, unknown>): void {
     if (this.shouldLog(LogLevel.ERROR)) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
       const entry = this.formatEntry(LogLevel.ERROR, message, context, errorObj);
@@ -224,8 +265,9 @@ export class Logger {
 
 /**
  * Create a logger instance for a specific module
+ * Automatically uses LOG_LEVEL environment variable for level configuration
  * @param module The module name to include in logs
- * @param config Additional configuration options
+ * @param config Additional configuration options (can override environment level)
  * @param outputAdapter Optional output adapter (uses console by default)
  * @returns A configured Logger instance
  */
@@ -242,6 +284,7 @@ export function createLogger(
 
 /**
  * Default logger instance for quick usage
+ * Automatically respects LOG_LEVEL environment variable
  * Can be imported and used directly without configuration
  * @example
  * import { logger } from './shared/logger';

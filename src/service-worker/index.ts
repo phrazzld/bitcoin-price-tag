@@ -8,6 +8,7 @@ import { PriceRequestMessage, PriceResponseMessage } from '../common/types';
 import { rehydrateCache, setCachedPrice, getCachedPrice } from './cache';
 import { fetchBtcPrice } from './api';
 import { createLogger } from '../shared/logger';
+import { SecureValidation } from '../common/schema-validation';
 
 /** Logger instance for this module */
 const logger = createLogger('service-worker');
@@ -139,45 +140,60 @@ function handleMessage(
     }
   });
 
-  // Type check and handle price request messages
-  if (isPriceRequestMessage(message)) {
-    handlePriceRequest(message, sendResponse);
-    // Return true to indicate we'll send a response asynchronously
-    return true;
+  // Perform comprehensive security validation
+  const validationResult = SecureValidation.validateChromeMessage(message, sender, 'PRICE_REQUEST');
+  
+  if (!validationResult.isValid) {
+    // Extract requestId for response correlation if possible (best effort)
+    const requestId = typeof message === 'object' && message !== null && 'requestId' in message && typeof message.requestId === 'string' 
+      ? message.requestId 
+      : 'unknown';
+
+    // Create error summary from validation errors
+    const primaryError = validationResult.errors[0];
+    const errorMessage = primaryError 
+      ? `${primaryError.message} (${primaryError.code})`
+      : 'Invalid message format';
+
+    sendResponse({
+      requestId,
+      type: 'PRICE_RESPONSE',
+      status: 'error',
+      error: {
+        message: errorMessage,
+        code: 'validation_error'
+      },
+      timestamp: Date.now()
+    } as PriceResponseMessage);
+
+    return true; // We've handled the message
   }
 
-  // Unknown message type - send error response
-  logger.warn('Unknown message type received', {
-    function_name: 'handleMessage',
-    messageType: (message as any)?.type
+  // Safe to proceed - message is validated as PriceRequestMessage
+  const validMessage = validationResult.data as PriceRequestMessage;
+  
+  handlePriceRequest(validMessage, sendResponse).catch(error => {
+    logger.error('Unhandled error in handlePriceRequest', error, {
+      function_name: 'handleMessage',
+      requestId: validMessage.requestId
+    });
+    // Send error response as fallback
+    sendResponse({
+      requestId: validMessage.requestId,
+      type: 'PRICE_RESPONSE',
+      status: 'error',
+      error: {
+        message: 'Internal error processing request',
+        code: 'internal_error'
+      },
+      timestamp: Date.now()
+    });
   });
   
-  sendResponse({
-    type: 'PRICE_RESPONSE',
-    status: 'error',
-    error: {
-      message: 'Unknown message type',
-      code: 'unknown_message'
-    },
-    timestamp: Date.now()
-  } as PriceResponseMessage);
-
-  return false;
+  // Return true to indicate we'll send a response asynchronously
+  return true;
 }
 
-/**
- * Type guard to check if a message is a PriceRequestMessage
- */
-function isPriceRequestMessage(message: unknown): message is PriceRequestMessage {
-  return (
-    message !== null &&
-    typeof message === 'object' &&
-    'type' in message &&
-    message.type === 'PRICE_REQUEST' &&
-    'requestId' in message &&
-    'timestamp' in message
-  );
-}
 
 /**
  * Handles price request messages by checking cache and fetching from API if needed
@@ -266,8 +282,31 @@ async function handlePriceRequest(
   }
 }
 
-// Register all event listeners
-chrome.runtime.onInstalled.addListener(handleInstalled);
-chrome.runtime.onStartup.addListener(handleStartup);
-chrome.alarms.onAlarm.addListener(handleAlarm);
+// Register all event listeners with error handling
+chrome.runtime.onInstalled.addListener((details) => {
+  handleInstalled(details).catch(error => {
+    logger.error('Unhandled error in onInstalled handler', error, {
+      function_name: 'onInstalled_wrapper'
+    });
+  });
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  handleStartup().catch(error => {
+    logger.error('Unhandled error in onStartup handler', error, {
+      function_name: 'onStartup_wrapper'
+    });
+  });
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  handleAlarm(alarm).catch(error => {
+    logger.error('Unhandled error in onAlarm handler', error, {
+      function_name: 'onAlarm_wrapper',
+      alarmName: alarm.name
+    });
+  });
+});
+
+// onMessage handler is not async, so no wrapper needed
 chrome.runtime.onMessage.addListener(handleMessage);

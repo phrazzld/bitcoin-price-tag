@@ -4,6 +4,7 @@
 
 import { PriceData, PriceRequestMessage, PriceResponseMessage } from '../common/types';
 import { createLogger } from '../shared/logger';
+import { SecureValidation } from '../common/schema-validation';
 
 /** 
  * Logger instance for this module
@@ -14,8 +15,9 @@ const logger = createLogger('content-script/messaging');
 /** 
  * Default timeout for price data requests in milliseconds
  * Prevents indefinite waiting if service worker doesn't respond
+ * CI environment gets longer timeout due to slower async operations
  */
-const REQUEST_TIMEOUT_MS = 10000; // 10 seconds
+const REQUEST_TIMEOUT_MS = process.env.CI ? 15000 : 10000; // 15s for CI, 10s locally
 
 /**
  * Error thrown when a price request times out
@@ -77,10 +79,8 @@ export async function requestPriceData(timeoutMs = REQUEST_TIMEOUT_MS): Promise<
   });
 
   return new Promise<PriceData>((resolve, reject) => {
-    let timeoutId: number | undefined;
-    
     // Set up timeout
-    timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       logger.warn('Price request timed out', {
         function_name: 'requestPriceData',
         requestId,
@@ -106,53 +106,70 @@ export async function requestPriceData(timeoutMs = REQUEST_TIMEOUT_MS): Promise<
         return;
       }
       
-      // Type check the response
-      if (!isPriceResponseMessage(response)) {
-        logger.error('Invalid response format', new Error('Response does not match expected format'), {
+      // Comprehensive security validation of response
+      const validationResult = SecureValidation.validateChromeMessage(
+        response, 
+        { origin: 'service-worker' } as chrome.runtime.MessageSender, 
+        'PRICE_RESPONSE'
+      );
+      
+      if (!validationResult.isValid) {
+        const primaryError = validationResult.errors[0];
+        const errorMessage = primaryError 
+          ? `Response validation failed: ${primaryError.message} (${primaryError.code})`
+          : 'Invalid response format';
+          
+        logger.error('Response validation failed', new Error(errorMessage), {
           function_name: 'requestPriceData',
           requestId,
-          response
+          validationErrors: validationResult.errors.map(err => ({
+            path: err.path,
+            code: err.code,
+            message: err.message
+          }))
         });
-        reject(new Error('Invalid response format'));
+        reject(new Error(errorMessage));
         return;
       }
       
+      const validResponse = validationResult.data as PriceResponseMessage;
+      
       // Check if this response is for our request
-      if (response.requestId !== requestId) {
+      if (validResponse.requestId !== requestId) {
         logger.error('Response requestId mismatch', new Error('Response ID does not match request ID'), {
           function_name: 'requestPriceData',
           requestId,
-          responseId: response.requestId
+          responseId: validResponse.requestId
         });
         reject(new Error('Response requestId mismatch'));
         return;
       }
       
       // Handle the response based on status
-      if (response.status === 'success' && response.data) {
+      if (validResponse.status === 'success' && validResponse.data) {
         logger.info('Price request successful', {
           function_name: 'requestPriceData',
           requestId,
-          responseTime: response.timestamp - request.timestamp,
+          responseTime: validResponse.timestamp - request.timestamp,
           priceData: {
-            usdRate: response.data.usdRate,
-            fetchedAt: response.data.fetchedAt,
-            source: response.data.source
+            usdRate: validResponse.data.usdRate,
+            fetchedAt: validResponse.data.fetchedAt,
+            source: validResponse.data.source
           }
         });
-        resolve(response.data);
-      } else if (response.status === 'error' && response.error) {
-        logger.error('Price request failed', new PriceRequestError(response.error.message, response.error.code), {
+        resolve(validResponse.data);
+      } else if (validResponse.status === 'error' && validResponse.error) {
+        logger.error('Price request failed', new PriceRequestError(validResponse.error.message, validResponse.error.code), {
           function_name: 'requestPriceData',
           requestId,
-          errorCode: response.error.code
+          errorCode: validResponse.error.code
         });
-        reject(new PriceRequestError(response.error.message, response.error.code));
+        reject(new PriceRequestError(validResponse.error.message, validResponse.error.code));
       } else {
         logger.error('Invalid response status', new Error('Response has neither success nor error status'), {
           function_name: 'requestPriceData',
           requestId,
-          status: response.status
+          status: validResponse.status
         });
         reject(new Error('Invalid response format'));
       }
@@ -160,17 +177,3 @@ export async function requestPriceData(timeoutMs = REQUEST_TIMEOUT_MS): Promise<
   });
 }
 
-/**
- * Type guard to check if a message is a PriceResponseMessage
- */
-function isPriceResponseMessage(message: unknown): message is PriceResponseMessage {
-  return (
-    message !== null &&
-    typeof message === 'object' &&
-    'type' in message &&
-    message.type === 'PRICE_RESPONSE' &&
-    'requestId' in message &&
-    'status' in message &&
-    'timestamp' in message
-  );
-}

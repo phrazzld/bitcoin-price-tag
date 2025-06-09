@@ -1,4 +1,4 @@
-import { test as base, chromium, BrowserContext, Page } from '@playwright/test';
+import { test as base, chromium, BrowserContext, Worker } from '@playwright/test';
 import path from 'path';
 
 // Custom fixture to handle extension loading
@@ -35,16 +35,16 @@ export const test = base.extend<{
     // Extract extension ID from service worker URL
     // Format: chrome-extension://[extension-id]/service-worker/index.js
     const url = serviceWorker.url();
-    const match = url.match(/chrome-extension:\/\/([^\/]+)\//);
+    const match = url.match(/chrome-extension:\/\/([^/]+)\//);
     const extensionId = match ? match[1] : '';
     
     await use(extensionId);
   },
 
-  serviceWorker: async ({ context }, use) => {
+  serviceWorker: async ({ context }: { context: BrowserContext }, use: (worker: Worker) => Promise<void>) => {
     // Wait for service worker to be available
     const worker = await context.waitForEvent('serviceworker', {
-      predicate: (worker) => worker.url().includes('service-worker'),
+      predicate: (worker: Worker) => worker.url().includes('service-worker'),
       timeout: 10000,
     });
     

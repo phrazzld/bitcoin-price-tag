@@ -5,11 +5,16 @@
  */
 
 import { vi } from 'vitest';
-import type { Runtime } from '@types/chrome';
+// Use chrome global instead of @types/chrome import
+
+// Make vi available globally for harness detection
+declare global {
+  const vi: typeof import('vitest').vi;
+}
 
 type MessageListener = (
   message: any,
-  sender: Runtime.MessageSender,
+  sender: chrome.runtime.MessageSender,
   sendResponse: (response?: any) => void
 ) => boolean | void;
 
@@ -114,7 +119,6 @@ export class ChromeRuntimeHarness {
     responseCallback?: (response: any) => void
   ): Promise<any> {
     this.lastError = null;
-    const messageId = ++this.messageCounter;
 
     // If responseCallback is provided, use callback-style API
     if (responseCallback) {
@@ -164,12 +168,19 @@ export class ChromeRuntimeHarness {
       this.lastError = new Error('Could not establish connection. Receiving end does not exist.');
       
       // Chrome calls the callback with undefined when there's an error
-      setTimeout(() => responseCallback(undefined), 0);
+      if (typeof vi !== 'undefined' && vi.isFakeTimers && vi.isFakeTimers()) {
+        // In test environment, call immediately
+        responseCallback(undefined);
+      } else if (process.env.CI) {
+        setImmediate(() => responseCallback(undefined));
+      } else {
+        setTimeout(() => responseCallback(undefined), 0);
+      }
       return;
     }
 
     // Create sender object
-    const sender: Runtime.MessageSender = {
+    const sender: chrome.runtime.MessageSender = {
       id: 'test-extension-id',
     };
 
@@ -182,6 +193,11 @@ export class ChromeRuntimeHarness {
         active: true,
         pinned: false,
         incognito: false,
+        frozen: false,
+        selected: false,
+        discarded: false,
+        autoDiscardable: true,
+        groupId: -1,
       };
     }
 
@@ -203,11 +219,25 @@ export class ChromeRuntimeHarness {
         
         console.log(`[Harness] sendResponse called with:`, response);
 
-        // Simulate async callback
-        setTimeout(() => {
-          console.log(`[Harness] Calling responseCallback with:`, response);
+        // Check if we're in a test environment with fake timers
+        if (typeof vi !== 'undefined' && vi.isFakeTimers && vi.isFakeTimers()) {
+          // In test environment, call immediately to avoid timer issues
+          console.log(`[Harness] Calling responseCallback immediately (fake timers):`, response);
           responseCallback(response);
-        }, 0);
+        } else {
+          // In real environment, use async callback - setImmediate in CI for faster response
+          if (process.env.CI) {
+            setImmediate(() => {
+              console.log(`[Harness] Calling responseCallback with:`, response);
+              responseCallback(response);
+            });
+          } else {
+            setTimeout(() => {
+              console.log(`[Harness] Calling responseCallback with:`, response);
+              responseCallback(response);
+            }, 0);
+          }
+        }
       };
 
       try {
@@ -225,7 +255,14 @@ export class ChromeRuntimeHarness {
 
     // If no async response is expected and none was sent, call callback with undefined
     if (!asyncResponseExpected && !responseHandled) {
-      setTimeout(() => responseCallback(undefined), 0);
+      if (typeof vi !== 'undefined' && vi.isFakeTimers && vi.isFakeTimers()) {
+        // In test environment, call immediately
+        responseCallback(undefined);
+      } else if (process.env.CI) {
+        setImmediate(() => responseCallback(undefined));
+      } else {
+        setTimeout(() => responseCallback(undefined), 0);
+      }
     }
   }
 
@@ -238,9 +275,19 @@ export class ChromeRuntimeHarness {
 
   /**
    * Wait for any pending async operations
+   * Handle both real and fake timer environments
    */
   async waitForPendingOperations(): Promise<void> {
-    // Give async operations a chance to complete
-    await new Promise(resolve => setTimeout(resolve, 10));
+    // In test environment with fake timers, use immediate resolution
+    if (typeof vi !== 'undefined' && vi.isFakeTimers && vi.isFakeTimers()) {
+      // Allow microtasks to complete
+      await Promise.resolve();
+      await Promise.resolve();
+      return;
+    }
+    
+    // Give async operations a chance to complete - longer wait in CI
+    const waitTime = process.env.CI ? 50 : 10;
+    await new Promise(resolve => setTimeout(resolve, waitTime));
   }
 }

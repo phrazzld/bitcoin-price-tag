@@ -1,5 +1,11 @@
 import { BrowserContext } from '@playwright/test';
 
+function requireServiceWorker(serviceWorker: any): void {
+  if (!serviceWorker) {
+    throw new Error('Service worker not available in headless mode. Use headed mode for service worker tests.');
+  }
+}
+
 export async function forceServiceWorkerRestart(context: BrowserContext, extensionId: string): Promise<void> {
   // We need to navigate to extension context to access chrome.runtime
   // Some extensions might not have index.html, so we'll use the extension's base URL
@@ -8,7 +14,7 @@ export async function forceServiceWorkerRestart(context: BrowserContext, extensi
   try {
     // Try index.html first
     await page.goto(`chrome-extension://${extensionId}/index.html`);
-  } catch (error) {
+  } catch (_error) {
     // If that fails, try the base URL
     await page.goto(`chrome-extension://${extensionId}/`);
   }
@@ -28,6 +34,7 @@ export async function forceServiceWorkerRestart(context: BrowserContext, extensi
 }
 
 export async function getStateFromSW(serviceWorker: any, key: string): Promise<any> {
+  requireServiceWorker(serviceWorker);
   return await serviceWorker.evaluate((k: string) => {
     return new Promise((resolve) => {
       chrome.storage.local.get(k, (result) => {
@@ -38,6 +45,7 @@ export async function getStateFromSW(serviceWorker: any, key: string): Promise<a
 }
 
 export async function setStateInSW(serviceWorker: any, key: string, value: any): Promise<void> {
+  requireServiceWorker(serviceWorker);
   await serviceWorker.evaluate((k: string, v: any) => {
     return new Promise<void>((resolve) => {
       chrome.storage.local.set({ [k]: v }, () => {
@@ -48,6 +56,7 @@ export async function setStateInSW(serviceWorker: any, key: string, value: any):
 }
 
 export async function clearStorageInSW(serviceWorker: any): Promise<void> {
+  requireServiceWorker(serviceWorker);
   await serviceWorker.evaluate(() => {
     return new Promise<void>((resolve) => {
       chrome.storage.local.clear(() => {
@@ -58,12 +67,14 @@ export async function clearStorageInSW(serviceWorker: any): Promise<void> {
 }
 
 export async function createAlarmInSW(serviceWorker: any, name: string, alarmInfo: any): Promise<void> {
+  requireServiceWorker(serviceWorker);
   await serviceWorker.evaluate((n: string, info: any) => {
     chrome.alarms.create(n, info);
   }, name, alarmInfo);
 }
 
 export async function getAlarmFromSW(serviceWorker: any, name: string): Promise<any> {
+  requireServiceWorker(serviceWorker);
   return await serviceWorker.evaluate((n: string) => {
     return new Promise((resolve) => {
       chrome.alarms.get(n, (alarm) => {
@@ -74,6 +85,7 @@ export async function getAlarmFromSW(serviceWorker: any, name: string): Promise<
 }
 
 export async function getAllAlarmsFromSW(serviceWorker: any): Promise<any[]> {
+  requireServiceWorker(serviceWorker);
   return await serviceWorker.evaluate(() => {
     return new Promise((resolve) => {
       chrome.alarms.getAll((alarms) => {
@@ -84,6 +96,7 @@ export async function getAllAlarmsFromSW(serviceWorker: any): Promise<any[]> {
 }
 
 export async function clearAllAlarmsInSW(serviceWorker: any): Promise<void> {
+  requireServiceWorker(serviceWorker);
   await serviceWorker.evaluate(() => {
     return new Promise<void>((resolve) => {
       chrome.alarms.clearAll(() => {
@@ -98,6 +111,7 @@ export async function waitForAlarmTrigger(
   alarmName: string, 
   timeout: number = 5000
 ): Promise<boolean> {
+  requireServiceWorker(serviceWorker);
   const startTime = Date.now();
   
   while (Date.now() - startTime < timeout) {
@@ -120,6 +134,7 @@ export async function waitForAlarmTrigger(
 }
 
 export async function setupAlarmListener(serviceWorker: any): Promise<void> {
+  requireServiceWorker(serviceWorker);
   await serviceWorker.evaluate(() => {
     if (!(globalThis as any).alarmListenerSetup) {
       chrome.alarms.onAlarm.addListener(async (alarm) => {

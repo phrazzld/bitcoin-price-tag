@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures/extension';
+import { finalTest as test, expect } from '../fixtures/extension-final';
 import { 
   forceServiceWorkerRestart, 
   getStateFromSW, 
@@ -19,7 +19,7 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
     await clearAllAlarmsInSW(serviceWorker);
   });
 
-  test('should handle multiple rapid restarts', async ({ context, extensionId, serviceWorker }) => {
+  test('should handle multiple rapid restarts', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Set initial state
     const testData = { 
       value: 'persistent', 
@@ -30,10 +30,10 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
 
     // Perform multiple rapid restarts
     for (let i = 0; i < 3; i++) {
-      await forceServiceWorkerRestart(context, extensionId);
+      await forceServiceWorkerRestart(extensionContext, extensionId);
       
       // Get new service worker
-      const newServiceWorker = await context.waitForEvent('serviceworker', {
+      const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
         predicate: (worker) => worker.url().includes('service-worker'),
       });
 
@@ -48,14 +48,14 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
     }
 
     // Final verification
-    const finalSW = await context.waitForEvent('serviceworker', {
+    const finalSW = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
     const finalData = await getStateFromSW(finalSW, 'rapidTest');
     expect(finalData.restartCount).toBe(3);
   });
 
-  test('should handle large data persistence', async ({ context, extensionId, serviceWorker }) => {
+  test('should handle large data persistence', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Create large data object
     const largeData = {
       arrays: Array(100).fill(null).map((_, i) => ({
@@ -73,10 +73,10 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
     await setStateInSW(serviceWorker, 'largeData', largeData);
 
     // Force restart
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 
@@ -87,7 +87,7 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
     expect(retrievedData.metadata.description.length).toBe(1000);
   });
 
-  test('should handle corrupted storage gracefully', async ({ context, extensionId, serviceWorker }) => {
+  test('should handle corrupted storage gracefully', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Set valid data first
     await setStateInSW(serviceWorker, 'validData', { status: 'ok' });
 
@@ -103,15 +103,15 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
 
     try {
       await setStateInSW(serviceWorker, 'edgeCase', edgeCaseData);
-    } catch (error) {
+    } catch (_error) {
       // Expected - some values might fail
     }
 
     // Force restart
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 
@@ -127,7 +127,7 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
     }
   });
 
-  test('should maintain state during concurrent operations', async ({ context, extensionId, serviceWorker }) => {
+  test('should maintain state during concurrent operations', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Start multiple concurrent operations
     const operations = [];
     
@@ -147,10 +147,10 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
     await Promise.all(operations);
 
     // Force restart while operations might still be settling
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 
@@ -161,18 +161,18 @@ test.describe('Edge Cases for Service Worker Persistence', () => {
     }
   });
 
-  test('should handle restart during storage operation', async ({ context, extensionId, serviceWorker }) => {
+  test('should handle restart during storage operation', async ({ extensionContext, extensionId, serviceWorker }) => {
     // Start a storage operation and restart immediately
-    const storagePromise = setStateInSW(serviceWorker, 'racyWrite', { 
+    setStateInSW(serviceWorker, 'racyWrite', { 
       timestamp: Date.now(),
       data: 'test'
     });
 
     // Don't wait for completion - restart immediately
-    await forceServiceWorkerRestart(context, extensionId);
+    await forceServiceWorkerRestart(extensionContext, extensionId);
 
     // Get new service worker
-    const newServiceWorker = await context.waitForEvent('serviceworker', {
+    const newServiceWorker = await extensionContext.waitForEvent('serviceworker', {
       predicate: (worker) => worker.url().includes('service-worker'),
     });
 

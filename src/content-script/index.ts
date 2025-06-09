@@ -6,16 +6,16 @@
 import { requestPriceData } from './messaging';
 import { findAndAnnotatePrices } from './dom';
 import { createLogger } from '../shared/logger';
+import { createDomObserver } from './dom-observer';
+import { DOM_OBSERVER_DEBOUNCE_MS } from '../common/constants';
 
 /** Logger instance for this module */
 const logger = createLogger('content-script');
 
-/** Delay before initial price request (in milliseconds) */
-const INITIAL_REQUEST_DELAY = 2500;
-
 /**
  * Main function that will be called when the page is ready
- * Requests price data and annotates the DOM
+ * Requests price data, creates a processedNodes set to track annotated nodes,
+ * and initiates the price annotation process
  */
 async function initPriceAnnotation(): Promise<void> {
   logger.info('Initializing price annotation', {
@@ -29,45 +29,59 @@ async function initPriceAnnotation(): Promise<void> {
       function_name: 'initPriceAnnotation'
     });
     const priceData = await requestPriceData();
-    logger.info('Price data received', {
+    logger.info('Price data received. Starting initial DOM scan.', {
       function_name: 'initPriceAnnotation',
       rate: priceData.usdRate,
       fetchedAt: priceData.fetchedAt
+    });
+
+    // Create a set to track processed nodes and avoid redundant work
+    const processedNodes = new Set<Node>();
+    logger.info('Created processedNodes set for tracking annotated nodes', {
+      function_name: 'initPriceAnnotation'
     });
 
     // Annotate prices in the DOM
     logger.info('Annotating prices in DOM', {
       function_name: 'initPriceAnnotation'
     });
-    findAndAnnotatePrices(document.body, priceData);
-    logger.info('Price annotation completed', {
+    findAndAnnotatePrices(document.body, priceData, processedNodes);
+    logger.info('Initial DOM scan complete. Starting DOM observer.', {
+      function_name: 'initPriceAnnotation',
+      processedNodesCount: processedNodes.size
+    });
+    
+    // Create and start DOM observer to handle dynamically loaded content
+    logger.info('Creating DOM observer for dynamic content', {
       function_name: 'initPriceAnnotation'
+    });
+    const domObserver = createDomObserver(
+      document.body,
+      findAndAnnotatePrices,
+      DOM_OBSERVER_DEBOUNCE_MS,
+      processedNodes
+    );
+    
+    // Start observing DOM changes with the current price data
+    domObserver.start(priceData);
+    logger.info('DOM observer started', {
+      function_name: 'initPriceAnnotation',
+      debounceMs: DOM_OBSERVER_DEBOUNCE_MS
     });
   } catch (error) {
     // Silent failure approach: Log errors without showing visual indicators to users
     // This ensures a non-intrusive browsing experience even when price data is unavailable
     // See docs/ERROR_HANDLING.md for the rationale behind this design decision
     
-    if (error instanceof Error) {
-      if (error.name === 'PriceRequestTimeoutError') {
-        logger.error('Request timed out', error, {
-          function_name: 'initPriceAnnotation'
-        });
-      } else if (error.name === 'PriceRequestError') {
-        logger.error('Request failed', error, {
-          function_name: 'initPriceAnnotation'
-        });
-      } else {
-        logger.error('Unexpected error', error, {
-          function_name: 'initPriceAnnotation'
-        });
-      }
-    } else {
-      logger.error('Unknown error', new Error(String(error)), {
-        function_name: 'initPriceAnnotation',
-        context: { error }
-      });
-    }
+    // Log failure with standardized message format as specified in PLAN.md
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    const errorContext = {
+      function_name: 'initPriceAnnotation',
+      errorType: error instanceof Error ? error.name : 'UnknownError',
+      errorMessage: error instanceof Error ? error.message : String(error)
+    };
+    
+    logger.error('Failed to fetch price data.', errorObj, errorContext);
     
     // Continue normal operation - page displays without price annotations
   }
@@ -75,22 +89,21 @@ async function initPriceAnnotation(): Promise<void> {
 
 /**
  * Initialize when DOM is ready
+ * This function ensures price annotation only happens after the DOM is available
  */
 function initialize(): void {
-  const runWithDelay = () => {
-    // Add delay before initial request, matching original behavior
-    setTimeout(() => {
-      initPriceAnnotation();
-    }, INITIAL_REQUEST_DELAY);
-  };
-
   if (document.readyState === 'loading') {
     // If DOM is still loading, wait for it to complete
     document.addEventListener('DOMContentLoaded', () => {
       logger.info('DOM content loaded', {
         function_name: 'initialize'
       });
-      runWithDelay();
+      // Start annotation directly when DOM is ready
+      initPriceAnnotation().catch(error => {
+        logger.error('Failed to initialize price annotation after DOMContentLoaded', error, {
+          function_name: 'initialize'
+        });
+      });
     });
   } else {
     // DOM is already loaded
@@ -98,12 +111,17 @@ function initialize(): void {
       function_name: 'initialize',
       readyState: document.readyState
     });
-    runWithDelay();
+    // Start annotation immediately as DOM is already available
+    initPriceAnnotation().catch(error => {
+      logger.error('Failed to initialize price annotation for already loaded DOM', error, {
+        function_name: 'initialize'
+      });
+    });
   }
 }
 
 // Start initialization
-logger.info('Content script loaded', {
+logger.info('Content script initialization started.', {
   url: window.location.href
 });
 initialize();
