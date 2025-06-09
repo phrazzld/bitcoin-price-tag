@@ -98,7 +98,7 @@ function runTests() {
       console.log('💡 For complete validation, run: npm run test:ci:full');
     }
     
-  } catch (error) {
+  } catch (_error) {
     console.error(`\n❌ ${suite.toUpperCase()} tests failed!`);
     console.error('🔍 For debugging, check the test output above.');
     

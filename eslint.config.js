@@ -75,12 +75,12 @@ module.exports = tseslint.config(
       '@typescript-eslint/unbound-method': 'off',
     },
   },
-  // Config for config files
+  // Config for config files and scripts
   {
-    files: ['*.config.ts', '*.config.js', 'eslint.config.js', 'verify-build.js'],
+    files: ['*.config.ts', '*.config.js', 'eslint.config.js', 'verify-build.js', 'scripts/**/*.js'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-require-imports': 'off', // Allow require() in config files
+      '@typescript-eslint/no-require-imports': 'off', // Allow require() in config files and scripts
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
