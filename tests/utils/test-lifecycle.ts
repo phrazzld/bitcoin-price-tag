@@ -556,14 +556,22 @@ function getSafeTimerFunction(): typeof setTimeout {
     return globalThis.setTimeout;
   }
   
-  // In Node.js environment, try to get from timers module
-  try {
-    const timers = require('timers');
-    if (typeof timers.setTimeout === 'function') {
-      return timers.setTimeout;
-    }
-  } catch {
-    // timers module not available
+  // In Node.js environment, check if process.nextTick is available
+  // This indicates we're in Node.js and can use basic timing primitives
+  if (typeof process !== 'undefined' && typeof process.nextTick === 'function') {
+    // Use process.nextTick with a simple delay loop
+    return (callback: () => void, ms: number) => {
+      const start = Date.now();
+      const checkTime = () => {
+        if (Date.now() - start >= ms) {
+          callback();
+        } else {
+          process.nextTick(checkTime);
+        }
+      };
+      process.nextTick(checkTime);
+      return 0 as any; // Return dummy timer ID
+    };
   }
   
   // Last resort: create a basic setTimeout using Date.now()
