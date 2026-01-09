@@ -933,11 +933,11 @@ async function expectLogToContain(
       // Reset the mock adapter before this specific test
       mockLoggerAdapter.reset();
 
-      // Trigger two alarms concurrently
-      const alarm1 = handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
-      const alarm2 = handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
+      // Trigger two alarms concurrently (handlers are fire-and-forget, returning void)
+      handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
+      handlers.onAlarm!({ name: REFRESH_ALARM_NAME, scheduledTime: Date.now(), periodInMinutes: undefined } as chrome.alarms.Alarm);
 
-      await Promise.all([alarm1, alarm2]);
+      // Let all async operations complete
       await vi.runAllTimersAsync();
 
       expect(mockApiModule.fetchBtcPrice).toHaveBeenCalledTimes(2);
